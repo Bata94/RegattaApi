@@ -15,9 +15,6 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - ./caddy/config:/config
       - ./caddy/data:/data
-    depends_on:
-      - api-dev
-      - api
     restart: unless-stopped
 
   gotenberg:
@@ -91,21 +88,21 @@ services:
       db:
         condition: service_healthy
 
-  api:
-    build:
-      dockerfile: Dockerfile
-      context: ./
-      target: prod
-    env_file: ".env"
-    deploy:
-      resources:
-        limits:
-          cpus: '4'
-          memory: 2048M
-    volumes:
-      - api-dev-files:/opt/app/files
-    depends_on:
-      gotenberg:
-        condition: service_started
-      db:
-        condition: service_healthy
+  # api:
+  #   build:
+  #     dockerfile: Dockerfile
+  #     context: ./
+  #     target: prod
+  #   env_file: ".env"
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '4'
+  #         memory: 2048M
+  #   volumes:
+  #     - api-dev-files:/opt/app/files
+  #   depends_on:
+  #     gotenberg:
+  #       condition: service_started
+  #     db:
+  #       condition: service_healthy

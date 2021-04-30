@@ -28,9 +28,9 @@ templ InternalRegattabuero() {
     // @internalRegattabueroNewDashboardBtn()
 
     @ui_components.InternalNavBtnGrid([]ui_components.InternalNavBtnParams{
-      {Name: "Abmeldung", Desc: "Meldungen abmelden", URL: "#"},
-      {Name: "Ummeldung", Desc: "Meldungen ummelden", URL: "#"},
-      {Name: "Nachmeldung", Desc: "Meldung nachmelden", URL: "#"},
+      {Name: "Abmeldung", Desc: "Meldungen abmelden", URL: "/internal/regattabuero/vereinswahl?next=abmeldung"},
+      {Name: "Ummeldung", Desc: "Meldungen ummelden", URL: "/internal/regattabuero/vereinswahl?next=ummeldung"},
+      {Name: "Nachmeldung", Desc: "Meldung nachmelden", URL: "/internal/regattabuero/vereinswahl?next=nachmeldung"},
       {Name: "Waage", Desc: "Sportler verwiegen", URL: "#"},
       {Name: "Startberechtigung", Desc: "Ärztliche Bescheinigung überprüfen", URL: "#"},
       {Name: "Sportler anlegen", Desc: "Neuen Sportler anlegen", URL: "#"},

@@ -233,6 +233,10 @@ func (c *Context) GetUUID(key string) (uuid.UUID, error) {
 	return uuid.Parse(param)
 }
 
+func (c *Context) GetQueryParam(key string) string {
+	return c.Query(key)
+}
+
 func (c *Context) GetUUIDFromQuery(key string) (uuid.UUID, error) {
 	param := c.Query(key)
 	if param == "" {

@@ -1,0 +1,29 @@
+package ui_pages
+
+import (
+  "fmt"
+  "github.com/bata94/RegattaApi/internal/crud"
+	"github.com/bata94/RegattaApi/internal/templates/components"
+)
+
+templ InternalVereinswahl(nextUrl string, vereine []crud.Verein){
+  <div class="max-w-[90%] mx-auto my-4 flex flex-col gap-4">
+    @ui_components.PageHeader("Vereinswahl")
+    for _, v := range vereine {
+      <div
+        class="card bg-base-100 w-full shadow-sm hover:cursor-pointer"
+        hx-get={fmt.Sprintf(nextUrl, v.Uuid)}
+        hx-boost="true"
+        hx-target="main"
+        hx-push-url="true"
+        hy-boost="true"
+        href={fmt.Sprintf(nextUrl, v.Uuid)}
+        >
+        <div class="card-body">
+          <h5 class="card-title">{v.Kuerzel}</h5>
+          <p class="card-text">{v.Name}</p>
+        </div>
+      </div>
+    }
+  </div>
+}
