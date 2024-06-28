@@ -1,0 +1,20 @@
+-- name: GetVereinMinimal :one
+SELECT * FROM verein
+WHERE uuid = $1 LIMIT 1;
+
+-- name: GetAllVerein :many
+SELECT * FROM verein
+ORDER BY name ASC;
+
+-- name: CreateVerein :one
+INSERT INTO verein (
+  uuid,
+  name,
+  kurzform,
+  kuerzel
+) VALUES (
+  $1,
+  $2,
+  $3,
+  $4
+) RETURNING *;
