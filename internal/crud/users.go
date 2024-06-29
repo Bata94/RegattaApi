@@ -71,6 +71,11 @@ type ReturnUserWithJWT struct {
 	UserGroup *sqlc.UsersGroup
 }
 
+type ReturnUserMinimal struct {
+	Ulid     string
+	Username string
+}
+
 type ReturnUser struct {
 	Ulid      string
 	Username  string

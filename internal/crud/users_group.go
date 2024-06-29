@@ -40,11 +40,11 @@ func GetUsersGroupsMinimal(ulid ulid.ULID) (*sqlc.UsersGroup, error) {
 
 type UsersGroupWithUsers struct {
 	*sqlc.UsersGroup
-	Users []*sqlc.User
+	Users []*ReturnUserMinimal
 }
 
 func UGwUsersFromSQLC(q []*sqlc.GetUserGroupRow, ulid ulid.ULID) (*UsersGroupWithUsers, error) {
-	users := []*sqlc.User{}
+	users := []*ReturnUserMinimal{}
 	var (
 		ug  *sqlc.UsersGroup
 		err error
@@ -57,7 +57,10 @@ func UGwUsersFromSQLC(q []*sqlc.GetUserGroupRow, ulid ulid.ULID) (*UsersGroupWit
 	} else {
 		ug = &q[0].UsersGroup
 		for _, u := range q {
-			users = append(users, &u.User)
+			users = append(users, &ReturnUserMinimal{
+				Ulid:     u.User.Ulid,
+				Username: *u.User.Username,
+			})
 		}
 	}
 
