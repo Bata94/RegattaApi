@@ -71,7 +71,7 @@ func (q *Queries) GetAllUser(ctx context.Context) ([]*User, error) {
 }
 
 const getUser = `-- name: GetUser :one
-SELECT users.ulid, users.username, users.hashed_password, users.is_active, users.group_ulid, users_group.ulid, users_group.name, users_group.allowed_admin, users_group.allowed_start, users_group.allowed_ziel, users_group.allowed_startlisten, users_group.allowed_regattaleitung
+SELECT users.ulid, users.username, users.hashed_password, users.is_active, users.group_ulid, users_group.ulid, users_group.name, users_group.allowed_admin, users_group.allowed_zeitnahme, users_group.allowed_startlisten, users_group.allowed_regattaleitung
 FROM users
 JOIN users_group
 ON users.group_ulid = users_group.ulid
@@ -95,8 +95,7 @@ func (q *Queries) GetUser(ctx context.Context, ulid string) (*GetUserRow, error)
 		&i.UsersGroup.Ulid,
 		&i.UsersGroup.Name,
 		&i.UsersGroup.AllowedAdmin,
-		&i.UsersGroup.AllowedStart,
-		&i.UsersGroup.AllowedZiel,
+		&i.UsersGroup.AllowedZeitnahme,
 		&i.UsersGroup.AllowedStartlisten,
 		&i.UsersGroup.AllowedRegattaleitung,
 	)
@@ -119,4 +118,17 @@ func (q *Queries) GetUserMinimal(ctx context.Context, ulid string) (*User, error
 		&i.GroupUlid,
 	)
 	return &i, err
+}
+
+const getUserUlidByName = `-- name: GetUserUlidByName :one
+SELECT ulid 
+FROM users
+WHERE username = $1
+`
+
+func (q *Queries) GetUserUlidByName(ctx context.Context, username *string) (string, error) {
+	row := q.db.QueryRow(ctx, getUserUlidByName, username)
+	var ulid string
+	err := row.Scan(&ulid)
+	return ulid, err
 }

@@ -45,6 +45,14 @@ func GetId32FromCtx(c *fiber.Ctx) (int32, error) {
 	return int32(id64), nil
 }
 
+func GetStrParamFromCtx(c *fiber.Ctx, param string) (string, error) {
+	str := c.Params(param, "")
+	if str == "" {
+		return "", &ReqError{Code: 404, StatusCode: fiber.StatusNotFound, Title: "ID not found", Msg: "", Details: "", Data: str}
+	}
+	return str, nil
+}
+
 func GetUuidFromCtx(c *fiber.Ctx) (*uuid.UUID, error) {
 	uuidStr := c.Params("uuid", "")
 	if uuidStr == "" {

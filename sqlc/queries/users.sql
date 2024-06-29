@@ -9,6 +9,11 @@ JOIN users_group
 ON users.group_ulid = users_group.ulid
 WHERE users.ulid = $1 LIMIT 1;
 
+-- name: GetUserUlidByName :one
+SELECT ulid 
+FROM users
+WHERE username = $1;
+
 -- name: GetAllUser :many
 SELECT * FROM users
 ORDER BY ulid;

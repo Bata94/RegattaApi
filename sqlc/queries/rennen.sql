@@ -6,6 +6,14 @@ WHERE uuid = $1 LIMIT 1;
 SELECT * FROM rennen
 ORDER BY sort_id ASC;
 
+-- name: GetAllRennenWithMeld :many
+SELECT *
+FROM rennen
+FULL JOIN meldung
+ON rennen.uuid = meldung.rennen_uuid
+ORDER BY rennen.sort_id;
+
+
 -- name: CreateRennen :one
 INSERT INTO rennen (
   uuid,

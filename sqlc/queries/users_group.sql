@@ -10,6 +10,11 @@ JOIN users
 ON users_group.ulid = users.group_ulid
 WHERE users_group.ulid = $1;
 
+-- name: GetUserGroupUlidByName :one
+SELECT ulid
+FROM users_group
+WHERE name = $1;
+
 -- name: GetAllUserGroup :many
 SELECT * FROM users_group
 ORDER BY ulid;

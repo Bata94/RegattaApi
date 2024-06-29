@@ -41,6 +41,7 @@ var (
 	AUTH_LOGIN_WRONG_PASSWORD = ReqError{Code: 1050, StatusCode: fiber.StatusUnauthorized, Title: "Wrong password"}
 	WRONG_REFRESH_TOKEN       = ReqError{Code: 1051, StatusCode: fiber.StatusUnauthorized, Title: "Wrong refresh token"}
 	TOKEN_GENERATION_ERROR    = ReqError{Code: 1052, StatusCode: fiber.StatusInternalServerError, Title: "Failed to generate token"}
+	TOKEN_INVALID = ReqError{Code: 1053, StatusCode: fiber.StatusUnauthorized, Title: "Failed to validate token"}
 
 	ACCOUNT_WITH_EMAIL_ALREADY_EXISTS = ReqError{Code: 1100, StatusCode: fiber.StatusBadRequest, Title: "An account with this email already exists"}
 )

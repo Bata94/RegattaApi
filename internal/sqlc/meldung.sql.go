@@ -11,16 +11,36 @@ import (
 	"github.com/google/uuid"
 )
 
+const checkMedlungSetzung = `-- name: CheckMedlungSetzung :one
+SELECT uuid, abteilung, bahn FROM meldung
+WHERE abteilung != 0 AND bahn != 0 LIMIT 1
+`
+
+type CheckMedlungSetzungRow struct {
+	Uuid      uuid.UUID `json:"uuid"`
+	Abteilung *int32    `json:"abteilung"`
+	Bahn      *int32    `json:"bahn"`
+}
+
+func (q *Queries) CheckMedlungSetzung(ctx context.Context) (*CheckMedlungSetzungRow, error) {
+	row := q.db.QueryRow(ctx, checkMedlungSetzung)
+	var i CheckMedlungSetzungRow
+	err := row.Scan(&i.Uuid, &i.Abteilung, &i.Bahn)
+	return &i, err
+}
+
 const createMeldung = `-- name: CreateMeldung :one
 INSERT INTO meldung (
   uuid,
   verein_uuid,
   rennen_uuid,
   drv_revision_uuid,
+  abgemeldet,
+  kosten,
   typ,
   bemerkung
 ) VALUES (
-  $1, $2, $3, $4, $5, $6
+  $1, $2, $3, $4, $5, $6, $7, $8
 )
 RETURNING uuid, drv_revision_uuid, typ, bemerkung, abgemeldet, dns, dsq, zeitnahme_bemerkung, start_nummer, abteilung, bahn, kosten, verein_uuid, rennen_uuid
 `
@@ -30,7 +50,9 @@ type CreateMeldungParams struct {
 	VereinUuid      uuid.UUID `json:"verein_uuid"`
 	RennenUuid      uuid.UUID `json:"rennen_uuid"`
 	DrvRevisionUuid uuid.UUID `json:"drv_revision_uuid"`
-	Typ             *string   `json:"typ"`
+	Abgemeldet      *bool     `json:"abgemeldet"`
+	Kosten          int32     `json:"kosten"`
+	Typ             string    `json:"typ"`
 	Bemerkung       *string   `json:"bemerkung"`
 }
 
@@ -40,6 +62,8 @@ func (q *Queries) CreateMeldung(ctx context.Context, arg CreateMeldungParams) (*
 		arg.VereinUuid,
 		arg.RennenUuid,
 		arg.DrvRevisionUuid,
+		arg.Abgemeldet,
+		arg.Kosten,
 		arg.Typ,
 		arg.Bemerkung,
 	)

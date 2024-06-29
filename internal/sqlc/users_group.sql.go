@@ -16,7 +16,7 @@ INSERT INTO users_group (
 ) VALUES (
   $1, $2
 )
-RETURNING ulid, name, allowed_admin, allowed_start, allowed_ziel, allowed_startlisten, allowed_regattaleitung
+RETURNING ulid, name, allowed_admin, allowed_zeitnahme, allowed_startlisten, allowed_regattaleitung
 `
 
 type CreateUserGroupParams struct {
@@ -31,8 +31,7 @@ func (q *Queries) CreateUserGroup(ctx context.Context, arg CreateUserGroupParams
 		&i.Ulid,
 		&i.Name,
 		&i.AllowedAdmin,
-		&i.AllowedStart,
-		&i.AllowedZiel,
+		&i.AllowedZeitnahme,
 		&i.AllowedStartlisten,
 		&i.AllowedRegattaleitung,
 	)
@@ -40,7 +39,7 @@ func (q *Queries) CreateUserGroup(ctx context.Context, arg CreateUserGroupParams
 }
 
 const getAllUserGroup = `-- name: GetAllUserGroup :many
-SELECT ulid, name, allowed_admin, allowed_start, allowed_ziel, allowed_startlisten, allowed_regattaleitung FROM users_group
+SELECT ulid, name, allowed_admin, allowed_zeitnahme, allowed_startlisten, allowed_regattaleitung FROM users_group
 ORDER BY ulid
 `
 
@@ -57,8 +56,7 @@ func (q *Queries) GetAllUserGroup(ctx context.Context) ([]*UsersGroup, error) {
 			&i.Ulid,
 			&i.Name,
 			&i.AllowedAdmin,
-			&i.AllowedStart,
-			&i.AllowedZiel,
+			&i.AllowedZeitnahme,
 			&i.AllowedStartlisten,
 			&i.AllowedRegattaleitung,
 		); err != nil {
@@ -73,7 +71,7 @@ func (q *Queries) GetAllUserGroup(ctx context.Context) ([]*UsersGroup, error) {
 }
 
 const getUserGroup = `-- name: GetUserGroup :many
-SELECT users_group.ulid, users_group.name, users_group.allowed_admin, users_group.allowed_start, users_group.allowed_ziel, users_group.allowed_startlisten, users_group.allowed_regattaleitung, users.ulid, users.username, users.hashed_password, users.is_active, users.group_ulid
+SELECT users_group.ulid, users_group.name, users_group.allowed_admin, users_group.allowed_zeitnahme, users_group.allowed_startlisten, users_group.allowed_regattaleitung, users.ulid, users.username, users.hashed_password, users.is_active, users.group_ulid
 FROM users_group
 JOIN users
 ON users_group.ulid = users.group_ulid
@@ -98,8 +96,7 @@ func (q *Queries) GetUserGroup(ctx context.Context, ulid string) ([]*GetUserGrou
 			&i.UsersGroup.Ulid,
 			&i.UsersGroup.Name,
 			&i.UsersGroup.AllowedAdmin,
-			&i.UsersGroup.AllowedStart,
-			&i.UsersGroup.AllowedZiel,
+			&i.UsersGroup.AllowedZeitnahme,
 			&i.UsersGroup.AllowedStartlisten,
 			&i.UsersGroup.AllowedRegattaleitung,
 			&i.User.Ulid,
@@ -119,7 +116,7 @@ func (q *Queries) GetUserGroup(ctx context.Context, ulid string) ([]*GetUserGrou
 }
 
 const getUserGroupMinimal = `-- name: GetUserGroupMinimal :one
-SELECT ulid, name, allowed_admin, allowed_start, allowed_ziel, allowed_startlisten, allowed_regattaleitung
+SELECT ulid, name, allowed_admin, allowed_zeitnahme, allowed_startlisten, allowed_regattaleitung
 FROM users_group
 WHERE users_group.ulid = $1
 `
@@ -131,10 +128,22 @@ func (q *Queries) GetUserGroupMinimal(ctx context.Context, ulid string) (*UsersG
 		&i.Ulid,
 		&i.Name,
 		&i.AllowedAdmin,
-		&i.AllowedStart,
-		&i.AllowedZiel,
+		&i.AllowedZeitnahme,
 		&i.AllowedStartlisten,
 		&i.AllowedRegattaleitung,
 	)
 	return &i, err
+}
+
+const getUserGroupUlidByName = `-- name: GetUserGroupUlidByName :one
+SELECT ulid
+FROM users_group
+WHERE name = $1
+`
+
+func (q *Queries) GetUserGroupUlidByName(ctx context.Context, name *string) (string, error) {
+	row := q.db.QueryRow(ctx, getUserGroupUlidByName, name)
+	var ulid string
+	err := row.Scan(&ulid)
+	return ulid, err
 }

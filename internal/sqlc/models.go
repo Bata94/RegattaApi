@@ -55,6 +55,49 @@ func (ns NullGeschlecht) Value() (driver.Value, error) {
 	return string(ns.Geschlecht), nil
 }
 
+type Rolle string
+
+const (
+	RolleRuderer Rolle = "Ruderer"
+	RolleStm     Rolle = "Stm."
+	RolleTrainer Rolle = "Trainer"
+)
+
+func (e *Rolle) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = Rolle(s)
+	case string:
+		*e = Rolle(s)
+	default:
+		return fmt.Errorf("unsupported scan type for Rolle: %T", src)
+	}
+	return nil
+}
+
+type NullRolle struct {
+	Rolle Rolle `json:"rolle"`
+	Valid bool  `json:"valid"` // Valid is true if Rolle is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullRolle) Scan(value interface{}) error {
+	if value == nil {
+		ns.Rolle, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.Rolle.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullRolle) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.Rolle), nil
+}
+
 type Tag string
 
 const (
@@ -155,6 +198,7 @@ type Athlet struct {
 
 type LinkMeldungAthlet struct {
 	ID          int32     `json:"id"`
+	Rolle       Rolle     `json:"rolle"`
 	Position    *int32    `json:"position"`
 	MeldungUuid uuid.UUID `json:"meldung_uuid"`
 	AthletUuid  uuid.UUID `json:"athlet_uuid"`
@@ -163,16 +207,16 @@ type LinkMeldungAthlet struct {
 type Meldung struct {
 	Uuid               uuid.UUID `json:"uuid"`
 	DrvRevisionUuid    uuid.UUID `json:"drv_revision_uuid"`
-	Typ                *string   `json:"typ"`
+	Typ                string    `json:"typ"`
 	Bemerkung          *string   `json:"bemerkung"`
 	Abgemeldet         *bool     `json:"abgemeldet"`
 	Dns                *bool     `json:"dns"`
 	Dsq                *bool     `json:"dsq"`
 	ZeitnahmeBemerkung *string   `json:"zeitnahme_bemerkung"`
-	StartNummer        *string   `json:"start_nummer"`
-	Abteilung          *string   `json:"abteilung"`
-	Bahn               *string   `json:"bahn"`
-	Kosten             *int32    `json:"kosten"`
+	StartNummer        *int32    `json:"start_nummer"`
+	Abteilung          *int32    `json:"abteilung"`
+	Bahn               *int32    `json:"bahn"`
+	Kosten             int32     `json:"kosten"`
 	VereinUuid         uuid.UUID `json:"verein_uuid"`
 	RennenUuid         uuid.UUID `json:"rennen_uuid"`
 }
@@ -183,6 +227,13 @@ type Obmann struct {
 	Email      *string   `json:"email"`
 	Phone      *string   `json:"phone"`
 	VereinUuid uuid.UUID `json:"verein_uuid"`
+}
+
+type Pausen struct {
+	ID               int32  `json:"id"`
+	Tag              Tag    `json:"tag"`
+	Laenge           int32  `json:"laenge"`
+	NachRennenNummer string `json:"nach_rennen_nummer"`
 }
 
 type Rennen struct {
@@ -198,8 +249,8 @@ type Rennen struct {
 	BootsklasseLang  *string        `json:"bootsklasse_lang"`
 	Altersklasse     *string        `json:"altersklasse"`
 	AltersklasseLang *string        `json:"altersklasse_lang"`
-	Tag              NullTag        `json:"tag"`
-	Wettkampf        NullWettkampf  `json:"wettkampf"`
+	Tag              Tag            `json:"tag"`
+	Wettkampf        Wettkampf      `json:"wettkampf"`
 	KostenEur        *int32         `json:"kosten_eur"`
 	Rennabstand      *int32         `json:"rennabstand"`
 	Startzeit        *string        `json:"startzeit"`
@@ -217,8 +268,7 @@ type UsersGroup struct {
 	Ulid                  string  `json:"ulid"`
 	Name                  *string `json:"name"`
 	AllowedAdmin          *bool   `json:"allowed_admin"`
-	AllowedStart          *bool   `json:"allowed_start"`
-	AllowedZiel           *bool   `json:"allowed_ziel"`
+	AllowedZeitnahme      *bool   `json:"allowed_zeitnahme"`
 	AllowedStartlisten    *bool   `json:"allowed_startlisten"`
 	AllowedRegattaleitung *bool   `json:"allowed_regattaleitung"`
 }
