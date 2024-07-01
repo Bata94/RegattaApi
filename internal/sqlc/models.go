@@ -211,6 +211,7 @@ type Meldung struct {
 	Bemerkung          *string   `json:"bemerkung"`
 	Abgemeldet         *bool     `json:"abgemeldet"`
 	Dns                *bool     `json:"dns"`
+	Dnf                *bool     `json:"dnf"`
 	Dsq                *bool     `json:"dsq"`
 	ZeitnahmeBemerkung *string   `json:"zeitnahme_bemerkung"`
 	StartNummer        *int32    `json:"start_nummer"`

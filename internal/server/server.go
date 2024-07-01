@@ -149,6 +149,7 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 
 		authV1 := v1.Group("/auth")
 		authV1.Post("/login", api_v1.Login)
+		authV1.Post("/logout", api_v1.Logout)
 
 		athletV1 := v1.Group("/athlet")
 		athletV1.Get("", api_v1.GetAllAthlet)
@@ -156,7 +157,7 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		athletV1.Post("", api_v1.CreateAthlet)
 
 		rennenV1 := v1.Group("/rennen")
-		rennenV1.Get("", api_v1.GetAllRennen)
+		rennenV1.Get("", middleware.Protected(), api_v1.GetAllRennen)
 
 		usersV1 := v1.Group("/users", middleware.Protected())
 		usersV1.Get("", api_v1.GetAllUsers)
@@ -170,6 +171,7 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		leitungV1 := v1.Group("/leitung")
 		leitungV1.Post("/drv_meldung_upload", api_v1.DrvMeldungUpload)
 		leitungV1.Post("/SetzungsLosung", api_v1.SetzungsLosung)
+		leitungV1.Post("/SetzungsLosung/reset", api_v1.ResetSetzung)
 		leitungV1.Post("/SetZeitplan", api_v1.SetZeitplan)
 	}
 

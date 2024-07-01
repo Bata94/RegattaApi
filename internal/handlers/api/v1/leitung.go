@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand/v2"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -87,7 +89,8 @@ type DrvEntries struct {
 	ShortName  string    `json:"shortname"`
 	Sequence   int       `json:"sequence"`
 	// combination, alternative, status, alternative_event_id ???
-	Members []DrvEntriesMembers `json:"members"`
+	AltEventID uuid.UUID           `json:"alternative_event_id"`
+	Members    []DrvEntriesMembers `json:"members"`
 }
 
 type DrvEntriesMembers struct {
@@ -226,13 +229,13 @@ func ImportDrvJson(filePath string) error {
 			continue
 		}
 
-		var rennabstand, kosten int32
+		wettkampf, tag, rennabstand, err := getRennInfo(drvMeldung.Regatta.Days, r)
+		if err != nil {
+			return err
+		}
+		kosten := int32(r.Cost.Amount)
+
 		var sex string
-
-		// TODO: Set Rennabstand, Tag, Wettkampf properly
-		rennabstand = 5
-		kosten = int32(r.Cost.Amount)
-
 		if r.Sex == "" {
 			sex = "x"
 		} else {
@@ -255,10 +258,10 @@ func ImportDrvJson(filePath string) error {
 			BootsklasseLang:  &r.BoatType.Name,
 			Altersklasse:     &r.Category.Code,
 			AltersklasseLang: &r.Category.Name,
-			Tag:              sqlc.NullTag{},
-			Wettkampf:        sqlc.NullWettkampf{},
+			Tag:              *tag,
+			Wettkampf:        *wettkampf,
 			KostenEur:        &kosten,
-			Rennabstand:      &rennabstand,
+			Rennabstand:      rennabstand,
 		}
 
 		_, err = crud.CreateRennen(newRennen)
@@ -267,6 +270,11 @@ func ImportDrvJson(filePath string) error {
 			log.Error(err.Error())
 			return err
 		}
+	}
+
+	allRennen, err := crud.GetAllRennen()
+	if err != nil {
+		return err
 	}
 
 	for _, a := range drvMeldung.ClubMembers {
@@ -319,42 +327,65 @@ func ImportDrvJson(filePath string) error {
 			continue
 		}
 
-		// TODO: Acount for alternative Meldung
+		// "Default Values"
 		typ := "DRV Meldung"
 		bemerkung := ""
-    athleten := []crud.MeldungAthlet{}
+		kosten, err := getKostenForMeld(allRennen, m)
+		if err != nil {
+			return err
+		}
+		abgemeldet := false
+		athleten := []crud.MeldungAthlet{}
 
-    for _, a := range m.Members {
-      role := strings.ToLower(a.Role)
-      position := int32(a.Position)
-      if role == "cox" {
-        athleten = append(athleten, crud.MeldungAthlet{
-        	Uuid:     a.ClubMemberId,
-        	Position: &position,
-        })
-      } else if role == "coach" {
-        log.Debug("Role Coach not implemented")
-        continue
-      } else if role == "rower" {
-        athleten = append(athleten, crud.MeldungAthlet{
-        	Uuid:     a.ClubMemberId,
-        	Position: &position,
-        })
-      } else {
-        log.Error("Unkown Role: ", a.Role)
-      }
-    }
+		// Account for Alt Meldung
+		// TODO: Add Col to save cor MeldUUID
+		if m.AltEventID != uuid.Nil {
+			log.Debug("Alternativ Meldung gefunden!")
+			typ += fmt.Sprintf(" - Alternative zu RennenUUID: %s", m.AltEventID.String())
+			abgemeldet = true
+			*kosten = int32(0)
+		}
+
+		for _, a := range m.Members {
+			role := strings.ToLower(a.Role)
+			position := int32(a.Position)
+			if role == "cox" {
+				athleten = append(athleten, crud.MeldungAthlet{
+					Uuid:     a.ClubMemberId,
+					Position: &position,
+					Rolle:    sqlc.RolleStm,
+				})
+			} else if role == "coach" {
+				athleten = append(athleten, crud.MeldungAthlet{
+					Uuid:     a.ClubMemberId,
+					Position: &position,
+					Rolle:    sqlc.RolleTrainer,
+				})
+				continue
+			} else if role == "rower" {
+				athleten = append(athleten, crud.MeldungAthlet{
+					Uuid:     a.ClubMemberId,
+					Position: &position,
+					Rolle:    sqlc.RolleRuderer,
+				})
+			} else {
+				log.Error("Unkown Role: ", a.Role)
+				continue
+			}
+		}
 
 		newMeldung := crud.CreateMeldungParams{
 			CreateMeldungParams: &sqlc.CreateMeldungParams{
-        Uuid:            m.Id,
-        VereinUuid:      m.ClubId,
-        RennenUuid:      m.EventId,
-        DrvRevisionUuid: m.RevisionId,
-        Typ:             &typ,
-        Bemerkung:       &bemerkung,
-      },
-			Athleten:          athleten,
+				Uuid:            m.Id,
+				VereinUuid:      m.ClubId,
+				RennenUuid:      m.EventId,
+				DrvRevisionUuid: m.RevisionId,
+				Abgemeldet:      &abgemeldet,
+				Kosten:          *kosten,
+				Typ:             typ,
+				Bemerkung:       &bemerkung,
+			},
+			Athleten: athleten,
 		}
 
 		_, err = crud.CreateMeldung(newMeldung)
@@ -366,4 +397,179 @@ func ImportDrvJson(filePath string) error {
 	}
 
 	return nil
+}
+
+func getKostenForMeld(rennen []*sqlc.Rennen, m DrvEntries) (*int32, error) {
+	kosten := int32(0)
+
+	for _, r := range rennen {
+		if r.Uuid == m.EventId {
+			kosten = *r.KostenEur
+		}
+	}
+
+	if kosten == 0 {
+		return nil, errors.New("RennenUUID von Meldung nicht gefunden!")
+	}
+
+	return &kosten, nil
+}
+
+func getRennInfo(regattaDays []string, event DrvEvents) (*sqlc.Wettkampf, *sqlc.Tag, *int32, error) {
+	var (
+		wettkampf   sqlc.Wettkampf
+		tag         sqlc.Tag
+		rennNr      int64
+		rennabstand int32
+		err         error
+	)
+	rennNr, err = strconv.ParseInt(event.Number, 10, 32)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	if event.Days[0].Date == regattaDays[0] {
+		tag = sqlc.TagSa
+
+		if rennNr < 100 {
+			wettkampf = sqlc.WettkampfLangstrecke
+			rennabstand = 1
+		} else {
+			wettkampf = sqlc.WettkampfSlalom
+			if strings.Contains(event.Category.Code, "9") || strings.Contains(event.Category.Code, "10") || strings.Contains(event.Category.Code, "11") {
+				rennabstand = 5
+			} else if strings.Contains(event.Category.Code, "12") || strings.Contains(event.Category.Code, "13") {
+				rennabstand = 4
+			} else {
+				rennabstand = 3
+			}
+		}
+	} else if event.Days[0].Date == regattaDays[1] {
+		tag = sqlc.TagSo
+
+		if rennNr < 310 || rennNr == 321 {
+			wettkampf = sqlc.WettkampfKurzstrecke
+			rennabstand = 3
+		} else {
+			wettkampf = sqlc.WettkampfSlalom
+			rennabstand = 10
+		}
+	} else {
+		return nil, nil, nil, errors.New("Could not find valid Date")
+	}
+
+	return &wettkampf, &tag, &rennabstand, nil
+}
+
+// TODO: Move Func
+// shuffle shuffles the elements of an array in place
+func shuffle(array []*sqlc.Meldung) {
+	for i := range array { //run the loop till the range of array
+		j := rand.IntN(i + 1)                   //choose any random number
+		array[i], array[j] = array[j], array[i] //swap the random element with current element
+	}
+}
+
+func SetzungsLosung(c *fiber.Ctx) error {
+	check, err := crud.CheckMeldungSetzung()
+	if err != nil {
+		return err
+	}
+
+	if check {
+		return c.Status(fiber.StatusBadRequest).JSON("Setzung bereits erledigt! Vorher reseten um zu wiederholen!")
+	}
+
+	rLs, err := crud.GetAllRennenWithMeld(false)
+	if err != nil {
+		return err
+	}
+
+	for _, r := range rLs {
+		numMeld := 0
+		for _, m := range r.Meldungen {
+			if *m.Abgemeldet == false {
+				numMeld++
+			}
+		}
+
+		abteilung := int32(1)
+		bahn := int32(1)
+		maxBahnen := 1
+
+		if r.Wettkampf == sqlc.WettkampfKurzstrecke {
+			maxBahnen = 4
+		} else if r.Wettkampf == sqlc.WettkampfSlalom {
+			maxBahnen = 3
+		} else if r.Wettkampf == sqlc.WettkampfLangstrecke {
+			maxBahnen = 99999
+		} else if r.Wettkampf == sqlc.WettkampfStaffel {
+			maxBahnen = 2
+		}
+
+		// TODO: WIP: Algo wont work correctly
+		letzteVolleAbteilung := numMeld / maxBahnen
+		if numMeld%maxBahnen == 1 && (r.Wettkampf != sqlc.WettkampfLangstrecke || r.Wettkampf != sqlc.WettkampfStaffel) {
+			letzteVolleAbteilung--
+		}
+
+		shuffle(r.Meldungen)
+
+		for _, m := range r.Meldungen {
+			if *m.Abgemeldet {
+				continue
+			}
+
+			updateParams := sqlc.UpdateMeldungSetzungParams{
+				Uuid:      m.Uuid,
+				Abteilung: &abteilung,
+				Bahn:      &bahn,
+			}
+			err := crud.UpdateMeldungSetzung(updateParams)
+			if err != nil {
+				return err
+			}
+
+			bahn++
+			if bahn > int32(maxBahnen) {
+				abteilung++
+				bahn = 1
+			}
+		}
+	}
+
+	retLs, err := crud.GetAllRennenWithMeld(false)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(retLs)
+	// return c.JSON("Setzung erfolgreich erstellt!")
+}
+
+func ResetSetzung(c *fiber.Ctx) error {
+	mLs, err := crud.GetAllMeldungen()
+	if err != nil {
+		return err
+	}
+
+	zero := int32(0)
+
+	for _, m := range mLs {
+		updateParams := sqlc.UpdateMeldungSetzungParams{
+			Uuid:      m.Uuid,
+			Abteilung: &zero,
+			Bahn:      &zero,
+		}
+		err := crud.UpdateMeldungSetzung(updateParams)
+		if err != nil {
+			return err
+		}
+	}
+
+	return c.JSON("Setzung erfolgreich zurückgesetzt!")
+}
+
+func SetZeitplan(c *fiber.Ctx) error {
+	return c.JSON("Zeitplan erfolgreich erstellt!")
 }

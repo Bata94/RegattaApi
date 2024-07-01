@@ -65,21 +65,21 @@ type User struct {
 }
 
 type ReturnUserWithJWT struct {
-	Ulid      string
-	Jwt       string
-	Username  string
-	UserGroup *sqlc.UsersGroup
+	Ulid      string           `json:"ulid"`
+	Jwt       string           `json:"jwt"`
+	Username  string           `json:"username"`
+	UserGroup *sqlc.UsersGroup `json:"user_group"`
 }
 
 type ReturnUserMinimal struct {
-	Ulid     string
-	Username string
+	Ulid     string `json:"ulid"`
+	Username string `json:"username"`
 }
 
 type ReturnUser struct {
-	Ulid      string
-	Username  string
-	UserGroup *sqlc.UsersGroup
+	Ulid      string           `json:"ulid"`
+	Username  string           `json:"username"`
+	UserGroup *sqlc.UsersGroup `json:"user_group"`
 }
 
 func (u *User) ToReturnUser() ReturnUser {

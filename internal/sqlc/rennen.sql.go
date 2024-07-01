@@ -139,7 +139,7 @@ func (q *Queries) GetAllRennen(ctx context.Context) ([]*Rennen, error) {
 }
 
 const getAllRennenWithMeld = `-- name: GetAllRennenWithMeld :many
-SELECT rennen.uuid, sort_id, nummer, bezeichnung, bezeichnung_lang, zusatz, leichtgewicht, geschlecht, bootsklasse, bootsklasse_lang, altersklasse, altersklasse_lang, tag, wettkampf, kosten_eur, rennabstand, startzeit, meldung.uuid, drv_revision_uuid, typ, bemerkung, abgemeldet, dns, dsq, zeitnahme_bemerkung, start_nummer, abteilung, bahn, kosten, verein_uuid, rennen_uuid
+SELECT rennen.uuid, sort_id, nummer, bezeichnung, bezeichnung_lang, zusatz, leichtgewicht, geschlecht, bootsklasse, bootsklasse_lang, altersklasse, altersklasse_lang, tag, wettkampf, kosten_eur, rennabstand, startzeit, meldung.uuid, drv_revision_uuid, typ, bemerkung, abgemeldet, dns, dnf, dsq, zeitnahme_bemerkung, start_nummer, abteilung, bahn, kosten, verein_uuid, rennen_uuid
 FROM rennen
 FULL JOIN meldung
 ON rennen.uuid = meldung.rennen_uuid
@@ -170,6 +170,7 @@ type GetAllRennenWithMeldRow struct {
 	Bemerkung          *string        `json:"bemerkung"`
 	Abgemeldet         *bool          `json:"abgemeldet"`
 	Dns                *bool          `json:"dns"`
+	Dnf                *bool          `json:"dnf"`
 	Dsq                *bool          `json:"dsq"`
 	ZeitnahmeBemerkung *string        `json:"zeitnahme_bemerkung"`
 	StartNummer        *int32         `json:"start_nummer"`
@@ -213,6 +214,7 @@ func (q *Queries) GetAllRennenWithMeld(ctx context.Context) ([]*GetAllRennenWith
 			&i.Bemerkung,
 			&i.Abgemeldet,
 			&i.Dns,
+			&i.Dnf,
 			&i.Dsq,
 			&i.ZeitnahmeBemerkung,
 			&i.StartNummer,

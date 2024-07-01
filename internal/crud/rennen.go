@@ -6,7 +6,6 @@ import (
 	"github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/handlers/api"
 	"github.com/bata94/RegattaApi/internal/sqlc"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 )
 
@@ -34,8 +33,6 @@ func GetAllRennenWithMeld(getEmptyRennen bool) ([]*RennenWithMeldung, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	log.Debug("Show Empty Renn: ", getEmptyRennen)
-
 	q, err := DB.Queries.GetAllRennenWithMeld(ctx)
 	if err != nil {
 		return nil, err
@@ -47,7 +44,6 @@ func GetAllRennenWithMeld(getEmptyRennen bool) ([]*RennenWithMeldung, error) {
 	)
 
 	for _, m := range q {
-		log.Debug(*m.SortID)
 		rennenStruct := &sqlc.Rennen{
 			Uuid:             m.Uuid,
 			SortID:           *m.SortID,
@@ -67,7 +63,6 @@ func GetAllRennenWithMeld(getEmptyRennen bool) ([]*RennenWithMeldung, error) {
 			Rennabstand:      m.Rennabstand,
 			Startzeit:        m.Startzeit,
 		}
-
 		meldungStruct := &sqlc.Meldung{}
 		if m.Uuid_2 != uuid.Nil {
 			meldungStruct = &sqlc.Meldung{
@@ -88,14 +83,24 @@ func GetAllRennenWithMeld(getEmptyRennen bool) ([]*RennenWithMeldung, error) {
 			}
 		}
 
-		// WIP!!!
+		if len(rLs) == 0 && currentRennen == nil {
+			if m.Uuid_2 != uuid.Nil {
+				currentRennen = &RennenWithMeldung{
+					Rennen:    rennenStruct,
+					Meldungen: []*sqlc.Meldung{meldungStruct},
+				}
+			} else {
+				currentRennen = &RennenWithMeldung{
+					Rennen:    rennenStruct,
+					Meldungen: []*sqlc.Meldung{},
+				}
+			}
+		}
 
-		if len(rLs) == 0 || currentRennen.Rennen.Uuid != rennenStruct.Uuid {
-			if currentRennen != nil {
-				log.Debug("Append Rennen")
+		if currentRennen.Rennen.Uuid != rennenStruct.Uuid {
+			if len(currentRennen.Meldungen) > 0 || getEmptyRennen {
 				rLs = append(rLs, currentRennen)
 			}
-			log.Debug("Set new Rennen")
 
 			if m.Uuid_2 != uuid.Nil {
 				currentRennen = &RennenWithMeldung{
@@ -103,19 +108,22 @@ func GetAllRennenWithMeld(getEmptyRennen bool) ([]*RennenWithMeldung, error) {
 					Meldungen: []*sqlc.Meldung{meldungStruct},
 				}
 			} else {
-				if getEmptyRennen {
-					currentRennen = &RennenWithMeldung{
-						Rennen:    rennenStruct,
-						Meldungen: []*sqlc.Meldung{},
-					}
+				currentRennen = &RennenWithMeldung{
+					Rennen:    rennenStruct,
+					Meldungen: []*sqlc.Meldung{},
 				}
 			}
 		} else if currentRennen.Rennen.Uuid == m.Uuid {
-			log.Debug("Append Meld")
-			currentRennen.Meldungen = append(currentRennen.Meldungen, meldungStruct)
+			if m.Uuid_2 != uuid.Nil {
+				currentRennen.Meldungen = append(currentRennen.Meldungen, meldungStruct)
+			}
 		} else {
 			return nil, errors.New("This error should be happening!")
 		}
+	}
+
+	if rLs == nil {
+		rLs = []*RennenWithMeldung{}
 	}
 
 	return rLs, nil

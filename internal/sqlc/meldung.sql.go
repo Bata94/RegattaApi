@@ -42,7 +42,7 @@ INSERT INTO meldung (
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7, $8
 )
-RETURNING uuid, drv_revision_uuid, typ, bemerkung, abgemeldet, dns, dsq, zeitnahme_bemerkung, start_nummer, abteilung, bahn, kosten, verein_uuid, rennen_uuid
+RETURNING uuid, drv_revision_uuid, typ, bemerkung, abgemeldet, dns, dnf, dsq, zeitnahme_bemerkung, start_nummer, abteilung, bahn, kosten, verein_uuid, rennen_uuid
 `
 
 type CreateMeldungParams struct {
@@ -75,6 +75,7 @@ func (q *Queries) CreateMeldung(ctx context.Context, arg CreateMeldungParams) (*
 		&i.Bemerkung,
 		&i.Abgemeldet,
 		&i.Dns,
+		&i.Dnf,
 		&i.Dsq,
 		&i.ZeitnahmeBemerkung,
 		&i.StartNummer,
@@ -88,7 +89,7 @@ func (q *Queries) CreateMeldung(ctx context.Context, arg CreateMeldungParams) (*
 }
 
 const getAllMeldung = `-- name: GetAllMeldung :many
-SELECT uuid, drv_revision_uuid, typ, bemerkung, abgemeldet, dns, dsq, zeitnahme_bemerkung, start_nummer, abteilung, bahn, kosten, verein_uuid, rennen_uuid FROM meldung
+SELECT uuid, drv_revision_uuid, typ, bemerkung, abgemeldet, dns, dnf, dsq, zeitnahme_bemerkung, start_nummer, abteilung, bahn, kosten, verein_uuid, rennen_uuid FROM meldung
 ORDER BY start_nummer ASC
 `
 
@@ -108,6 +109,7 @@ func (q *Queries) GetAllMeldung(ctx context.Context) ([]*Meldung, error) {
 			&i.Bemerkung,
 			&i.Abgemeldet,
 			&i.Dns,
+			&i.Dnf,
 			&i.Dsq,
 			&i.ZeitnahmeBemerkung,
 			&i.StartNummer,
@@ -128,7 +130,7 @@ func (q *Queries) GetAllMeldung(ctx context.Context) ([]*Meldung, error) {
 }
 
 const getMeldungMinimal = `-- name: GetMeldungMinimal :one
-SELECT uuid, drv_revision_uuid, typ, bemerkung, abgemeldet, dns, dsq, zeitnahme_bemerkung, start_nummer, abteilung, bahn, kosten, verein_uuid, rennen_uuid FROM meldung
+SELECT uuid, drv_revision_uuid, typ, bemerkung, abgemeldet, dns, dnf, dsq, zeitnahme_bemerkung, start_nummer, abteilung, bahn, kosten, verein_uuid, rennen_uuid FROM meldung
 WHERE uuid = $1 LIMIT 1
 `
 
@@ -142,6 +144,7 @@ func (q *Queries) GetMeldungMinimal(ctx context.Context, argUuid uuid.UUID) (*Me
 		&i.Bemerkung,
 		&i.Abgemeldet,
 		&i.Dns,
+		&i.Dnf,
 		&i.Dsq,
 		&i.ZeitnahmeBemerkung,
 		&i.StartNummer,
@@ -152,4 +155,21 @@ func (q *Queries) GetMeldungMinimal(ctx context.Context, argUuid uuid.UUID) (*Me
 		&i.RennenUuid,
 	)
 	return &i, err
+}
+
+const updateMeldungSetzung = `-- name: UpdateMeldungSetzung :exec
+UPDATE meldung
+SET abteilung = $2, bahn = $3
+WHERE uuid = $1
+`
+
+type UpdateMeldungSetzungParams struct {
+	Uuid      uuid.UUID `json:"uuid"`
+	Abteilung *int32    `json:"abteilung"`
+	Bahn      *int32    `json:"bahn"`
+}
+
+func (q *Queries) UpdateMeldungSetzung(ctx context.Context, arg UpdateMeldungSetzungParams) error {
+	_, err := q.db.Exec(ctx, updateMeldungSetzung, arg.Uuid, arg.Abteilung, arg.Bahn)
+	return err
 }

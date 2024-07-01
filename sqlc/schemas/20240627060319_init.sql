@@ -84,6 +84,7 @@ CREATE TABLE meldung(
   bemerkung text,
   abgemeldet boolean DEFAULT false,
   dns boolean DEFAULT false,
+  dnf boolean DEFAULT false,
   dsq boolean DEFAULT false,
   zeitnahme_bemerkung text,
   start_nummer int DEFAULT 0,

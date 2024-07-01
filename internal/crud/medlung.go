@@ -20,18 +20,18 @@ type MeldungAthlet struct {
 }
 
 func GetAllMeldungen() ([]*sqlc.Meldung, error) {
-  ctx, cancel := getCtxWithTo()
-  defer cancel()
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
 
-  mLs, err := DB.Queries.GetAllMeldung(ctx)
-  if err != nil {
-    return nil, err
-  }
-  if mLs == nil {
-    mLs = []*sqlc.Meldung{}
-  }
+	mLs, err := DB.Queries.GetAllMeldung(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if mLs == nil {
+		mLs = []*sqlc.Meldung{}
+	}
 
-  return mLs, nil
+	return mLs, nil
 }
 
 func GetMeldungMinimal(uuid uuid.UUID) (*sqlc.Meldung, error) {
@@ -50,22 +50,22 @@ func GetMeldungMinimal(uuid uuid.UUID) (*sqlc.Meldung, error) {
 }
 
 func CheckMeldungSetzung() (bool, error) {
-  ctx, cancel := getCtxWithTo()
-  defer cancel()
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
 
-  m, err := DB.Queries.CheckMedlungSetzung(ctx)
-  if err != nil {
+	m, err := DB.Queries.CheckMedlungSetzung(ctx)
+	if err != nil {
 		if isNoRowError(err) {
 			return false, nil
 		}
-    return true, err
-  }
+		return true, err
+	}
 
-  if m != nil {
-    return true, nil
-  } else {
-    return false, nil
-  }
+	if m != nil {
+		return true, nil
+	} else {
+		return false, nil
+	}
 }
 
 func CreateMeldung(mParams CreateMeldungParams) (*sqlc.Meldung, error) {
@@ -96,4 +96,12 @@ func CreateMeldung(mParams CreateMeldungParams) (*sqlc.Meldung, error) {
 	}
 
 	return m, nil
+}
+
+func UpdateMeldungSetzung(p sqlc.UpdateMeldungSetzungParams) error {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	return DB.Queries.UpdateMeldungSetzung(ctx, p)
+
 }

@@ -10,6 +10,11 @@ ORDER BY start_nummer ASC;
 SELECT uuid, abteilung, bahn FROM meldung
 WHERE abteilung != 0 AND bahn != 0 LIMIT 1;
 
+-- name: UpdateMeldungSetzung :exec
+UPDATE meldung
+SET abteilung = $2, bahn = $3
+WHERE uuid = $1;
+
 -- name: CreateMeldung :one
 INSERT INTO meldung (
   uuid,
