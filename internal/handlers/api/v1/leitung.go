@@ -477,7 +477,9 @@ func SetzungsLosung(c *fiber.Ctx) error {
 	}
 
 	if check {
-		return c.Status(fiber.StatusBadRequest).JSON("Setzung bereits erledigt! Vorher reseten um zu wiederholen!")
+		retErr := &api.BAD_REQUEST
+		retErr.Msg = "Setzung bereits erledigt! Vorher reseten um zu wiederholen!"
+		return retErr
 	}
 
 	rLs, err := crud.GetAllRennenWithMeld(false)
@@ -538,13 +540,13 @@ func SetzungsLosung(c *fiber.Ctx) error {
 		}
 	}
 
-	retLs, err := crud.GetAllRennenWithMeld(false)
+	_, err = crud.GetAllRennenWithMeld(false)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(retLs)
-	// return c.JSON("Setzung erfolgreich erstellt!")
+	// return c.JSON(retLs)
+	return c.JSON("Setzung erfolgreich erstellt!")
 }
 
 func ResetSetzung(c *fiber.Ctx) error {
