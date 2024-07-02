@@ -38,6 +38,21 @@ func GetAllAthlet() ([]*sqlc.Athlet, error) {
 	return aLs, err
 }
 
+func GetAllNNAthleten() ([]*sqlc.Athlet, error) {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	aLs, err := DB.Queries.GetAllNNAthleten(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if aLs == nil {
+		aLs = []*sqlc.Athlet{}
+	}
+
+	return aLs, err
+}
+
 func CreateAthlet(aParams sqlc.CreateAthletParams) (*sqlc.Athlet, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()

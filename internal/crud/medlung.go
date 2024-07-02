@@ -1,10 +1,11 @@
 package crud
 
 import (
+	"fmt"
+
 	"github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/handlers/api"
 	"github.com/bata94/RegattaApi/internal/sqlc"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 )
 
@@ -87,11 +88,13 @@ func CreateMeldung(mParams CreateMeldungParams) (*sqlc.Meldung, error) {
 		})
 
 		if err != nil {
-			log.Errorf("Error linking MeldungAthlet: %s \nMeldung-ID: %s \nAthlet-ID: %s",
+			retErr := api.INTERNAL_SERVER_ERROR
+			retErr.Details = fmt.Sprintf("Error linking MeldungAthlet: %s \nMeldung-ID: %s \nAthlet-ID: %s",
 				err,
 				m.Uuid.String(),
 				a.Uuid.String(),
 			)
+			return nil, &retErr
 		}
 	}
 

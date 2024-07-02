@@ -67,7 +67,7 @@ CREATE TABLE rennen (
   wettkampf wettkampf NOT NULL,
   kosten_eur int,
   rennabstand int,
-  startzeit text DEFAULT '00:00:00'
+  startzeit text DEFAULT '00:00'
 );
 
 CREATE TABLE pausen (

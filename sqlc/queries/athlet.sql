@@ -6,6 +6,11 @@ WHERE uuid = $1 LIMIT 1;
 SELECT * FROM athlet
 ORDER BY name ASC;
 
+-- name: GetAllNNAthleten :many
+SELECT * FROM athlet
+WHERE vorname = 'No' and name = 'Name' and jahrgang = '9999'
+ORDER BY verein_uuid ASC;
+
 -- name: CreateAthlet :one
 INSERT INTO athlet
 (uuid, verein_uuid, name, vorname, jahrgang, aerztliche_bescheinigung, geschlecht)

@@ -197,7 +197,7 @@ func ImportDrvJson(filePath string) error {
 			}
 		}
 		if verein != nil {
-			log.Debug("Verein already exists: ", verein.Name)
+			// log.Debug("Verein already exists: ", verein.Name)
 			continue
 		}
 
@@ -213,7 +213,28 @@ func ImportDrvJson(filePath string) error {
 			log.Error(err.Error())
 			return err
 		}
+
+		nnUuid, err := uuid.NewV7()
+		if err != nil {
+			return err
+		}
+		aerztBesch := true
+		nnAthletParams := sqlc.CreateAthletParams{
+			Uuid:                    nnUuid,
+			VereinUuid:              newVerein.Uuid,
+			Name:                    "Name",
+			Vorname:                 "No",
+			Jahrgang:                "9999",
+			AerztlicheBescheinigung: &aerztBesch,
+			Geschlecht:              "x",
+		}
+		_, err = crud.CreateAthlet(nnAthletParams)
+		if err != nil {
+			return err
+		}
 	}
+
+	allNNAthleten, err := crud.GetAllNNAthleten()
 
 	for _, r := range drvMeldung.Events {
 		rennen, err := crud.GetRennenMinimal(r.Id)
@@ -225,7 +246,7 @@ func ImportDrvJson(filePath string) error {
 			}
 		}
 		if rennen != nil {
-			log.Debugf("Rennen already exists: %s - %s", rennen.Nummer, *rennen.BezeichnungLang)
+			// log.Debugf("Rennen already exists: %s - %s", rennen.Nummer, *rennen.BezeichnungLang)
 			continue
 		}
 
@@ -287,7 +308,7 @@ func ImportDrvJson(filePath string) error {
 			}
 		}
 		if athlet != nil {
-			log.Debugf("Athlet already exists: %s %s", athlet.Vorname, athlet.Name)
+			// log.Debugf("Athlet already exists: %s %s", athlet.Vorname, athlet.Name)
 			continue
 		}
 
@@ -322,9 +343,23 @@ func ImportDrvJson(filePath string) error {
 			}
 		}
 		if meldung != nil {
-			log.Debug("Meldung already exists...")
-			// TODO: Compare RevisionID to easy import Changes from Meldeportal
-			continue
+			if meldung.DrvRevisionUuid.ClockSequence() == m.RevisionId.ClockSequence() {
+				continue
+			}
+
+			log.Debug("Meld in DB Rev: ", meldung.DrvRevisionUuid.ClockSequence())
+			log.Debug("Meld in JSON Rev: ", m.RevisionId.ClockSequence())
+
+			if meldung.DrvRevisionUuid.ClockSequence() > m.RevisionId.ClockSequence() {
+				retErr := api.INTERNAL_SERVER_ERROR
+				retErr.Msg = fmt.Sprintf("Meldung in DB is newer than in JSON! Das sollte nicht passieren! MeldungID: %s", m.Id)
+				return &retErr
+			}
+
+			// TODO: Update Meldung
+			retErr := api.INTERNAL_SERVER_ERROR
+			retErr.Msg = fmt.Sprintf("Min. eine Meldung in JSON is newer than in DB! Dies ist noch nicht implementiert. Bitte an Admin wenden! MeldungID: %s", m.Id)
+			return &retErr
 		}
 
 		// "Default Values"
@@ -349,22 +384,36 @@ func ImportDrvJson(filePath string) error {
 		for _, a := range m.Members {
 			role := strings.ToLower(a.Role)
 			position := int32(a.Position)
+			aUuid := a.ClubMemberId
+			if aUuid == uuid.Nil {
+				log.Warn("uuid is nil", aUuid)
+				for _, nnA := range allNNAthleten {
+					if nnA.VereinUuid == m.ClubId {
+						aUuid = nnA.Uuid
+						break
+					}
+				}
+				if aUuid == uuid.Nil {
+					log.Error("uuid is still nil", aUuid)
+					return &api.INTERNAL_SERVER_ERROR
+				}
+			}
 			if role == "cox" {
 				athleten = append(athleten, crud.MeldungAthlet{
-					Uuid:     a.ClubMemberId,
+					Uuid:     aUuid,
 					Position: &position,
 					Rolle:    sqlc.RolleStm,
 				})
 			} else if role == "coach" {
 				athleten = append(athleten, crud.MeldungAthlet{
-					Uuid:     a.ClubMemberId,
+					Uuid:     aUuid,
 					Position: &position,
 					Rolle:    sqlc.RolleTrainer,
 				})
 				continue
 			} else if role == "rower" {
 				athleten = append(athleten, crud.MeldungAthlet{
-					Uuid:     a.ClubMemberId,
+					Uuid:     aUuid,
 					Position: &position,
 					Rolle:    sqlc.RolleRuderer,
 				})
@@ -572,6 +621,62 @@ func ResetSetzung(c *fiber.Ctx) error {
 	return c.JSON("Setzung erfolgreich zurückgesetzt!")
 }
 
+type SetZeitplanParams struct {
+	SaStartStunde int `json:"sa_start_stunde"`
+	SoStartStunde int `json:"so_start_stunde"`
+}
+
+// BUG: It is not setting time for the last race for some Reason
+// TODO: Add Pausen
 func SetZeitplan(c *fiber.Ctx) error {
+	param := new(SetZeitplanParams)
+	err := c.BodyParser(&param)
+	if err != nil {
+		return err
+	}
+
+	rLs, err := crud.GetAllRennenWithMeld(true)
+	if err != nil {
+		return err
+	}
+
+	curStartTimeSa, err := time.Parse("15:04", fmt.Sprintf("%d:00", param.SaStartStunde))
+	curStartTimeSo, err := time.Parse("15:04", fmt.Sprintf("%d:00", param.SoStartStunde))
+
+	log.Debug(curStartTimeSa, curStartTimeSo)
+	log.Debug(len(rLs))
+	for i, r := range rLs {
+		log.Debug(i, r.Nummer, *r.Bezeichnung)
+		if r.Tag == sqlc.TagSa {
+			saTimeStr := curStartTimeSa.Format("15:04")
+
+			err := crud.UpdateStartZeit(sqlc.UpdateStartZeitParams{
+				Startzeit: &saTimeStr,
+				Uuid:      r.Uuid,
+			})
+			if err != nil {
+				return err
+			}
+
+			rennenDur := time.Duration(r.NumAbteilungen*int(*r.Rennabstand)) * time.Minute
+			curStartTimeSa = curStartTimeSa.Add(rennenDur)
+		} else if r.Tag == sqlc.TagSo {
+			soTimeStr := curStartTimeSo.Format("15:04")
+
+			err := crud.UpdateStartZeit(sqlc.UpdateStartZeitParams{
+				Startzeit: &soTimeStr,
+				Uuid:      r.Uuid,
+			})
+			if err != nil {
+				return err
+			}
+
+			rennenDur := time.Duration(r.NumAbteilungen*int(*r.Rennabstand)) * time.Minute
+			curStartTimeSo = curStartTimeSo.Add(rennenDur)
+		} else {
+			log.Errorf("RennenNummer %s Tag Error %s", r.Nummer, r.Tag)
+		}
+	}
+
 	return c.JSON("Zeitplan erfolgreich erstellt!")
 }
