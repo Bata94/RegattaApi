@@ -13,6 +13,7 @@ require (
 	github.com/oklog/ulid/v2 v2.1.0
 	github.com/swaggo/swag v1.16.3
 	golang.org/x/crypto v0.17.0
+	golang.org/x/text v0.14.0
 )
 
 require (
@@ -42,7 +43,6 @@ require (
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/tools v0.7.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )

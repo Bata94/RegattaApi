@@ -448,7 +448,7 @@ func ImportDrvJson(filePath string) error {
 	return nil
 }
 
-func getKostenForMeld(rennen []*sqlc.Rennen, m DrvEntries) (*int32, error) {
+func getKostenForMeld(rennen []*crud.Rennen, m DrvEntries) (*int32, error) {
 	kosten := int32(0)
 
 	for _, r := range rennen {

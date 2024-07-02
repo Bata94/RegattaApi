@@ -158,6 +158,7 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 
 		rennenV1 := v1.Group("/rennen")
 		rennenV1.Get("", api_v1.GetAllRennen)
+		rennenV1.Get("/:uuid", api_v1.GetRennen)
 		rennenV1.Get("/wettkampf/:wettkampf", api_v1.GetAllRennenByWettkampf)
 
 		usersV1 := v1.Group("/users", middleware.Protected())

@@ -11,6 +11,20 @@ import (
 	"golang.org/x/text/language"
 )
 
+func GetRennen(c *fiber.Ctx) error {
+	uuid, err := api.GetUuidFromCtx(c)
+	if err != nil {
+		return err
+	}
+
+	r, err := crud.GetRennen(*uuid)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(r)
+}
+
 func GetAllRennen(c *fiber.Ctx) error {
 	withMeldStr := c.Query("withMeld", "")
 	withMeld := false

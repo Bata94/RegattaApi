@@ -2,6 +2,13 @@
 SELECT * FROM rennen
 WHERE uuid = $1 LIMIT 1;
 
+-- name: GetRennen :many
+SELECT *
+FROM rennen
+FULL JOIN meldung
+ON rennen.uuid = meldung.rennen_uuid
+WHERE rennen.uuid = $1;
+
 -- name: GetAllRennen :many
 SELECT * FROM rennen
 ORDER BY sort_id ASC;
