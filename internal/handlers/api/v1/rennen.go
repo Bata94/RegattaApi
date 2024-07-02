@@ -4,7 +4,11 @@ import (
 	"strings"
 
 	"github.com/bata94/RegattaApi/internal/crud"
+	"github.com/bata94/RegattaApi/internal/handlers/api"
+	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/gofiber/fiber/v2"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 func GetAllRennen(c *fiber.Ctx) error {
@@ -32,5 +36,36 @@ func GetAllRennen(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	return c.JSON(rLs)
+}
+
+func GetAllRennenByWettkampf(c *fiber.Ctx) error {
+	wettkampfStr, err := api.GetStrParamFromCtx(c, "wettkampf")
+	if err != nil {
+		retErr := api.BAD_REQUEST
+		retErr.Details = err.Error()
+		return &retErr
+	}
+	caser := cases.Title(language.German)
+	wettkampfStr = caser.String(wettkampfStr)
+	wettkampf := sqlc.Wettkampf(wettkampfStr)
+
+	showEmptyStr := c.Query("showEmpty", "")
+	showEmpty := false
+	if strings.ToLower(showEmptyStr) == "true" || showEmptyStr == "yes" || showEmptyStr == "1" {
+		showEmpty = true
+	}
+
+	showStartedStr := c.Query("showStarted", "")
+	showStarted := false
+	if strings.ToLower(showStartedStr) == "true" || showStartedStr == "yes" || showStartedStr == "1" {
+		showStarted = true
+	}
+
+	rLs, err := crud.GetAllRennenByWettkampf(wettkampf, showStarted, showEmpty)
+	if err != nil {
+		return err
+	}
+
 	return c.JSON(rLs)
 }

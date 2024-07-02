@@ -149,6 +149,7 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		auth.Post("/logout", api_v1.Logout)
 
 		v1 := api.Group("/v1", middleware.Protected(), apiCompressor, defApiCacheMid)
+		v1.Get("/test", api_v1.TestHandler)
 
 		athletV1 := v1.Group("/athlet")
 		athletV1.Get("", api_v1.GetAllAthlet)
@@ -157,6 +158,7 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 
 		rennenV1 := v1.Group("/rennen")
 		rennenV1.Get("", api_v1.GetAllRennen)
+		rennenV1.Get("/wettkampf/:wettkampf", api_v1.GetAllRennenByWettkampf)
 
 		usersV1 := v1.Group("/users", middleware.Protected())
 		usersV1.Get("", api_v1.GetAllUsers)

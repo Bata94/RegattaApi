@@ -138,6 +138,103 @@ func (q *Queries) GetAllRennen(ctx context.Context) ([]*Rennen, error) {
 	return items, nil
 }
 
+const getAllRennenByWettkampf = `-- name: GetAllRennenByWettkampf :many
+SELECT rennen.uuid, sort_id, nummer, bezeichnung, bezeichnung_lang, zusatz, leichtgewicht, geschlecht, bootsklasse, bootsklasse_lang, altersklasse, altersklasse_lang, tag, wettkampf, kosten_eur, rennabstand, startzeit, meldung.uuid, drv_revision_uuid, typ, bemerkung, abgemeldet, dns, dnf, dsq, zeitnahme_bemerkung, start_nummer, abteilung, bahn, kosten, verein_uuid, rennen_uuid
+FROM rennen
+FULL JOIN meldung
+ON rennen.uuid = meldung.rennen_uuid
+WHERE wettkampf = $1
+ORDER BY sort_id ASC
+`
+
+type GetAllRennenByWettkampfRow struct {
+	Uuid               uuid.UUID      `json:"uuid"`
+	SortID             *int32         `json:"sort_id"`
+	Nummer             *string        `json:"nummer"`
+	Bezeichnung        *string        `json:"bezeichnung"`
+	BezeichnungLang    *string        `json:"bezeichnung_lang"`
+	Zusatz             *string        `json:"zusatz"`
+	Leichtgewicht      *bool          `json:"leichtgewicht"`
+	Geschlecht         NullGeschlecht `json:"geschlecht"`
+	Bootsklasse        *string        `json:"bootsklasse"`
+	BootsklasseLang    *string        `json:"bootsklasse_lang"`
+	Altersklasse       *string        `json:"altersklasse"`
+	AltersklasseLang   *string        `json:"altersklasse_lang"`
+	Tag                NullTag        `json:"tag"`
+	Wettkampf          NullWettkampf  `json:"wettkampf"`
+	KostenEur          *int32         `json:"kosten_eur"`
+	Rennabstand        *int32         `json:"rennabstand"`
+	Startzeit          *string        `json:"startzeit"`
+	Uuid_2             uuid.UUID      `json:"uuid_2"`
+	DrvRevisionUuid    uuid.UUID      `json:"drv_revision_uuid"`
+	Typ                *string        `json:"typ"`
+	Bemerkung          *string        `json:"bemerkung"`
+	Abgemeldet         *bool          `json:"abgemeldet"`
+	Dns                *bool          `json:"dns"`
+	Dnf                *bool          `json:"dnf"`
+	Dsq                *bool          `json:"dsq"`
+	ZeitnahmeBemerkung *string        `json:"zeitnahme_bemerkung"`
+	StartNummer        *int32         `json:"start_nummer"`
+	Abteilung          *int32         `json:"abteilung"`
+	Bahn               *int32         `json:"bahn"`
+	Kosten             *int32         `json:"kosten"`
+	VereinUuid         uuid.UUID      `json:"verein_uuid"`
+	RennenUuid         uuid.UUID      `json:"rennen_uuid"`
+}
+
+func (q *Queries) GetAllRennenByWettkampf(ctx context.Context, wettkampf Wettkampf) ([]*GetAllRennenByWettkampfRow, error) {
+	rows, err := q.db.Query(ctx, getAllRennenByWettkampf, wettkampf)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*GetAllRennenByWettkampfRow
+	for rows.Next() {
+		var i GetAllRennenByWettkampfRow
+		if err := rows.Scan(
+			&i.Uuid,
+			&i.SortID,
+			&i.Nummer,
+			&i.Bezeichnung,
+			&i.BezeichnungLang,
+			&i.Zusatz,
+			&i.Leichtgewicht,
+			&i.Geschlecht,
+			&i.Bootsklasse,
+			&i.BootsklasseLang,
+			&i.Altersklasse,
+			&i.AltersklasseLang,
+			&i.Tag,
+			&i.Wettkampf,
+			&i.KostenEur,
+			&i.Rennabstand,
+			&i.Startzeit,
+			&i.Uuid_2,
+			&i.DrvRevisionUuid,
+			&i.Typ,
+			&i.Bemerkung,
+			&i.Abgemeldet,
+			&i.Dns,
+			&i.Dnf,
+			&i.Dsq,
+			&i.ZeitnahmeBemerkung,
+			&i.StartNummer,
+			&i.Abteilung,
+			&i.Bahn,
+			&i.Kosten,
+			&i.VereinUuid,
+			&i.RennenUuid,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getAllRennenWithMeld = `-- name: GetAllRennenWithMeld :many
 SELECT rennen.uuid, sort_id, nummer, bezeichnung, bezeichnung_lang, zusatz, leichtgewicht, geschlecht, bootsklasse, bootsklasse_lang, altersklasse, altersklasse_lang, tag, wettkampf, kosten_eur, rennabstand, startzeit, meldung.uuid, drv_revision_uuid, typ, bemerkung, abgemeldet, dns, dnf, dsq, zeitnahme_bemerkung, start_nummer, abteilung, bahn, kosten, verein_uuid, rennen_uuid
 FROM rennen
@@ -262,4 +359,18 @@ func (q *Queries) GetRennenMinimal(ctx context.Context, argUuid uuid.UUID) (*Ren
 		&i.Startzeit,
 	)
 	return &i, err
+}
+
+const updateStartZeit = `-- name: UpdateStartZeit :exec
+UPDATE rennen SET startzeit = $1 WHERE uuid = $2
+`
+
+type UpdateStartZeitParams struct {
+	Startzeit *string   `json:"startzeit"`
+	Uuid      uuid.UUID `json:"uuid"`
+}
+
+func (q *Queries) UpdateStartZeit(ctx context.Context, arg UpdateStartZeitParams) error {
+	_, err := q.db.Exec(ctx, updateStartZeit, arg.Startzeit, arg.Uuid)
+	return err
 }

@@ -13,6 +13,16 @@ FULL JOIN meldung
 ON rennen.uuid = meldung.rennen_uuid
 ORDER BY rennen.sort_id;
 
+-- name: GetAllRennenByWettkampf :many
+SELECT *
+FROM rennen
+FULL JOIN meldung
+ON rennen.uuid = meldung.rennen_uuid
+WHERE wettkampf = $1
+ORDER BY sort_id ASC;
+
+-- name: UpdateStartZeit :exec
+UPDATE rennen SET startzeit = $1 WHERE uuid = $2;
 
 -- name: CreateRennen :one
 INSERT INTO rennen (
