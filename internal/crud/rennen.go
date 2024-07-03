@@ -393,7 +393,7 @@ func GetRennen(uuid uuid.UUID) (*RennenWithMeldung, error) {
 		}
 
 		r.Meldungen = append(r.Meldungen, &sqlc.Meldung{
-			Uuid:               row.Uuid,
+			Uuid:               row.Uuid_2,
 			DrvRevisionUuid:    row.DrvRevisionUuid,
 			Typ:                *row.Typ,
 			Bemerkung:          row.Bemerkung,
