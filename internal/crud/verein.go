@@ -7,6 +7,21 @@ import (
 	"github.com/google/uuid"
 )
 
+func GetAllVerein() ([]*sqlc.Verein, error) {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	vLs, err := DB.Queries.GetAllVerein(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if vLs == nil {
+		vLs = []*sqlc.Verein{}
+	}
+
+	return vLs, err
+}
+
 func GetVereinMinimal(uuid uuid.UUID) (*sqlc.Verein, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()

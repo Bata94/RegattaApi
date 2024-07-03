@@ -156,6 +156,10 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		athletV1.Get("/:uuid", api_v1.GetAthlet)
 		athletV1.Post("", api_v1.CreateAthlet)
 
+		vereinV1 := v1.Group("/verein")
+		vereinV1.Get("", api_v1.GetAllVerein)
+		vereinV1.Get("/:uuid", api_v1.GetVerein)
+
 		rennenV1 := v1.Group("/rennen")
 		rennenV1.Get("", api_v1.GetAllRennen)
 		rennenV1.Get("/:uuid", api_v1.GetRennen)
