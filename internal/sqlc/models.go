@@ -229,11 +229,10 @@ type Obmann struct {
 	VereinUuid uuid.UUID `json:"verein_uuid"`
 }
 
-type Pausen struct {
-	ID               int32  `json:"id"`
-	Tag              Tag    `json:"tag"`
-	Laenge           int32  `json:"laenge"`
-	NachRennenNummer string `json:"nach_rennen_nummer"`
+type Pause struct {
+	ID             int32     `json:"id"`
+	Laenge         int32     `json:"laenge"`
+	NachRennenUuid uuid.UUID `json:"nach_rennen_uuid"`
 }
 
 type Rennen struct {

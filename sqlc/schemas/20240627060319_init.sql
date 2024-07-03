@@ -69,11 +69,11 @@ CREATE TABLE rennen (
   startzeit text DEFAULT '00:00'
 );
 
-CREATE TABLE pausen (
+CREATE TABLE pause (
   id SERIAL PRIMARY KEY,
-  tag tag NOT NULL,
   laenge int NOT NULL,
-  nach_rennen_nummer text NOT NULL
+  nach_rennen_uuid uuid NOT NULL,
+  CONSTRAINT fk_rennen FOREIGN KEY (nach_rennen_uuid) REFERENCES rennen(uuid)
 );
 
 CREATE TABLE meldung(
@@ -144,10 +144,6 @@ CREATE TABLE users (
   CONSTRAINT fk_users_group FOREIGN KEY (group_ulid) REFERENCES users_group(ulid)
 );
 
-INSERT INTO pausen (tag, laenge, nach_rennen_nummer) VALUES ('so', 30, '115');
-INSERT INTO pausen (tag, laenge, nach_rennen_nummer) VALUES ('so', 30, '130');
-INSERT INTO pausen (tag, laenge, nach_rennen_nummer) VALUES ('so', 30, '321');
-
 INSERT INTO users_group (
   ulid,
   name,
@@ -212,8 +208,8 @@ DROP TABLE zeitnahme_ergebnis;
 DROP TABLE obmann;
 DROP TABLE link_meldung_athlet;
 DROP TABLE meldung;
+DROP TABLE pause;
 DROP TABLE rennen;
-DROP TABLE pausen;
 DROP TABLE zeitnahme_ziel;
 DROP TABLE zeitnahme_start;
 DROP TABLE athlet;

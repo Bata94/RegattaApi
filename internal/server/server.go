@@ -170,7 +170,6 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		meldungV1.Get("/:uuid", api_v1.GetMeldung)
 		meldungV1.Post("/updateSetzungBatch", api_v1.UpdateSetzungBatch)
 
-		usersV1 := v1.Group("/users", middleware.Protected())
 		usersV1 := v1.Group("/users")
 		usersV1.Get("", api_v1.GetAllUsers)
 		usersV1.Get("/:ulid", api_v1.GetUser)
@@ -179,6 +178,10 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		usersV1.Get("/group", api_v1.GetAllUsersGroups)
 		usersV1.Get("/group/:ulid", api_v1.GetUsersGroup)
 		usersV1.Get("/group/name/:name", api_v1.GetUsersGroupByName)
+
+    pausenV1 := v1.Group("/pause")
+    pausenV1.Get("", api_v1.GetAllPausen)
+    pausenV1.Get("/:id", api_v1.GetAllPausen)
 
 		leitungV1 := v1.Group("/leitung")
 		leitungV1.Post("/drv_meldung_upload", api_v1.DrvMeldungUpload)
