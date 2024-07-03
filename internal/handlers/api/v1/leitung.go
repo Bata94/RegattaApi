@@ -218,15 +218,15 @@ func ImportDrvJson(filePath string) error {
 		if err != nil {
 			return err
 		}
-		aerztBesch := true
+		startberechtigt := true
 		nnAthletParams := sqlc.CreateAthletParams{
-			Uuid:                    nnUuid,
-			VereinUuid:              newVerein.Uuid,
-			Name:                    "Name",
-			Vorname:                 "No",
-			Jahrgang:                "9999",
-			AerztlicheBescheinigung: &aerztBesch,
-			Geschlecht:              "x",
+			Uuid:            nnUuid,
+			VereinUuid:      newVerein.Uuid,
+			Name:            "Name",
+			Vorname:         "No",
+			Jahrgang:        "9999",
+			Startberechtigt: &startberechtigt,
+			Geschlecht:      "x",
 		}
 		_, err = crud.CreateAthlet(nnAthletParams)
 		if err != nil {
@@ -312,17 +312,16 @@ func ImportDrvJson(filePath string) error {
 			continue
 		}
 
-		var arztBesch bool
-		arztBesch = true
+		startberechtigt := true
 
 		newAthlet := sqlc.CreateAthletParams{
-			Uuid:                    a.Id,
-			VereinUuid:              a.ClubId,
-			Name:                    a.Person.Firstname,
-			Vorname:                 a.Person.Lastname,
-			Jahrgang:                a.Person.YearOfBirth,
-			AerztlicheBescheinigung: &arztBesch,
-			Geschlecht:              sqlc.Geschlecht(strings.ToLower(a.Person.Sex)),
+			Uuid:            a.Id,
+			VereinUuid:      a.ClubId,
+			Name:            a.Person.Firstname,
+			Vorname:         a.Person.Lastname,
+			Jahrgang:        a.Person.YearOfBirth,
+			Startberechtigt: &startberechtigt,
+			Geschlecht:      sqlc.Geschlecht(strings.ToLower(a.Person.Sex)),
 		}
 
 		_, err = crud.CreateAthlet(newAthlet)
@@ -619,6 +618,43 @@ func ResetSetzung(c *fiber.Ctx) error {
 	}
 
 	return c.JSON("Setzung erfolgreich zurückgesetzt!")
+}
+
+func SetStartnummern(c *fiber.Ctx) error {
+	rLs, err := crud.GetAllRennenWithMeld(false)
+	if err != nil {
+		return err
+	}
+
+	abgStartNummer := int32(999)
+	curStartNummer := int32(1)
+	lastDay := sqlc.TagSa
+
+	for _, r := range rLs {
+		if lastDay != r.Tag {
+			lastDay = r.Tag
+			curStartNummer = 1
+		}
+		for _, m := range r.Meldungen {
+			if *m.Abgemeldet {
+				err = crud.UpdateStartNummer(sqlc.UpdateStartNummerParams{
+					Uuid:        m.Uuid,
+					StartNummer: &abgStartNummer,
+				})
+			} else {
+				err = crud.UpdateStartNummer(sqlc.UpdateStartNummerParams{
+					Uuid:        m.Uuid,
+					StartNummer: &curStartNummer,
+				})
+				curStartNummer++
+			}
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return c.JSON("Startnummern erfolgreich vergeben!")
 }
 
 type SetZeitplanParams struct {

@@ -15,6 +15,11 @@ UPDATE meldung
 SET abteilung = $2, bahn = $3
 WHERE uuid = $1;
 
+-- name: UpdateStartNummer :exec
+UPDATE meldung
+SET start_nummer = $2
+WHERE uuid = $1;
+
 -- name: CreateMeldung :one
 INSERT INTO meldung (
   uuid,

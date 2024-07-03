@@ -175,6 +175,7 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		leitungV1.Post("/SetzungsLosung", api_v1.SetzungsLosung)
 		leitungV1.Post("/SetzungsLosung/reset", api_v1.ResetSetzung)
 		leitungV1.Post("/SetZeitplan", api_v1.SetZeitplan)
+		leitungV1.Post("/SetStartnummern", api_v1.SetStartnummern)
 	}
 
 	if frontendEnabled {

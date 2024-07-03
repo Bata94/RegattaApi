@@ -23,8 +23,7 @@ CREATE TABLE athlet (
   geschlecht geschlecht NOT NULL,
   jahrgang text NOT NULL,
   gewicht int DEFAULT 0,
-  aerztliche_bescheinigung boolean DEFAULT false,
-  lg_gemeldet boolean DEFAULT false,
+  startberechtigt boolean DEFAULT false,
   verein_uuid uuid NOT NULL,
   CONSTRAINT fk_verein FOREIGN KEY (verein_uuid) REFERENCES verein(uuid)
 );

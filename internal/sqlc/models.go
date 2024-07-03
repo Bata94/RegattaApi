@@ -185,15 +185,14 @@ func (ns NullWettkampf) Value() (driver.Value, error) {
 }
 
 type Athlet struct {
-	Uuid                    uuid.UUID  `json:"uuid"`
-	Vorname                 string     `json:"vorname"`
-	Name                    string     `json:"name"`
-	Geschlecht              Geschlecht `json:"geschlecht"`
-	Jahrgang                string     `json:"jahrgang"`
-	Gewicht                 *int32     `json:"gewicht"`
-	AerztlicheBescheinigung *bool      `json:"aerztliche_bescheinigung"`
-	LgGemeldet              *bool      `json:"lg_gemeldet"`
-	VereinUuid              uuid.UUID  `json:"verein_uuid"`
+	Uuid            uuid.UUID  `json:"uuid"`
+	Vorname         string     `json:"vorname"`
+	Name            string     `json:"name"`
+	Geschlecht      Geschlecht `json:"geschlecht"`
+	Jahrgang        string     `json:"jahrgang"`
+	Gewicht         *int32     `json:"gewicht"`
+	Startberechtigt *bool      `json:"startberechtigt"`
+	VereinUuid      uuid.UUID  `json:"verein_uuid"`
 }
 
 type LinkMeldungAthlet struct {

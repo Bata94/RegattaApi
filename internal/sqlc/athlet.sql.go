@@ -13,20 +13,20 @@ import (
 
 const createAthlet = `-- name: CreateAthlet :one
 INSERT INTO athlet
-(uuid, verein_uuid, name, vorname, jahrgang, aerztliche_bescheinigung, geschlecht)
+(uuid, verein_uuid, name, vorname, jahrgang, startberechtigt, geschlecht)
 VALUES
 ($1, $2, $3, $4, $5, $6, $7)
-RETURNING uuid, vorname, name, geschlecht, jahrgang, gewicht, aerztliche_bescheinigung, lg_gemeldet, verein_uuid
+RETURNING uuid, vorname, name, geschlecht, jahrgang, gewicht, startberechtigt, verein_uuid
 `
 
 type CreateAthletParams struct {
-	Uuid                    uuid.UUID  `json:"uuid"`
-	VereinUuid              uuid.UUID  `json:"verein_uuid"`
-	Name                    string     `json:"name"`
-	Vorname                 string     `json:"vorname"`
-	Jahrgang                string     `json:"jahrgang"`
-	AerztlicheBescheinigung *bool      `json:"aerztliche_bescheinigung"`
-	Geschlecht              Geschlecht `json:"geschlecht"`
+	Uuid            uuid.UUID  `json:"uuid"`
+	VereinUuid      uuid.UUID  `json:"verein_uuid"`
+	Name            string     `json:"name"`
+	Vorname         string     `json:"vorname"`
+	Jahrgang        string     `json:"jahrgang"`
+	Startberechtigt *bool      `json:"startberechtigt"`
+	Geschlecht      Geschlecht `json:"geschlecht"`
 }
 
 func (q *Queries) CreateAthlet(ctx context.Context, arg CreateAthletParams) (*Athlet, error) {
@@ -36,7 +36,7 @@ func (q *Queries) CreateAthlet(ctx context.Context, arg CreateAthletParams) (*At
 		arg.Name,
 		arg.Vorname,
 		arg.Jahrgang,
-		arg.AerztlicheBescheinigung,
+		arg.Startberechtigt,
 		arg.Geschlecht,
 	)
 	var i Athlet
@@ -47,15 +47,14 @@ func (q *Queries) CreateAthlet(ctx context.Context, arg CreateAthletParams) (*At
 		&i.Geschlecht,
 		&i.Jahrgang,
 		&i.Gewicht,
-		&i.AerztlicheBescheinigung,
-		&i.LgGemeldet,
+		&i.Startberechtigt,
 		&i.VereinUuid,
 	)
 	return &i, err
 }
 
 const getAllAthlet = `-- name: GetAllAthlet :many
-SELECT uuid, vorname, name, geschlecht, jahrgang, gewicht, aerztliche_bescheinigung, lg_gemeldet, verein_uuid FROM athlet
+SELECT uuid, vorname, name, geschlecht, jahrgang, gewicht, startberechtigt, verein_uuid FROM athlet
 ORDER BY name ASC
 `
 
@@ -75,8 +74,7 @@ func (q *Queries) GetAllAthlet(ctx context.Context) ([]*Athlet, error) {
 			&i.Geschlecht,
 			&i.Jahrgang,
 			&i.Gewicht,
-			&i.AerztlicheBescheinigung,
-			&i.LgGemeldet,
+			&i.Startberechtigt,
 			&i.VereinUuid,
 		); err != nil {
 			return nil, err
@@ -90,7 +88,7 @@ func (q *Queries) GetAllAthlet(ctx context.Context) ([]*Athlet, error) {
 }
 
 const getAllNNAthleten = `-- name: GetAllNNAthleten :many
-SELECT uuid, vorname, name, geschlecht, jahrgang, gewicht, aerztliche_bescheinigung, lg_gemeldet, verein_uuid FROM athlet
+SELECT uuid, vorname, name, geschlecht, jahrgang, gewicht, startberechtigt, verein_uuid FROM athlet
 WHERE vorname = 'No' and name = 'Name' and jahrgang = '9999'
 ORDER BY verein_uuid ASC
 `
@@ -111,8 +109,7 @@ func (q *Queries) GetAllNNAthleten(ctx context.Context) ([]*Athlet, error) {
 			&i.Geschlecht,
 			&i.Jahrgang,
 			&i.Gewicht,
-			&i.AerztlicheBescheinigung,
-			&i.LgGemeldet,
+			&i.Startberechtigt,
 			&i.VereinUuid,
 		); err != nil {
 			return nil, err
@@ -126,7 +123,7 @@ func (q *Queries) GetAllNNAthleten(ctx context.Context) ([]*Athlet, error) {
 }
 
 const getAthletMinimal = `-- name: GetAthletMinimal :one
-SELECT uuid, vorname, name, geschlecht, jahrgang, gewicht, aerztliche_bescheinigung, lg_gemeldet, verein_uuid FROM athlet
+SELECT uuid, vorname, name, geschlecht, jahrgang, gewicht, startberechtigt, verein_uuid FROM athlet
 WHERE uuid = $1 LIMIT 1
 `
 
@@ -140,8 +137,7 @@ func (q *Queries) GetAthletMinimal(ctx context.Context, argUuid uuid.UUID) (*Ath
 		&i.Geschlecht,
 		&i.Jahrgang,
 		&i.Gewicht,
-		&i.AerztlicheBescheinigung,
-		&i.LgGemeldet,
+		&i.Startberechtigt,
 		&i.VereinUuid,
 	)
 	return &i, err

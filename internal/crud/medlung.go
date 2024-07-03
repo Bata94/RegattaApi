@@ -106,5 +106,11 @@ func UpdateMeldungSetzung(p sqlc.UpdateMeldungSetzungParams) error {
 	defer cancel()
 
 	return DB.Queries.UpdateMeldungSetzung(ctx, p)
+}
 
+func UpdateStartNummer(p sqlc.UpdateStartNummerParams) error {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	return DB.Queries.UpdateStartNummer(ctx, p)
 }

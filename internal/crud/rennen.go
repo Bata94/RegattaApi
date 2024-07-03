@@ -116,7 +116,7 @@ type Rennen struct {
 
 type RennenWithMeldung struct {
 	*Rennen
-	Meldungen []*sqlc.Meldung
+	Meldungen []*sqlc.Meldung `json:"meldungen"`
 }
 
 func sqlcRennenToCrudRennen(q []*sqlc.GetAllRennenWithMeldRow, getEmptyRennen bool) ([]*RennenWithMeldung, error) {
@@ -411,6 +411,7 @@ func GetRennen(uuid uuid.UUID) (*RennenWithMeldung, error) {
 		})
 	}
 	r.NumMeldungen = len(r.Meldungen)
+	r.NumAbteilungen = int(numAbt)
 
 	return &r, nil
 }

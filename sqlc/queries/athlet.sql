@@ -13,7 +13,7 @@ ORDER BY verein_uuid ASC;
 
 -- name: CreateAthlet :one
 INSERT INTO athlet
-(uuid, verein_uuid, name, vorname, jahrgang, aerztliche_bescheinigung, geschlecht)
+(uuid, verein_uuid, name, vorname, jahrgang, startberechtigt, geschlecht)
 VALUES
 ($1, $2, $3, $4, $5, $6, $7)
 RETURNING *;

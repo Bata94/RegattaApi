@@ -173,3 +173,19 @@ func (q *Queries) UpdateMeldungSetzung(ctx context.Context, arg UpdateMeldungSet
 	_, err := q.db.Exec(ctx, updateMeldungSetzung, arg.Uuid, arg.Abteilung, arg.Bahn)
 	return err
 }
+
+const updateStartNummer = `-- name: UpdateStartNummer :exec
+UPDATE meldung
+SET start_nummer = $2
+WHERE uuid = $1
+`
+
+type UpdateStartNummerParams struct {
+	Uuid        uuid.UUID `json:"uuid"`
+	StartNummer *int32    `json:"start_nummer"`
+}
+
+func (q *Queries) UpdateStartNummer(ctx context.Context, arg UpdateStartNummerParams) error {
+	_, err := q.db.Exec(ctx, updateStartNummer, arg.Uuid, arg.StartNummer)
+	return err
+}
