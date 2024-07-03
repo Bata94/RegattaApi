@@ -6,8 +6,14 @@ import (
 	"github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/handlers/api"
 	"github.com/bata94/RegattaApi/internal/sqlc"
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 )
+
+type UpdateSetzungBatchParams struct {
+	RennenUUID uuid.UUID                          `json:"rennen_uuid"`
+	Meldungen  []*sqlc.UpdateMeldungSetzungParams `json:"meldungen"`
+}
 
 type CreateMeldungParams struct {
 	*sqlc.CreateMeldungParams
@@ -105,7 +111,27 @@ func UpdateMeldungSetzung(p sqlc.UpdateMeldungSetzungParams) error {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
+	log.Debugf("Updating Meldung %s to Abt: %d, Bahn: %d", p.Uuid, p.Abteilung, p.Bahn)
 	return DB.Queries.UpdateMeldungSetzung(ctx, p)
+}
+
+func UpdateSetzungBatch(p UpdateSetzungBatchParams) error {
+	if len(p.Meldungen) == 0 {
+		return &api.BAD_REQUEST
+	}
+
+	for _, m := range p.Meldungen {
+		err := UpdateMeldungSetzung(sqlc.UpdateMeldungSetzungParams{
+			Uuid:      m.Uuid,
+			Abteilung: m.Abteilung,
+			Bahn:      m.Bahn,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func UpdateStartNummer(p sqlc.UpdateStartNummerParams) error {

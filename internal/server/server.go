@@ -168,8 +168,10 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		meldungV1 := v1.Group("/meldung")
 		meldungV1.Get("/", api_v1.GetAllMeldung)
 		meldungV1.Get("/:uuid", api_v1.GetMeldung)
+		meldungV1.Post("/updateSetzungBatch", api_v1.UpdateSetzungBatch)
 
 		usersV1 := v1.Group("/users", middleware.Protected())
+		usersV1 := v1.Group("/users")
 		usersV1.Get("", api_v1.GetAllUsers)
 		usersV1.Get("/:ulid", api_v1.GetUser)
 		usersV1.Get("/name/:name", api_v1.GetUserByName)

@@ -33,3 +33,18 @@ func GetMeldung(c *fiber.Ctx) error {
 
 	return c.JSON(m)
 }
+
+func UpdateSetzungBatch(c *fiber.Ctx) error {
+	params := new(crud.UpdateSetzungBatchParams)
+	err := c.BodyParser(params)
+	if err != nil {
+		return err
+	}
+
+	err = crud.UpdateSetzungBatch(*params)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON("Setzung erfolgreich aktualisiert!")
+}
