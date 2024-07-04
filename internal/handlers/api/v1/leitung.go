@@ -293,7 +293,12 @@ func ImportDrvJson(filePath string) error {
 		}
 	}
 
-	allRennen, err := crud.GetAllRennen()
+	allRennen, err := crud.GetAllRennen(&crud.GetAllRennenParams{
+		GetMeldungen:  false,
+		ShowEmpty:     true,
+		ShowStarted:   true,
+		ShowWettkampf: sqlc.NullWettkampf{},
+	})
 	if err != nil {
 		return err
 	}
@@ -447,7 +452,7 @@ func ImportDrvJson(filePath string) error {
 	return nil
 }
 
-func getKostenForMeld(rennen []*crud.Rennen, m DrvEntries) (*int32, error) {
+func getKostenForMeld(rennen []*crud.RennenWithMeldung, m DrvEntries) (*int32, error) {
 	kosten := int32(0)
 
 	for _, r := range rennen {
@@ -530,7 +535,12 @@ func SetzungsLosung(c *fiber.Ctx) error {
 		return retErr
 	}
 
-	rLs, err := crud.GetAllRennenWithMeld(false)
+	rLs, err := crud.GetAllRennen(&crud.GetAllRennenParams{
+		GetMeldungen:  true,
+		ShowEmpty:     true,
+		ShowStarted:   true,
+		ShowWettkampf: sqlc.NullWettkampf{},
+	})
 	if err != nil {
 		return err
 	}
@@ -588,7 +598,12 @@ func SetzungsLosung(c *fiber.Ctx) error {
 		}
 	}
 
-	_, err = crud.GetAllRennenWithMeld(false)
+	_, err = crud.GetAllRennen(&crud.GetAllRennenParams{
+		GetMeldungen:  true,
+		ShowEmpty:     true,
+		ShowStarted:   true,
+		ShowWettkampf: sqlc.NullWettkampf{},
+	})
 	if err != nil {
 		return err
 	}
@@ -621,7 +636,12 @@ func ResetSetzung(c *fiber.Ctx) error {
 }
 
 func SetStartnummern(c *fiber.Ctx) error {
-	rLs, err := crud.GetAllRennenWithMeld(false)
+	rLs, err := crud.GetAllRennen(&crud.GetAllRennenParams{
+		GetMeldungen:  true,
+		ShowEmpty:     true,
+		ShowStarted:   true,
+		ShowWettkampf: sqlc.NullWettkampf{},
+	})
 	if err != nil {
 		return err
 	}
@@ -671,7 +691,12 @@ func SetZeitplan(c *fiber.Ctx) error {
 		return err
 	}
 
-	rLs, err := crud.GetAllRennenWithMeld(true)
+	rLs, err := crud.GetAllRennen(&crud.GetAllRennenParams{
+		GetMeldungen:  true,
+		ShowEmpty:     true,
+		ShowStarted:   true,
+		ShowWettkampf: sqlc.NullWettkampf{},
+	})
 	if err != nil {
 		return err
 	}

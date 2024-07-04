@@ -2,11 +2,22 @@ package api
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/oklog/ulid/v2"
 )
+
+func GetQueryParamBoolFromCtx(c *fiber.Ctx, param string, def bool) bool {
+	str := c.Query(param, "")
+	if strings.ToLower(str) == "true" || str == "yes" || str == "1" {
+		return true
+	} else if strings.ToLower(str) == "false" || str == "no" || str == "0" {
+		return false
+	}
+	return def
+}
 
 func GetId64FromCtx(c *fiber.Ctx) (int64, error) {
 	idStr := c.Params("id", "")

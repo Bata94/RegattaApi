@@ -15,7 +15,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
-	"github.com/gofiber/fiber/v2/middleware/cache"
+	// "github.com/gofiber/fiber/v2/middleware/cache"
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 
@@ -24,7 +24,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/helmet"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/monitor"
-	"github.com/gofiber/fiber/v2/utils"
+	// "github.com/gofiber/fiber/v2/utils"
 	//  _ "github.com/bata94/RegattaApi/docs"
 	// "github.com/gofiber/swagger"
 )
@@ -47,20 +47,20 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 	// 	MaxBytes:             0,
 	// 	Methods:              []string{fiber.MethodGet, fiber.MethodHead},
 	// })
-	defApiCacheMid := cache.New(cache.Config{
-		Next:         nil,
-		Expiration:   5 * time.Second,
-		CacheHeader:  "X-Cache",
-		CacheControl: false,
-		KeyGenerator: func(c *fiber.Ctx) string {
-			return utils.CopyString(c.Path())
-		},
-		ExpirationGenerator:  nil,
-		StoreResponseHeaders: false,
-		Storage:              nil,
-		MaxBytes:             0,
-		Methods:              []string{fiber.MethodGet, fiber.MethodHead},
-	})
+	// defApiCacheMid := cache.New(cache.Config{
+	// 	Next:         nil,
+	// 	Expiration:   5 * time.Second,
+	// 	CacheHeader:  "X-Cache",
+	// 	CacheControl: false,
+	// 	KeyGenerator: func(c *fiber.Ctx) string {
+	// 		return utils.CopyString(c.Path())
+	// 	},
+	// 	ExpirationGenerator:  nil,
+	// 	StoreResponseHeaders: false,
+	// 	Storage:              nil,
+	// 	MaxBytes:             0,
+	// 	Methods:              []string{fiber.MethodGet, fiber.MethodHead},
+	// })
 	// defAssetCacheMid := cache.New(cache.Config{
 	// 	Next:         nil,
 	// 	Expiration:   30 * time.Minute,
@@ -148,7 +148,7 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		auth.Post("/login", api_v1.Login)
 		auth.Post("/logout", api_v1.Logout)
 
-		v1 := api.Group("/v1", middleware.Protected(), apiCompressor, defApiCacheMid)
+		v1 := api.Group("/v1", middleware.Protected(), apiCompressor)
 		v1.Get("/test", api_v1.TestHandler)
 
 		athletV1 := v1.Group("/athlet")

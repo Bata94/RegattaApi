@@ -5,91 +5,106 @@ import (
 	"errors"
 	"slices"
 
+	"github.com/gofiber/fiber/v2/log"
+
 	"github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/handlers/api"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/google/uuid"
 )
 
-func GetAllRennen() ([]*Rennen, error) {
+type GetAllRennenParams struct {
+	GetMeldungen  bool
+	ShowEmpty     bool
+	ShowStarted   bool
+	ShowWettkampf sqlc.NullWettkampf
+}
+
+func GetAllRennen(p *GetAllRennenParams) ([]*RennenWithMeldung, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	q, err := DB.Queries.GetAllRennenWithMeld(ctx)
+	log.Debug("GetMeldungen: ", p.GetMeldungen, " ShowEmpty: ", p.ShowEmpty, " ShowStarted: ", p.ShowStarted, " ShowWettkampf: ", p.ShowWettkampf)
+	var (
+		q   []*sqlc.GetAllRennenWithMeldRow
+		err error
+	)
+
+	if p.ShowWettkampf.Valid == false || p.ShowWettkampf.Wettkampf == "" {
+		q, err = DB.Queries.GetAllRennenWithMeld(ctx)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		qDirty, err := DB.Queries.GetAllRennenByWettkampf(ctx, p.ShowWettkampf.Wettkampf)
+		if err != nil {
+			return nil, err
+		}
+		for _, r := range qDirty {
+			q = append(q, &sqlc.GetAllRennenWithMeldRow{
+				Uuid:               r.Uuid,
+				SortID:             r.SortID,
+				Nummer:             r.Nummer,
+				Bezeichnung:        r.Bezeichnung,
+				BezeichnungLang:    r.BezeichnungLang,
+				Zusatz:             r.Zusatz,
+				Leichtgewicht:      r.Leichtgewicht,
+				Geschlecht:         r.Geschlecht,
+				Bootsklasse:        r.Bootsklasse,
+				BootsklasseLang:    r.BootsklasseLang,
+				Altersklasse:       r.Altersklasse,
+				AltersklasseLang:   r.AltersklasseLang,
+				Tag:                r.Tag,
+				Wettkampf:          r.Wettkampf,
+				KostenEur:          r.KostenEur,
+				Rennabstand:        r.Rennabstand,
+				Startzeit:          r.Startzeit,
+				Uuid_2:             r.Uuid_2,
+				DrvRevisionUuid:    r.DrvRevisionUuid,
+				Typ:                r.Typ,
+				Bemerkung:          r.Bemerkung,
+				Abgemeldet:         r.Abgemeldet,
+				Dns:                r.Dns,
+				Dnf:                r.Dnf,
+				Dsq:                r.Dsq,
+				ZeitnahmeBemerkung: r.ZeitnahmeBemerkung,
+				StartNummer:        r.StartNummer,
+				Abteilung:          r.Abteilung,
+				Bahn:               r.Bahn,
+				Kosten:             r.Kosten,
+				VereinUuid:         r.VereinUuid,
+				RennenUuid:         r.RennenUuid,
+			})
+		}
+	}
+
+	log.Debug(len(q))
+	rLs, err := sqlcRennenToCrudRennen(q, true)
 	if err != nil {
 		return nil, err
 	}
+	retLs := []*RennenWithMeldung{}
 
-	// TODO: move to func
-	qParsed := []*sqlc.GetAllRennenWithMeldRow{}
-	for _, r := range q {
-		qParsed = append(qParsed, &sqlc.GetAllRennenWithMeldRow{
-			Uuid:               r.Uuid,
-			SortID:             r.SortID,
-			Nummer:             r.Nummer,
-			Bezeichnung:        r.Bezeichnung,
-			BezeichnungLang:    r.BezeichnungLang,
-			Zusatz:             r.Zusatz,
-			Leichtgewicht:      r.Leichtgewicht,
-			Geschlecht:         r.Geschlecht,
-			Bootsklasse:        r.Bootsklasse,
-			BootsklasseLang:    r.BootsklasseLang,
-			Altersklasse:       r.Altersklasse,
-			AltersklasseLang:   r.AltersklasseLang,
-			Tag:                r.Tag,
-			Wettkampf:          r.Wettkampf,
-			KostenEur:          r.KostenEur,
-			Rennabstand:        r.Rennabstand,
-			Startzeit:          r.Startzeit,
-			Uuid_2:             r.Uuid_2,
-			DrvRevisionUuid:    r.DrvRevisionUuid,
-			Typ:                r.Typ,
-			Bemerkung:          r.Bemerkung,
-			Abgemeldet:         r.Abgemeldet,
-			Dns:                r.Dns,
-			Dnf:                r.Dnf,
-			Dsq:                r.Dsq,
-			ZeitnahmeBemerkung: r.ZeitnahmeBemerkung,
-			StartNummer:        r.StartNummer,
-			Abteilung:          r.Abteilung,
-			Bahn:               r.Bahn,
-			Kosten:             r.Kosten,
-			VereinUuid:         r.VereinUuid,
-			RennenUuid:         r.RennenUuid,
-		})
-	}
-
-	rLs, err := sqlcRennenToCrudRennen(qParsed, true)
-	if err != nil {
-		return nil, err
-	}
-
-	rennenLs := []*Rennen{}
+	log.Debug(len(rLs))
 	for _, r := range rLs {
-		rennenLs = append(rennenLs, &Rennen{
-			Uuid:             r.Uuid,
-			SortID:           r.SortID,
-			Nummer:           r.Nummer,
-			Bezeichnung:      r.Bezeichnung,
-			BezeichnungLang:  r.BezeichnungLang,
-			Zusatz:           r.Zusatz,
-			Leichtgewicht:    r.Leichtgewicht,
-			Geschlecht:       r.Geschlecht,
-			Bootsklasse:      r.Bootsklasse,
-			BootsklasseLang:  r.BootsklasseLang,
-			Altersklasse:     r.Altersklasse,
-			AltersklasseLang: r.AltersklasseLang,
-			Tag:              r.Tag,
-			Wettkampf:        r.Wettkampf,
-			KostenEur:        r.KostenEur,
-			Rennabstand:      r.Rennabstand,
-			Startzeit:        r.Startzeit,
-			NumMeldungen:     r.NumMeldungen,
-			NumAbteilungen:   r.NumAbteilungen,
+		meldungen := []*sqlc.Meldung{}
+		if p.GetMeldungen == true {
+			meldungen = r.Meldungen
+		}
+		if p.ShowStarted == false {
+			// TODO: Implement!
+		}
+		if p.ShowEmpty == false && r.NumMeldungen == 0 {
+			continue
+		}
+
+		retLs = append(retLs, &RennenWithMeldung{
+			Rennen:    r.Rennen,
+			Meldungen: meldungen,
 		})
 	}
 
-	return rennenLs, nil
+	return retLs, nil
 }
 
 type Rennen struct {
@@ -232,103 +247,6 @@ func sqlcRennenToCrudRennen(q []*sqlc.GetAllRennenWithMeldRow, getEmptyRennen bo
 	}
 
 	return rLs, nil
-}
-
-func GetAllRennenWithMeld(getEmptyRennen bool) ([]*RennenWithMeldung, error) {
-	ctx, cancel := getCtxWithTo()
-	defer cancel()
-
-	q, err := DB.Queries.GetAllRennenWithMeld(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	rLs, err := sqlcRennenToCrudRennen(q, getEmptyRennen)
-	if err != nil {
-		return nil, err
-	}
-
-	return rLs, nil
-}
-
-func GetAllRennenByWettkampf(wettkampf sqlc.Wettkampf, showStarted, showEmpty bool) ([]*Rennen, error) {
-	ctx, cancel := getCtxWithTo()
-	defer cancel()
-
-	q, err := DB.Queries.GetAllRennenByWettkampf(ctx, wettkampf)
-	if err != nil {
-		return nil, err
-	}
-
-	qParsed := []*sqlc.GetAllRennenWithMeldRow{}
-	for _, r := range q {
-		qParsed = append(qParsed, &sqlc.GetAllRennenWithMeldRow{
-			Uuid:               r.Uuid,
-			SortID:             r.SortID,
-			Nummer:             r.Nummer,
-			Bezeichnung:        r.Bezeichnung,
-			BezeichnungLang:    r.BezeichnungLang,
-			Zusatz:             r.Zusatz,
-			Leichtgewicht:      r.Leichtgewicht,
-			Geschlecht:         r.Geschlecht,
-			Bootsklasse:        r.Bootsklasse,
-			BootsklasseLang:    r.BootsklasseLang,
-			Altersklasse:       r.Altersklasse,
-			AltersklasseLang:   r.AltersklasseLang,
-			Tag:                r.Tag,
-			Wettkampf:          r.Wettkampf,
-			KostenEur:          r.KostenEur,
-			Rennabstand:        r.Rennabstand,
-			Startzeit:          r.Startzeit,
-			Uuid_2:             r.Uuid_2,
-			DrvRevisionUuid:    r.DrvRevisionUuid,
-			Typ:                r.Typ,
-			Bemerkung:          r.Bemerkung,
-			Abgemeldet:         r.Abgemeldet,
-			Dns:                r.Dns,
-			Dnf:                r.Dnf,
-			Dsq:                r.Dsq,
-			ZeitnahmeBemerkung: r.ZeitnahmeBemerkung,
-			StartNummer:        r.StartNummer,
-			Abteilung:          r.Abteilung,
-			Bahn:               r.Bahn,
-			Kosten:             r.Kosten,
-			VereinUuid:         r.VereinUuid,
-			RennenUuid:         r.RennenUuid,
-		})
-	}
-
-	rLs, err := sqlcRennenToCrudRennen(qParsed, showEmpty)
-	if err != nil {
-		return nil, err
-	}
-
-	rennenLs := []*Rennen{}
-	for _, r := range rLs {
-		rennenLs = append(rennenLs, &Rennen{
-			Uuid:             r.Uuid,
-			SortID:           r.SortID,
-			Nummer:           r.Nummer,
-			Bezeichnung:      r.Bezeichnung,
-			BezeichnungLang:  r.BezeichnungLang,
-			Zusatz:           r.Zusatz,
-			Leichtgewicht:    r.Leichtgewicht,
-			Geschlecht:       r.Geschlecht,
-			Bootsklasse:      r.Bootsklasse,
-			BootsklasseLang:  r.BootsklasseLang,
-			Altersklasse:     r.Altersklasse,
-			AltersklasseLang: r.AltersklasseLang,
-			Tag:              r.Tag,
-			Wettkampf:        r.Wettkampf,
-			KostenEur:        r.KostenEur,
-			Rennabstand:      r.Rennabstand,
-			Startzeit:        r.Startzeit,
-			NumMeldungen:     r.NumMeldungen,
-			NumAbteilungen:   r.NumAbteilungen,
-		})
-	}
-
-	return rennenLs, nil
 }
 
 func GetRennenMinimal(uuid uuid.UUID) (*sqlc.Rennen, error) {

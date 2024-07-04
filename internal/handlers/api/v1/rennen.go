@@ -1,8 +1,6 @@
 package api_v1
 
 import (
-	"strings"
-
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handlers/api"
 	"github.com/bata94/RegattaApi/internal/sqlc"
@@ -26,57 +24,26 @@ func GetRennen(c *fiber.Ctx) error {
 }
 
 func GetAllRennen(c *fiber.Ctx) error {
-	withMeldStr := c.Query("withMeld", "")
-	withMeld := false
-	if strings.ToLower(withMeldStr) == "true" || withMeldStr == "yes" || withMeldStr == "1" {
-		withMeld = true
-	}
-
-	showEmptyStr := c.Query("showEmpty", "")
-	showEmpty := false
-	if strings.ToLower(showEmptyStr) == "true" || showEmptyStr == "yes" || showEmptyStr == "1" {
-		showEmpty = true
-	}
-
-	if withMeld {
-		rLs, err := crud.GetAllRennenWithMeld(showEmpty)
-		if err != nil {
-			return err
+	getMeld := api.GetQueryParamBoolFromCtx(c, "getMeld", false)
+	showEmpty := api.GetQueryParamBoolFromCtx(c, "showEmpty", true)
+	showStarted := api.GetQueryParamBoolFromCtx(c, "showStarted", true)
+	showWettkampfStr := c.Query("wettkampf", "")
+	showWettkampf := sqlc.NullWettkampf{}
+	if showWettkampfStr != "" {
+		caser := cases.Title(language.German)
+		showWettkampfStr = caser.String(showWettkampfStr)
+		showWettkampf = sqlc.NullWettkampf{
+			Wettkampf: sqlc.Wettkampf(showWettkampfStr),
+			Valid:     true,
 		}
-		return c.JSON(rLs)
 	}
 
-	rLs, err := crud.GetAllRennen()
-	if err != nil {
-		return err
-	}
-	return c.JSON(rLs)
-}
-
-func GetAllRennenByWettkampf(c *fiber.Ctx) error {
-	wettkampfStr, err := api.GetStrParamFromCtx(c, "wettkampf")
-	if err != nil {
-		retErr := api.BAD_REQUEST
-		retErr.Details = err.Error()
-		return &retErr
-	}
-	caser := cases.Title(language.German)
-	wettkampfStr = caser.String(wettkampfStr)
-	wettkampf := sqlc.Wettkampf(wettkampfStr)
-
-	showEmptyStr := c.Query("showEmpty", "")
-	showEmpty := false
-	if strings.ToLower(showEmptyStr) == "true" || showEmptyStr == "yes" || showEmptyStr == "1" {
-		showEmpty = true
-	}
-
-	showStartedStr := c.Query("showStarted", "")
-	showStarted := false
-	if strings.ToLower(showStartedStr) == "true" || showStartedStr == "yes" || showStartedStr == "1" {
-		showStarted = true
-	}
-
-	rLs, err := crud.GetAllRennenByWettkampf(wettkampf, showStarted, showEmpty)
+	rLs, err := crud.GetAllRennen(&crud.GetAllRennenParams{
+		GetMeldungen:  getMeld,
+		ShowEmpty:     showEmpty,
+		ShowStarted:   showStarted,
+		ShowWettkampf: showWettkampf,
+	})
 	if err != nil {
 		return err
 	}
