@@ -156,19 +156,35 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		athletV1.Get("/:uuid", api_v1.GetAthlet)
 		athletV1.Post("", api_v1.CreateAthlet)
 
-		vereinV1 := v1.Group("/verein")
-		vereinV1.Get("", api_v1.GetAllVerein)
-		vereinV1.Get("/:uuid", api_v1.GetVerein)
+		bueroV1 := v1.Group("/buero")
+		bueroV1.Post("/abmeldung", api_v1.Abmeldung)
+		bueroV1.Post("/ummeldung", api_v1.Ummeldung)
+		bueroV1.Post("/nachmeldung", api_v1.Nachmeldung)
+		bueroV1.Post("/startnummernausgabe", api_v1.StartnummernAusgabe)
+		bueroV1.Post("/startnummernwechsel", api_v1.StartnummernWechsel)
+		bueroV1.Post("/kasse/einzahlung", api_v1.KasseEinzahlung)
 
-		rennenV1 := v1.Group("/rennen")
-		rennenV1.Get("", api_v1.GetAllRennen)
-		rennenV1.Get("/:uuid", api_v1.GetRennen)
-		rennenV1.Get("/wettkampf/:wettkampf", api_v1.GetAllRennenByWettkampf)
+		leitungV1 := v1.Group("/leitung")
+		leitungV1.Post("/drv_meldung_upload", api_v1.DrvMeldungUpload)
+		leitungV1.Post("/SetzungsLosung", api_v1.SetzungsLosung)
+		leitungV1.Post("/SetzungsLosung/reset", api_v1.ResetSetzung)
+		leitungV1.Post("/SetZeitplan", api_v1.SetZeitplan)
+		leitungV1.Post("/SetStartnummern", api_v1.SetStartnummern)
 
 		meldungV1 := v1.Group("/meldung")
 		meldungV1.Get("/", api_v1.GetAllMeldung)
 		meldungV1.Get("/:uuid", api_v1.GetMeldung)
 		meldungV1.Post("/updateSetzungBatch", api_v1.UpdateSetzungBatch)
+
+		pausenV1 := v1.Group("/pause")
+		pausenV1.Get("", api_v1.GetAllPausen)
+		pausenV1.Get("/:id", api_v1.GetPause)
+		pausenV1.Post("/", api_v1.CreatePause)
+		pausenV1.Put("/", api_v1.UpdatePause)
+
+		rennenV1 := v1.Group("/rennen")
+		rennenV1.Get("", api_v1.GetAllRennen)
+		rennenV1.Get("/:uuid", api_v1.GetRennen)
 
 		usersV1 := v1.Group("/users")
 		usersV1.Get("", api_v1.GetAllUsers)
@@ -179,16 +195,9 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		usersV1.Get("/group/:ulid", api_v1.GetUsersGroup)
 		usersV1.Get("/group/name/:name", api_v1.GetUsersGroupByName)
 
-    pausenV1 := v1.Group("/pause")
-    pausenV1.Get("", api_v1.GetAllPausen)
-    pausenV1.Get("/:id", api_v1.GetAllPausen)
-
-		leitungV1 := v1.Group("/leitung")
-		leitungV1.Post("/drv_meldung_upload", api_v1.DrvMeldungUpload)
-		leitungV1.Post("/SetzungsLosung", api_v1.SetzungsLosung)
-		leitungV1.Post("/SetzungsLosung/reset", api_v1.ResetSetzung)
-		leitungV1.Post("/SetZeitplan", api_v1.SetZeitplan)
-		leitungV1.Post("/SetStartnummern", api_v1.SetStartnummern)
+		vereinV1 := v1.Group("/verein")
+		vereinV1.Get("", api_v1.GetAllVerein)
+		vereinV1.Get("/:uuid", api_v1.GetVerein)
 	}
 
 	if frontendEnabled {
