@@ -179,6 +179,7 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		pausenV1 := v1.Group("/pause")
 		pausenV1.Get("", api_v1.GetAllPausen)
 		pausenV1.Get("/:id", api_v1.GetPause)
+		pausenV1.Delete("/:id", api_v1.DeletePause)
 		pausenV1.Post("/", api_v1.CreatePause)
 		pausenV1.Put("/", api_v1.UpdatePause)
 

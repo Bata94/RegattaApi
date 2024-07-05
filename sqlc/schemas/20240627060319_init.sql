@@ -28,7 +28,6 @@ CREATE TABLE athlet (
   CONSTRAINT fk_verein FOREIGN KEY (verein_uuid) REFERENCES verein(uuid)
 );
 
-
 CREATE TABLE zeitnahme_start (
   id SERIAL PRIMARY KEY,
   rennen_nummer text,

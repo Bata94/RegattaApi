@@ -13,28 +13,35 @@ import (
 
 const createPause = `-- name: CreatePause :one
 INSERT INTO pause (
-  id,
   laenge,
   nach_rennen_uuid
 ) VALUES (
   $1,
-  $2,
-  $3
+  $2
 )
 RETURNING id, laenge, nach_rennen_uuid
 `
 
 type CreatePauseParams struct {
-	ID             int32     `json:"id"`
 	Laenge         int32     `json:"laenge"`
 	NachRennenUuid uuid.UUID `json:"nach_rennen_uuid"`
 }
 
 func (q *Queries) CreatePause(ctx context.Context, arg CreatePauseParams) (*Pause, error) {
-	row := q.db.QueryRow(ctx, createPause, arg.ID, arg.Laenge, arg.NachRennenUuid)
+	row := q.db.QueryRow(ctx, createPause, arg.Laenge, arg.NachRennenUuid)
 	var i Pause
 	err := row.Scan(&i.ID, &i.Laenge, &i.NachRennenUuid)
 	return &i, err
+}
+
+const deletePause = `-- name: DeletePause :exec
+DELETE FROM pause
+WHERE id = $1
+`
+
+func (q *Queries) DeletePause(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, deletePause, id)
+	return err
 }
 
 const getAllPause = `-- name: GetAllPause :many
@@ -76,19 +83,18 @@ func (q *Queries) GetPause(ctx context.Context, id int32) (*Pause, error) {
 
 const updatePause = `-- name: UpdatePause :one
 UPDATE pause
-SET laenge = $2, nach_rennen_uuid = $3
+SET laenge = $2
 WHERE id = $1
 RETURNING id, laenge, nach_rennen_uuid
 `
 
 type UpdatePauseParams struct {
-	ID             int32     `json:"id"`
-	Laenge         int32     `json:"laenge"`
-	NachRennenUuid uuid.UUID `json:"nach_rennen_uuid"`
+	ID     int32 `json:"id"`
+	Laenge int32 `json:"laenge"`
 }
 
 func (q *Queries) UpdatePause(ctx context.Context, arg UpdatePauseParams) (*Pause, error) {
-	row := q.db.QueryRow(ctx, updatePause, arg.ID, arg.Laenge, arg.NachRennenUuid)
+	row := q.db.QueryRow(ctx, updatePause, arg.ID, arg.Laenge)
 	var i Pause
 	err := row.Scan(&i.ID, &i.Laenge, &i.NachRennenUuid)
 	return &i, err
