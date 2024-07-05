@@ -262,11 +262,11 @@ func GetRennenMinimal(uuid uuid.UUID) (*sqlc.Rennen, error) {
 	return r, nil
 }
 
-func GetRennen(uuid uuid.UUID) (*RennenWithMeldung, error) {
+func GetRennen(uuidParam uuid.UUID) (*RennenWithMeldung, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	q, err := DB.Queries.GetRennen(ctx, uuid)
+	q, err := DB.Queries.GetRennen(ctx, uuidParam)
 	if err != nil {
 		if isNoRowError(err) {
 			return nil, &api.NOT_FOUND
@@ -303,33 +303,36 @@ func GetRennen(uuid uuid.UUID) (*RennenWithMeldung, error) {
 	}
 
 	numAbt := int32(0)
-	for _, row := range q {
-		if numAbt < *row.Abteilung {
-			numAbt = *row.Abteilung
-		}
+  log.Debug(q[0].Uuid_2)
+  if q[0].Uuid_2 != uuid.Nil {
+    for _, row := range q {
+      if numAbt < *row.Abteilung {
+        numAbt = *row.Abteilung
+      }
 
-		r.Meldungen = append(r.Meldungen, &sqlc.Meldung{
-			Uuid:               row.Uuid_2,
-			DrvRevisionUuid:    row.DrvRevisionUuid,
-			Typ:                *row.Typ,
-			Bemerkung:          row.Bemerkung,
-			Abgemeldet:         row.Abgemeldet,
-			Dns:                row.Dns,
-			Dnf:                row.Dnf,
-			Dsq:                row.Dsq,
-			ZeitnahmeBemerkung: row.ZeitnahmeBemerkung,
-			StartNummer:        row.StartNummer,
-			Abteilung:          row.Abteilung,
-			Bahn:               row.Bahn,
-			Kosten:             *row.Kosten,
-			VereinUuid:         row.VereinUuid,
-			RennenUuid:         row.RennenUuid,
-		})
-	}
-	r.NumMeldungen = len(r.Meldungen)
-	r.NumAbteilungen = int(numAbt)
+      r.Meldungen = append(r.Meldungen, &sqlc.Meldung{
+        Uuid:               row.Uuid_2,
+        DrvRevisionUuid:    row.DrvRevisionUuid,
+        Typ:                *row.Typ,
+        Bemerkung:          row.Bemerkung,
+        Abgemeldet:         row.Abgemeldet,
+        Dns:                row.Dns,
+        Dnf:                row.Dnf,
+        Dsq:                row.Dsq,
+        ZeitnahmeBemerkung: row.ZeitnahmeBemerkung,
+        StartNummer:        row.StartNummer,
+        Abteilung:          row.Abteilung,
+        Bahn:               row.Bahn,
+        Kosten:             *row.Kosten,
+        VereinUuid:         row.VereinUuid,
+        RennenUuid:         row.RennenUuid,
+      })
+    }
+  }
+  r.NumMeldungen = len(r.Meldungen)
+  r.NumAbteilungen = int(numAbt)
 
-	return &r, nil
+  return &r, nil
 }
 
 func UpdateStartZeit(params sqlc.UpdateStartZeitParams) error {
