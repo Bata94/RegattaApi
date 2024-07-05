@@ -682,8 +682,6 @@ type SetZeitplanParams struct {
 	SoStartStunde int `json:"so_start_stunde"`
 }
 
-// BUG: It is not setting time for the last race for some Reason
-// TODO: Add Pausen
 func SetZeitplan(c *fiber.Ctx) error {
 	param := new(SetZeitplanParams)
 	err := c.BodyParser(&param)
@@ -701,13 +699,15 @@ func SetZeitplan(c *fiber.Ctx) error {
 		return err
 	}
 
+  pLs, err := crud.GetAllPausen()
+  if err != nil {
+    return err
+  }
+
 	curStartTimeSa, err := time.Parse("15:04", fmt.Sprintf("%d:00", param.SaStartStunde))
 	curStartTimeSo, err := time.Parse("15:04", fmt.Sprintf("%d:00", param.SoStartStunde))
 
-	log.Debug(curStartTimeSa, curStartTimeSo)
-	log.Debug(len(rLs))
-	for i, r := range rLs {
-		log.Debug(i, r.Nummer, *r.Bezeichnung)
+	for _, r := range rLs {
 		if r.Tag == sqlc.TagSa {
 			saTimeStr := curStartTimeSa.Format("15:04")
 
@@ -720,7 +720,28 @@ func SetZeitplan(c *fiber.Ctx) error {
 			}
 
 			rennenDur := time.Duration(r.NumAbteilungen*int(*r.Rennabstand)) * time.Minute
+      if r.Wettkampf == sqlc.WettkampfLangstrecke {
+        rennenDur = time.Duration(r.NumMeldungen*int(*r.Rennabstand)) * time.Minute
+      }
 			curStartTimeSa = curStartTimeSa.Add(rennenDur)
+
+      for _, p := range pLs {
+        if p.NachRennenUuid == r.Uuid {
+          pausenDur := time.Duration(p.Laenge) * time.Minute
+          curStartTimeSa = curStartTimeSa.Add(pausenDur)
+
+          curMinuteStr := fmt.Sprint(curStartTimeSa.Minute())
+          curMinute, err := strconv.Atoi(curMinuteStr[1:])
+          if err != nil {
+            log.Error(err)
+            continue
+          }
+
+          roundingMinutes := 10 - curMinute
+          roundingDur := time.Duration(roundingMinutes) * time.Minute
+          curStartTimeSa = curStartTimeSa.Add(roundingDur)
+        }
+      }
 		} else if r.Tag == sqlc.TagSo {
 			soTimeStr := curStartTimeSo.Format("15:04")
 
@@ -734,6 +755,24 @@ func SetZeitplan(c *fiber.Ctx) error {
 
 			rennenDur := time.Duration(r.NumAbteilungen*int(*r.Rennabstand)) * time.Minute
 			curStartTimeSo = curStartTimeSo.Add(rennenDur)
+
+      for _, p := range pLs {
+        if p.NachRennenUuid == r.Uuid {
+          pausenDur := time.Duration(p.Laenge) * time.Minute
+          curStartTimeSo = curStartTimeSo.Add(pausenDur)
+
+          curMinuteStr := fmt.Sprint(curStartTimeSo.Minute())
+          curMinute, err := strconv.Atoi(curMinuteStr[1:])
+          if err != nil {
+            log.Error(err)
+            continue
+          }
+
+          roundingMinutes := 10 - curMinute
+          roundingDur := time.Duration(roundingMinutes) * time.Minute
+          curStartTimeSo = curStartTimeSo.Add(roundingDur)
+        }
+      }
 		} else {
 			log.Errorf("RennenNummer %s Tag Error %s", r.Nummer, r.Tag)
 		}
