@@ -6,7 +6,6 @@ import (
 	"github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/handlers/api"
 	"github.com/bata94/RegattaApi/internal/sqlc"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 )
 
@@ -111,7 +110,6 @@ func UpdateMeldungSetzung(p sqlc.UpdateMeldungSetzungParams) error {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	log.Debugf("Updating Meldung %s to Abt: %d, Bahn: %d", p.Uuid, p.Abteilung, p.Bahn)
 	return DB.Queries.UpdateMeldungSetzung(ctx, p)
 }
 
