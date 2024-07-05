@@ -78,14 +78,12 @@ func GetAllRennen(p *GetAllRennenParams) ([]*RennenWithMeldung, error) {
 		}
 	}
 
-	log.Debug(len(q))
 	rLs, err := sqlcRennenToCrudRennen(q, true)
 	if err != nil {
 		return nil, err
 	}
 	retLs := []*RennenWithMeldung{}
 
-	log.Debug(len(rLs))
 	for _, r := range rLs {
 		meldungen := []*sqlc.Meldung{}
 		if p.GetMeldungen == true {
