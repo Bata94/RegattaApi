@@ -10,22 +10,22 @@ import (
 )
 
 type UpdateSetzungBatchParams struct {
-	RennenUUID uuid.UUID                          `json:"rennen_uuid"`
-	Meldungen  []*sqlc.UpdateMeldungSetzungParams `json:"meldungen"`
+	RennenUUID uuid.UUID                         `json:"rennen_uuid"`
+	Meldungen  []sqlc.UpdateMeldungSetzungParams `json:"meldungen"`
 }
 
 type CreateMeldungParams struct {
-	*sqlc.CreateMeldungParams
+	sqlc.CreateMeldungParams
 	Athleten []MeldungAthlet
 }
 
 type MeldungAthlet struct {
 	Uuid     uuid.UUID
-	Position *int32
+	Position int32
 	Rolle    sqlc.Rolle
 }
 
-func GetAllMeldungen() ([]*sqlc.Meldung, error) {
+func GetAllMeldungen() ([]sqlc.Meldung, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
@@ -34,22 +34,22 @@ func GetAllMeldungen() ([]*sqlc.Meldung, error) {
 		return nil, err
 	}
 	if mLs == nil {
-		mLs = []*sqlc.Meldung{}
+		mLs = []sqlc.Meldung{}
 	}
 
 	return mLs, nil
 }
 
-func GetMeldungMinimal(uuid uuid.UUID) (*sqlc.Meldung, error) {
+func GetMeldungMinimal(uuid uuid.UUID) (sqlc.Meldung, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	m, err := DB.Queries.GetMeldungMinimal(ctx, uuid)
 	if err != nil {
 		if isNoRowError(err) {
-			return nil, &api.NOT_FOUND
+			return sqlc.Meldung{}, &api.NOT_FOUND
 		}
-		return nil, err
+		return sqlc.Meldung{}, err
 	}
 
 	return m, nil
@@ -59,7 +59,7 @@ func CheckMeldungSetzung() (bool, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	m, err := DB.Queries.CheckMedlungSetzung(ctx)
+	_, err := DB.Queries.CheckMedlungSetzung(ctx)
 	if err != nil {
 		if isNoRowError(err) {
 			return false, nil
@@ -67,21 +67,17 @@ func CheckMeldungSetzung() (bool, error) {
 		return true, err
 	}
 
-	if m != nil {
-		return true, nil
-	} else {
-		return false, nil
-	}
+	return true, nil
 }
 
-func CreateMeldung(mParams CreateMeldungParams) (*sqlc.Meldung, error) {
+func CreateMeldung(mParams CreateMeldungParams) (sqlc.Meldung, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	// TODO: Implement as Transaction!
-	m, err := DB.Queries.CreateMeldung(ctx, *mParams.CreateMeldungParams)
+	m, err := DB.Queries.CreateMeldung(ctx, mParams.CreateMeldungParams)
 	if err != nil {
-		return nil, err
+		return sqlc.Meldung{}, err
 	}
 
 	for _, a := range mParams.Athleten {
@@ -99,7 +95,7 @@ func CreateMeldung(mParams CreateMeldungParams) (*sqlc.Meldung, error) {
 				m.Uuid.String(),
 				a.Uuid.String(),
 			)
-			return nil, &retErr
+			return sqlc.Meldung{}, &retErr
 		}
 	}
 

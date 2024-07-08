@@ -20,11 +20,11 @@ RETURNING ulid, name, allowed_admin, allowed_zeitnahme, allowed_startlisten, all
 `
 
 type CreateUserGroupParams struct {
-	Name         *string `json:"name"`
-	AllowedAdmin *bool   `json:"allowed_admin"`
+	Name         string `json:"name"`
+	AllowedAdmin bool   `json:"allowed_admin"`
 }
 
-func (q *Queries) CreateUserGroup(ctx context.Context, arg CreateUserGroupParams) (*UsersGroup, error) {
+func (q *Queries) CreateUserGroup(ctx context.Context, arg CreateUserGroupParams) (UsersGroup, error) {
 	row := q.db.QueryRow(ctx, createUserGroup, arg.Name, arg.AllowedAdmin)
 	var i UsersGroup
 	err := row.Scan(
@@ -35,7 +35,7 @@ func (q *Queries) CreateUserGroup(ctx context.Context, arg CreateUserGroupParams
 		&i.AllowedStartlisten,
 		&i.AllowedRegattaleitung,
 	)
-	return &i, err
+	return i, err
 }
 
 const getAllUserGroup = `-- name: GetAllUserGroup :many
@@ -43,13 +43,13 @@ SELECT ulid, name, allowed_admin, allowed_zeitnahme, allowed_startlisten, allowe
 ORDER BY ulid
 `
 
-func (q *Queries) GetAllUserGroup(ctx context.Context) ([]*UsersGroup, error) {
+func (q *Queries) GetAllUserGroup(ctx context.Context) ([]UsersGroup, error) {
 	rows, err := q.db.Query(ctx, getAllUserGroup)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []*UsersGroup
+	items := []UsersGroup{}
 	for rows.Next() {
 		var i UsersGroup
 		if err := rows.Scan(
@@ -62,7 +62,7 @@ func (q *Queries) GetAllUserGroup(ctx context.Context) ([]*UsersGroup, error) {
 		); err != nil {
 			return nil, err
 		}
-		items = append(items, &i)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -83,13 +83,13 @@ type GetUserGroupRow struct {
 	User       User       `json:"user"`
 }
 
-func (q *Queries) GetUserGroup(ctx context.Context, ulid string) ([]*GetUserGroupRow, error) {
+func (q *Queries) GetUserGroup(ctx context.Context, ulid string) ([]GetUserGroupRow, error) {
 	rows, err := q.db.Query(ctx, getUserGroup, ulid)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []*GetUserGroupRow
+	items := []GetUserGroupRow{}
 	for rows.Next() {
 		var i GetUserGroupRow
 		if err := rows.Scan(
@@ -107,7 +107,7 @@ func (q *Queries) GetUserGroup(ctx context.Context, ulid string) ([]*GetUserGrou
 		); err != nil {
 			return nil, err
 		}
-		items = append(items, &i)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -121,7 +121,7 @@ FROM users_group
 WHERE users_group.ulid = $1
 `
 
-func (q *Queries) GetUserGroupMinimal(ctx context.Context, ulid string) (*UsersGroup, error) {
+func (q *Queries) GetUserGroupMinimal(ctx context.Context, ulid string) (UsersGroup, error) {
 	row := q.db.QueryRow(ctx, getUserGroupMinimal, ulid)
 	var i UsersGroup
 	err := row.Scan(
@@ -132,7 +132,7 @@ func (q *Queries) GetUserGroupMinimal(ctx context.Context, ulid string) (*UsersG
 		&i.AllowedStartlisten,
 		&i.AllowedRegattaleitung,
 	)
-	return &i, err
+	return i, err
 }
 
 const getUserGroupUlidByName = `-- name: GetUserGroupUlidByName :one
@@ -141,7 +141,7 @@ FROM users_group
 WHERE name = $1
 `
 
-func (q *Queries) GetUserGroupUlidByName(ctx context.Context, name *string) (string, error) {
+func (q *Queries) GetUserGroupUlidByName(ctx context.Context, name string) (string, error) {
 	row := q.db.QueryRow(ctx, getUserGroupUlidByName, name)
 	var ulid string
 	err := row.Scan(&ulid)

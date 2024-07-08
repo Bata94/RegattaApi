@@ -1,6 +1,6 @@
 -include .env
 
-sqlc-gen:
+sqlc:
 	@echo "Generating SQLC..."
 	@sqlc generate
 
@@ -18,7 +18,7 @@ db-down:
 	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose down
 
 # Generate Templ
-templ-gen:
+templ:
 	@echo "Generating Templ..."
 	@templ generate
 
@@ -39,15 +39,15 @@ swagger-fmt:
 	@swag fmt
 
 # Build the application
-build: # tailwind-gen # swagger-gen # templ-gen
+build: templ # tailwind-gen # swagger-gen
 	@echo "Building..."
 	@go build -o bin/main main.go
 
-full-build: sqlc-gen build # swagger-fmt templ-gen build
+full-build: sqlc build # swagger-fmt build
 	@echo "Full-Building..."
 
 # Run the application
-run: sqlc-gen
+run: sqlc
 	@go run main.go
 
 # Test the application

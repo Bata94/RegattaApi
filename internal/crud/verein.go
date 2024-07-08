@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func GetAllVerein() ([]*sqlc.Verein, error) {
+func GetAllVerein() ([]sqlc.Verein, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
@@ -16,34 +16,34 @@ func GetAllVerein() ([]*sqlc.Verein, error) {
 		return nil, err
 	}
 	if vLs == nil {
-		vLs = []*sqlc.Verein{}
+		vLs = []sqlc.Verein{}
 	}
 
 	return vLs, err
 }
 
-func GetVereinMinimal(uuid uuid.UUID) (*sqlc.Verein, error) {
+func GetVereinMinimal(uuid uuid.UUID) (sqlc.Verein, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	v, err := DB.Queries.GetVereinMinimal(ctx, uuid)
 	if err != nil {
 		if isNoRowError(err) {
-			return nil, &api.NOT_FOUND
+			return sqlc.Verein{}, &api.NOT_FOUND
 		}
-		return nil, err
+		return sqlc.Verein{}, err
 	}
 
 	return v, nil
 }
 
-func CreateVerein(vParams sqlc.CreateVereinParams) (*sqlc.Verein, error) {
+func CreateVerein(vParams sqlc.CreateVereinParams) (sqlc.Verein, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	v, err := DB.Queries.CreateVerein(ctx, vParams)
 	if err != nil {
-		return nil, err
+		return sqlc.Verein{}, err
 	}
 
 	return v, nil

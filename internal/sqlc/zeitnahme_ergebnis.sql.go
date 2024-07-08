@@ -26,13 +26,13 @@ INSERT INTO zeitnahme_ergebnis (
 `
 
 type CreateZeitnahmeErgebnisParams struct {
-	Endzeit          *float64  `json:"endzeit"`
+	Endzeit          float64   `json:"endzeit"`
 	ZeitnahmeStartID int32     `json:"zeitnahme_start_id"`
 	ZeitnahmeZielID  int32     `json:"zeitnahme_ziel_id"`
 	MeldungUuid      uuid.UUID `json:"meldung_uuid"`
 }
 
-func (q *Queries) CreateZeitnahmeErgebnis(ctx context.Context, arg CreateZeitnahmeErgebnisParams) (*ZeitnahmeErgebni, error) {
+func (q *Queries) CreateZeitnahmeErgebnis(ctx context.Context, arg CreateZeitnahmeErgebnisParams) (ZeitnahmeErgebni, error) {
 	row := q.db.QueryRow(ctx, createZeitnahmeErgebnis,
 		arg.Endzeit,
 		arg.ZeitnahmeStartID,
@@ -47,7 +47,7 @@ func (q *Queries) CreateZeitnahmeErgebnis(ctx context.Context, arg CreateZeitnah
 		&i.ZeitnahmeZielID,
 		&i.MeldungUuid,
 	)
-	return &i, err
+	return i, err
 }
 
 const getAllZeitnahmeErgebnis = `-- name: GetAllZeitnahmeErgebnis :many
@@ -55,13 +55,13 @@ SELECT id, endzeit, zeitnahme_start_id, zeitnahme_ziel_id, meldung_uuid FROM zei
 ORDER BY id ASC
 `
 
-func (q *Queries) GetAllZeitnahmeErgebnis(ctx context.Context) ([]*ZeitnahmeErgebni, error) {
+func (q *Queries) GetAllZeitnahmeErgebnis(ctx context.Context) ([]ZeitnahmeErgebni, error) {
 	rows, err := q.db.Query(ctx, getAllZeitnahmeErgebnis)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []*ZeitnahmeErgebni
+	items := []ZeitnahmeErgebni{}
 	for rows.Next() {
 		var i ZeitnahmeErgebni
 		if err := rows.Scan(
@@ -73,7 +73,7 @@ func (q *Queries) GetAllZeitnahmeErgebnis(ctx context.Context) ([]*ZeitnahmeErge
 		); err != nil {
 			return nil, err
 		}
-		items = append(items, &i)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -86,7 +86,7 @@ SELECT id, endzeit, zeitnahme_start_id, zeitnahme_ziel_id, meldung_uuid FROM zei
 WHERE id = $1 LIMIT 1
 `
 
-func (q *Queries) GetZeitnahmeErgebnisMinimal(ctx context.Context, id int32) (*ZeitnahmeErgebni, error) {
+func (q *Queries) GetZeitnahmeErgebnisMinimal(ctx context.Context, id int32) (ZeitnahmeErgebni, error) {
 	row := q.db.QueryRow(ctx, getZeitnahmeErgebnisMinimal, id)
 	var i ZeitnahmeErgebni
 	err := row.Scan(
@@ -96,5 +96,5 @@ func (q *Queries) GetZeitnahmeErgebnisMinimal(ctx context.Context, id int32) (*Z
 		&i.ZeitnahmeZielID,
 		&i.MeldungUuid,
 	)
-	return &i, err
+	return i, err
 }

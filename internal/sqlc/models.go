@@ -185,48 +185,48 @@ func (ns NullWettkampf) Value() (driver.Value, error) {
 }
 
 type Athlet struct {
-	Uuid            uuid.UUID  `json:"uuid"`
-	Vorname         string     `json:"vorname"`
-	Name            string     `json:"name"`
-	Geschlecht      Geschlecht `json:"geschlecht"`
-	Jahrgang        string     `json:"jahrgang"`
-	Gewicht         *int32     `json:"gewicht"`
-	Startberechtigt *bool      `json:"startberechtigt"`
-	VereinUuid      uuid.UUID  `json:"verein_uuid"`
+	Uuid            uuid.UUID   `json:"uuid"`
+	Vorname         string      `json:"vorname"`
+	Name            string      `json:"name"`
+	Geschlecht      Geschlecht  `json:"geschlecht"`
+	Jahrgang        string      `json:"jahrgang"`
+	Gewicht         pgtype.Int4 `json:"gewicht"`
+	Startberechtigt bool        `json:"startberechtigt"`
+	VereinUuid      uuid.UUID   `json:"verein_uuid"`
 }
 
 type LinkMeldungAthlet struct {
 	ID          int32     `json:"id"`
 	Rolle       Rolle     `json:"rolle"`
-	Position    *int32    `json:"position"`
+	Position    int32     `json:"position"`
 	MeldungUuid uuid.UUID `json:"meldung_uuid"`
 	AthletUuid  uuid.UUID `json:"athlet_uuid"`
 }
 
 type Meldung struct {
-	Uuid               uuid.UUID `json:"uuid"`
-	DrvRevisionUuid    uuid.UUID `json:"drv_revision_uuid"`
-	Typ                string    `json:"typ"`
-	Bemerkung          *string   `json:"bemerkung"`
-	Abgemeldet         *bool     `json:"abgemeldet"`
-	Dns                *bool     `json:"dns"`
-	Dnf                *bool     `json:"dnf"`
-	Dsq                *bool     `json:"dsq"`
-	ZeitnahmeBemerkung *string   `json:"zeitnahme_bemerkung"`
-	StartNummer        *int32    `json:"start_nummer"`
-	Abteilung          *int32    `json:"abteilung"`
-	Bahn               *int32    `json:"bahn"`
-	Kosten             int32     `json:"kosten"`
-	VereinUuid         uuid.UUID `json:"verein_uuid"`
-	RennenUuid         uuid.UUID `json:"rennen_uuid"`
+	Uuid               uuid.UUID   `json:"uuid"`
+	DrvRevisionUuid    uuid.UUID   `json:"drv_revision_uuid"`
+	Typ                string      `json:"typ"`
+	Bemerkung          pgtype.Text `json:"bemerkung"`
+	Abgemeldet         bool        `json:"abgemeldet"`
+	Dns                bool        `json:"dns"`
+	Dnf                bool        `json:"dnf"`
+	Dsq                bool        `json:"dsq"`
+	ZeitnahmeBemerkung pgtype.Text `json:"zeitnahme_bemerkung"`
+	StartNummer        int32       `json:"start_nummer"`
+	Abteilung          int32       `json:"abteilung"`
+	Bahn               int32       `json:"bahn"`
+	Kosten             int32       `json:"kosten"`
+	VereinUuid         uuid.UUID   `json:"verein_uuid"`
+	RennenUuid         uuid.UUID   `json:"rennen_uuid"`
 }
 
 type Obmann struct {
-	Uuid       uuid.UUID `json:"uuid"`
-	Name       *string   `json:"name"`
-	Email      *string   `json:"email"`
-	Phone      *string   `json:"phone"`
-	VereinUuid uuid.UUID `json:"verein_uuid"`
+	Uuid       uuid.UUID   `json:"uuid"`
+	Name       pgtype.Text `json:"name"`
+	Email      pgtype.Text `json:"email"`
+	Phone      pgtype.Text `json:"phone"`
+	VereinUuid uuid.UUID   `json:"verein_uuid"`
 }
 
 type Pause struct {
@@ -236,52 +236,52 @@ type Pause struct {
 }
 
 type Rennen struct {
-	Uuid             uuid.UUID      `json:"uuid"`
-	SortID           int32          `json:"sort_id"`
-	Nummer           string         `json:"nummer"`
-	Bezeichnung      *string        `json:"bezeichnung"`
-	BezeichnungLang  *string        `json:"bezeichnung_lang"`
-	Zusatz           *string        `json:"zusatz"`
-	Leichtgewicht    *bool          `json:"leichtgewicht"`
-	Geschlecht       NullGeschlecht `json:"geschlecht"`
-	Bootsklasse      *string        `json:"bootsklasse"`
-	BootsklasseLang  *string        `json:"bootsklasse_lang"`
-	Altersklasse     *string        `json:"altersklasse"`
-	AltersklasseLang *string        `json:"altersklasse_lang"`
-	Tag              Tag            `json:"tag"`
-	Wettkampf        Wettkampf      `json:"wettkampf"`
-	KostenEur        *int32         `json:"kosten_eur"`
-	Rennabstand      *int32         `json:"rennabstand"`
-	Startzeit        *string        `json:"startzeit"`
+	Uuid             uuid.UUID   `json:"uuid"`
+	SortID           int32       `json:"sort_id"`
+	Nummer           string      `json:"nummer"`
+	Bezeichnung      string      `json:"bezeichnung"`
+	BezeichnungLang  string      `json:"bezeichnung_lang"`
+	Zusatz           pgtype.Text `json:"zusatz"`
+	Leichtgewicht    bool        `json:"leichtgewicht"`
+	Geschlecht       Geschlecht  `json:"geschlecht"`
+	Bootsklasse      string      `json:"bootsklasse"`
+	BootsklasseLang  string      `json:"bootsklasse_lang"`
+	Altersklasse     string      `json:"altersklasse"`
+	AltersklasseLang string      `json:"altersklasse_lang"`
+	Tag              Tag         `json:"tag"`
+	Wettkampf        Wettkampf   `json:"wettkampf"`
+	KostenEur        pgtype.Int4 `json:"kosten_eur"`
+	Rennabstand      pgtype.Int4 `json:"rennabstand"`
+	Startzeit        pgtype.Text `json:"startzeit"`
 }
 
 type User struct {
-	Ulid           string  `json:"ulid"`
-	Username       *string `json:"username"`
-	HashedPassword *string `json:"hashed_password"`
-	IsActive       *bool   `json:"is_active"`
-	GroupUlid      string  `json:"group_ulid"`
+	Ulid           string `json:"ulid"`
+	Username       string `json:"username"`
+	HashedPassword string `json:"hashed_password"`
+	IsActive       bool   `json:"is_active"`
+	GroupUlid      string `json:"group_ulid"`
 }
 
 type UsersGroup struct {
-	Ulid                  string  `json:"ulid"`
-	Name                  *string `json:"name"`
-	AllowedAdmin          *bool   `json:"allowed_admin"`
-	AllowedZeitnahme      *bool   `json:"allowed_zeitnahme"`
-	AllowedStartlisten    *bool   `json:"allowed_startlisten"`
-	AllowedRegattaleitung *bool   `json:"allowed_regattaleitung"`
+	Ulid                  string `json:"ulid"`
+	Name                  string `json:"name"`
+	AllowedAdmin          bool   `json:"allowed_admin"`
+	AllowedZeitnahme      bool   `json:"allowed_zeitnahme"`
+	AllowedStartlisten    bool   `json:"allowed_startlisten"`
+	AllowedRegattaleitung bool   `json:"allowed_regattaleitung"`
 }
 
 type Verein struct {
 	Uuid     uuid.UUID `json:"uuid"`
-	Name     *string   `json:"name"`
-	Kurzform *string   `json:"kurzform"`
-	Kuerzel  *string   `json:"kuerzel"`
+	Name     string    `json:"name"`
+	Kurzform string    `json:"kurzform"`
+	Kuerzel  string    `json:"kuerzel"`
 }
 
 type ZeitnahmeErgebni struct {
 	ID               int32     `json:"id"`
-	Endzeit          *float64  `json:"endzeit"`
+	Endzeit          float64   `json:"endzeit"`
 	ZeitnahmeStartID int32     `json:"zeitnahme_start_id"`
 	ZeitnahmeZielID  int32     `json:"zeitnahme_ziel_id"`
 	MeldungUuid      uuid.UUID `json:"meldung_uuid"`
@@ -289,20 +289,20 @@ type ZeitnahmeErgebni struct {
 
 type ZeitnahmeStart struct {
 	ID              int32            `json:"id"`
-	RennenNummer    *string          `json:"rennen_nummer"`
-	StartNummer     *string          `json:"start_nummer"`
+	RennenNummer    pgtype.Text      `json:"rennen_nummer"`
+	StartNummer     string           `json:"start_nummer"`
 	TimeClient      pgtype.Timestamp `json:"time_client"`
 	TimeServer      pgtype.Timestamp `json:"time_server"`
-	MeasuredLatency *int32           `json:"measured_latency"`
-	Verarbeitet     *bool            `json:"verarbeitet"`
+	MeasuredLatency pgtype.Int4      `json:"measured_latency"`
+	Verarbeitet     bool             `json:"verarbeitet"`
 }
 
 type ZeitnahmeZiel struct {
 	ID              int32            `json:"id"`
-	RennenNummer    *string          `json:"rennen_nummer"`
-	StartNummer     *string          `json:"start_nummer"`
+	RennenNummer    pgtype.Text      `json:"rennen_nummer"`
+	StartNummer     string           `json:"start_nummer"`
 	TimeClient      pgtype.Timestamp `json:"time_client"`
 	TimeServer      pgtype.Timestamp `json:"time_server"`
-	MeasuredLatency *int32           `json:"measured_latency"`
-	Verarbeitet     *bool            `json:"verarbeitet"`
+	MeasuredLatency pgtype.Int4      `json:"measured_latency"`
+	Verarbeitet     bool             `json:"verarbeitet"`
 }

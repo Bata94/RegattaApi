@@ -11,9 +11,9 @@ CREATE TYPE ROLLE AS ENUM('Ruderer', 'Stm.', 'Trainer');
 
 CREATE TABLE verein (
   uuid uuid PRIMARY KEY,
-  name text,
-  kurzform text,
-  kuerzel text
+  name text NOT NULL,
+  kurzform text NOT NULL,
+  kuerzel text NOT NULL
 );
 
 CREATE TABLE athlet (
@@ -23,7 +23,7 @@ CREATE TABLE athlet (
   geschlecht geschlecht NOT NULL,
   jahrgang text NOT NULL,
   gewicht int DEFAULT 0,
-  startberechtigt boolean DEFAULT false,
+  startberechtigt boolean DEFAULT false NOT NULL,
   verein_uuid uuid NOT NULL,
   CONSTRAINT fk_verein FOREIGN KEY (verein_uuid) REFERENCES verein(uuid)
 );
@@ -31,36 +31,36 @@ CREATE TABLE athlet (
 CREATE TABLE zeitnahme_start (
   id SERIAL PRIMARY KEY,
   rennen_nummer text,
-  start_nummer text,
-  time_client timestamp,
-  time_server timestamp,
+  start_nummer text NOT NULL,
+  time_client timestamp NOT NULL,
+  time_server timestamp NOT NULL,
   measured_latency int,
-  verarbeitet boolean DEFAULT false
+  verarbeitet boolean DEFAULT false NOT NULL
 );
 
 CREATE TABLE zeitnahme_ziel (
   id SERIAL PRIMARY KEY,
   rennen_nummer text,
-  start_nummer text,
-  time_client timestamp,
-  time_server timestamp,
+  start_nummer text NOT NULL,
+  time_client timestamp NOT NULL,
+  time_server timestamp NOT NULL,
   measured_latency int,
-  verarbeitet boolean DEFAULT false
+  verarbeitet boolean DEFAULT false NOT NULL
 );
 
 CREATE TABLE rennen (
   uuid uuid PRIMARY KEY,
   sort_id int unique NOT NULL,
   nummer text NOT NULL,
-  bezeichnung text,
-  bezeichnung_lang text,
+  bezeichnung text NOT NULL,
+  bezeichnung_lang text NOT NULL,
   zusatz text,
-  leichtgewicht boolean DEFAULT false,
-  geschlecht geschlecht,
-  bootsklasse text,
-  bootsklasse_lang text,
-  altersklasse text,
-  altersklasse_lang text,
+  leichtgewicht boolean DEFAULT false NOT NULL,
+  geschlecht geschlecht NOT NULL,
+  bootsklasse text NOT NULL,
+  bootsklasse_lang text NOT NULL,
+  altersklasse text NOT NULL,
+  altersklasse_lang text NOT NULL,
   tag tag NOT NULL,
   wettkampf wettkampf NOT NULL,
   kosten_eur int,
@@ -80,14 +80,14 @@ CREATE TABLE meldung(
   drv_revision_uuid uuid NOT NULL,
   typ text NOT NULL,
   bemerkung text,
-  abgemeldet boolean DEFAULT false,
-  dns boolean DEFAULT false,
-  dnf boolean DEFAULT false,
-  dsq boolean DEFAULT false,
+  abgemeldet boolean DEFAULT false NOT NULL,
+  dns boolean DEFAULT false NOT NULL,
+  dnf boolean DEFAULT false NOT NULL,
+  dsq boolean DEFAULT false NOT NULL,
   zeitnahme_bemerkung text,
-  start_nummer int DEFAULT 0,
-  abteilung int DEFAULT 0,
-  bahn int DEFAULT 0,
+  start_nummer int DEFAULT 0 NOT NULL,
+  abteilung int DEFAULT 0 NOT NULL,
+  bahn int DEFAULT 0 NOT NULL,
   kosten int NOT NULL,
   verein_uuid uuid NOT NULL,
   CONSTRAINT fk_verein FOREIGN KEY (verein_uuid) REFERENCES verein(uuid),
@@ -98,7 +98,7 @@ CREATE TABLE meldung(
 CREATE TABLE link_meldung_athlet (
   id SERIAL PRIMARY KEY,
   rolle rolle NOT NULL,
-  position int,
+  position int NOT NULL,
   meldung_uuid uuid NOT NULL,
   CONSTRAINT fk_meldung FOREIGN KEY (meldung_uuid) REFERENCES meldung(uuid),
   athlet_uuid uuid NOT NULL,
@@ -116,7 +116,7 @@ CREATE TABLE obmann (
 
 CREATE TABLE zeitnahme_ergebnis (
   id SERIAL PRIMARY KEY,
-  endzeit float,
+  endzeit float NOT NULL,
   zeitnahme_start_id int NOT NULL,
   CONSTRAINT fk_zeitnahme_start FOREIGN KEY (zeitnahme_start_id) REFERENCES zeitnahme_start(id),
   zeitnahme_ziel_id int NOT NULL,
@@ -127,18 +127,18 @@ CREATE TABLE zeitnahme_ergebnis (
 
 CREATE TABLE users_group (
   ulid ulid PRIMARY KEY DEFAULT gen_monotonic_ulid(),
-  name text,
-  allowed_admin boolean DEFAULT false,
-  allowed_zeitnahme boolean DEFAULT false,
-  allowed_startlisten boolean DEFAULT false,
-  allowed_regattaleitung boolean DEFAULT false
+  name text NOT NULL,
+  allowed_admin boolean DEFAULT false NOT NULL,
+  allowed_zeitnahme boolean DEFAULT false NOT NULL,
+  allowed_startlisten boolean DEFAULT false NOT NULL,
+  allowed_regattaleitung boolean DEFAULT false NOT NULL
 );
 
 CREATE TABLE users (
   ulid ulid PRIMARY KEY DEFAULT gen_monotonic_ulid(),
-  username text UNIQUE,
-  hashed_password text,
-  is_active boolean DEFAULT false,
+  username text UNIQUE NOT NULL,
+  hashed_password text NOT NULL,
+  is_active boolean DEFAULT false NOT NULL,
   group_ulid ulid NOT NULL,
   CONSTRAINT fk_users_group FOREIGN KEY (group_ulid) REFERENCES users_group(ulid)
 );

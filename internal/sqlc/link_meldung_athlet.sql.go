@@ -29,10 +29,10 @@ type CreateLinkMeldungAthletParams struct {
 	AthletUuid  uuid.UUID `json:"athlet_uuid"`
 	MeldungUuid uuid.UUID `json:"meldung_uuid"`
 	Rolle       Rolle     `json:"rolle"`
-	Position    *int32    `json:"position"`
+	Position    int32     `json:"position"`
 }
 
-func (q *Queries) CreateLinkMeldungAthlet(ctx context.Context, arg CreateLinkMeldungAthletParams) (*LinkMeldungAthlet, error) {
+func (q *Queries) CreateLinkMeldungAthlet(ctx context.Context, arg CreateLinkMeldungAthletParams) (LinkMeldungAthlet, error) {
 	row := q.db.QueryRow(ctx, createLinkMeldungAthlet,
 		arg.AthletUuid,
 		arg.MeldungUuid,
@@ -47,5 +47,5 @@ func (q *Queries) CreateLinkMeldungAthlet(ctx context.Context, arg CreateLinkMel
 		&i.MeldungUuid,
 		&i.AthletUuid,
 	)
-	return &i, err
+	return i, err
 }

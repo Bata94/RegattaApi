@@ -14,13 +14,13 @@ func GetAllPausen(c *fiber.Ctx) error {
 		return err
 	}
 	if pLs == nil {
-		pLs = []*sqlc.Pause{}
+		pLs = []sqlc.Pause{}
 	}
 	return c.JSON(pLs)
 }
 
 func GetPause(c *fiber.Ctx) error {
-	id, err := api.GetId32FromCtx(c)
+	id, err := api.GetIdFromCtx(c)
 	if err != nil {
 		return err
 	}
@@ -53,9 +53,9 @@ func CreatePause(c *fiber.Ctx) error {
 	}
 
 	p, err := crud.CreatePause(*params)
-  if err != nil {
-    return err
-  }
+	if err != nil {
+		return err
+	}
 
 	return c.JSON(p)
 }
@@ -68,9 +68,9 @@ func UpdatePause(c *fiber.Ctx) error {
 	}
 
 	p, err := crud.UpdatePause(*params)
-  if err != nil {
-    return err
-  }
+	if err != nil {
+		return err
+	}
 
 	return c.JSON(p)
 }

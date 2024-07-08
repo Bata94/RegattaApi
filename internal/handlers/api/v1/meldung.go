@@ -14,7 +14,7 @@ func GetAllMeldung(c *fiber.Ctx) error {
 		return err
 	}
 	if mLs == nil {
-		mLs = []*sqlc.Meldung{}
+		mLs = []sqlc.Meldung{}
 	}
 
 	return c.JSON(mLs)

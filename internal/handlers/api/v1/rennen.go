@@ -25,6 +25,7 @@ func GetRennen(c *fiber.Ctx) error {
 
 func GetAllRennen(c *fiber.Ctx) error {
 	getMeld := api.GetQueryParamBoolFromCtx(c, "getMeld", false)
+	getAthleten := api.GetQueryParamBoolFromCtx(c, "getAthleten", false)
 	showEmpty := api.GetQueryParamBoolFromCtx(c, "showEmpty", true)
 	showStarted := api.GetQueryParamBoolFromCtx(c, "showStarted", true)
 	showWettkampfStr := c.Query("wettkampf", "")
@@ -38,8 +39,15 @@ func GetAllRennen(c *fiber.Ctx) error {
 		}
 	}
 
-	rLs, err := crud.GetAllRennen(&crud.GetAllRennenParams{
+	if getAthleten && !getMeld {
+		retErr := &api.BAD_REQUEST
+		retErr.Msg = "Query param getAthleten requires getMeldungen to be true"
+		return retErr
+	}
+
+	rLs, err := crud.GetAllRennen(crud.GetAllRennenParams{
 		GetMeldungen:  getMeld,
+		GetAthleten:   getAthleten,
 		ShowEmpty:     showEmpty,
 		ShowStarted:   showStarted,
 		ShowWettkampf: showWettkampf,

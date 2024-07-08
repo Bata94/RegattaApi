@@ -27,12 +27,12 @@ INSERT INTO verein (
 
 type CreateVereinParams struct {
 	Uuid     uuid.UUID `json:"uuid"`
-	Name     *string   `json:"name"`
-	Kurzform *string   `json:"kurzform"`
-	Kuerzel  *string   `json:"kuerzel"`
+	Name     string    `json:"name"`
+	Kurzform string    `json:"kurzform"`
+	Kuerzel  string    `json:"kuerzel"`
 }
 
-func (q *Queries) CreateVerein(ctx context.Context, arg CreateVereinParams) (*Verein, error) {
+func (q *Queries) CreateVerein(ctx context.Context, arg CreateVereinParams) (Verein, error) {
 	row := q.db.QueryRow(ctx, createVerein,
 		arg.Uuid,
 		arg.Name,
@@ -46,7 +46,7 @@ func (q *Queries) CreateVerein(ctx context.Context, arg CreateVereinParams) (*Ve
 		&i.Kurzform,
 		&i.Kuerzel,
 	)
-	return &i, err
+	return i, err
 }
 
 const getAllVerein = `-- name: GetAllVerein :many
@@ -54,13 +54,13 @@ SELECT uuid, name, kurzform, kuerzel FROM verein
 ORDER BY name ASC
 `
 
-func (q *Queries) GetAllVerein(ctx context.Context) ([]*Verein, error) {
+func (q *Queries) GetAllVerein(ctx context.Context) ([]Verein, error) {
 	rows, err := q.db.Query(ctx, getAllVerein)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []*Verein
+	items := []Verein{}
 	for rows.Next() {
 		var i Verein
 		if err := rows.Scan(
@@ -71,7 +71,7 @@ func (q *Queries) GetAllVerein(ctx context.Context) ([]*Verein, error) {
 		); err != nil {
 			return nil, err
 		}
-		items = append(items, &i)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -84,7 +84,7 @@ SELECT uuid, name, kurzform, kuerzel FROM verein
 WHERE uuid = $1 LIMIT 1
 `
 
-func (q *Queries) GetVereinMinimal(ctx context.Context, argUuid uuid.UUID) (*Verein, error) {
+func (q *Queries) GetVereinMinimal(ctx context.Context, argUuid uuid.UUID) (Verein, error) {
 	row := q.db.QueryRow(ctx, getVereinMinimal, argUuid)
 	var i Verein
 	err := row.Scan(
@@ -93,5 +93,5 @@ func (q *Queries) GetVereinMinimal(ctx context.Context, argUuid uuid.UUID) (*Ver
 		&i.Kurzform,
 		&i.Kuerzel,
 	)
-	return &i, err
+	return i, err
 }

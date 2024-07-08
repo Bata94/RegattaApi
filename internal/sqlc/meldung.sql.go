@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const checkMedlungSetzung = `-- name: CheckMedlungSetzung :one
@@ -18,15 +19,15 @@ WHERE abteilung != 0 AND bahn != 0 LIMIT 1
 
 type CheckMedlungSetzungRow struct {
 	Uuid      uuid.UUID `json:"uuid"`
-	Abteilung *int32    `json:"abteilung"`
-	Bahn      *int32    `json:"bahn"`
+	Abteilung int32     `json:"abteilung"`
+	Bahn      int32     `json:"bahn"`
 }
 
-func (q *Queries) CheckMedlungSetzung(ctx context.Context) (*CheckMedlungSetzungRow, error) {
+func (q *Queries) CheckMedlungSetzung(ctx context.Context) (CheckMedlungSetzungRow, error) {
 	row := q.db.QueryRow(ctx, checkMedlungSetzung)
 	var i CheckMedlungSetzungRow
 	err := row.Scan(&i.Uuid, &i.Abteilung, &i.Bahn)
-	return &i, err
+	return i, err
 }
 
 const createMeldung = `-- name: CreateMeldung :one
@@ -46,17 +47,17 @@ RETURNING uuid, drv_revision_uuid, typ, bemerkung, abgemeldet, dns, dnf, dsq, ze
 `
 
 type CreateMeldungParams struct {
-	Uuid            uuid.UUID `json:"uuid"`
-	VereinUuid      uuid.UUID `json:"verein_uuid"`
-	RennenUuid      uuid.UUID `json:"rennen_uuid"`
-	DrvRevisionUuid uuid.UUID `json:"drv_revision_uuid"`
-	Abgemeldet      *bool     `json:"abgemeldet"`
-	Kosten          int32     `json:"kosten"`
-	Typ             string    `json:"typ"`
-	Bemerkung       *string   `json:"bemerkung"`
+	Uuid            uuid.UUID   `json:"uuid"`
+	VereinUuid      uuid.UUID   `json:"verein_uuid"`
+	RennenUuid      uuid.UUID   `json:"rennen_uuid"`
+	DrvRevisionUuid uuid.UUID   `json:"drv_revision_uuid"`
+	Abgemeldet      bool        `json:"abgemeldet"`
+	Kosten          int32       `json:"kosten"`
+	Typ             string      `json:"typ"`
+	Bemerkung       pgtype.Text `json:"bemerkung"`
 }
 
-func (q *Queries) CreateMeldung(ctx context.Context, arg CreateMeldungParams) (*Meldung, error) {
+func (q *Queries) CreateMeldung(ctx context.Context, arg CreateMeldungParams) (Meldung, error) {
 	row := q.db.QueryRow(ctx, createMeldung,
 		arg.Uuid,
 		arg.VereinUuid,
@@ -85,7 +86,7 @@ func (q *Queries) CreateMeldung(ctx context.Context, arg CreateMeldungParams) (*
 		&i.VereinUuid,
 		&i.RennenUuid,
 	)
-	return &i, err
+	return i, err
 }
 
 const getAllMeldung = `-- name: GetAllMeldung :many
@@ -93,13 +94,13 @@ SELECT uuid, drv_revision_uuid, typ, bemerkung, abgemeldet, dns, dnf, dsq, zeitn
 ORDER BY start_nummer ASC
 `
 
-func (q *Queries) GetAllMeldung(ctx context.Context) ([]*Meldung, error) {
+func (q *Queries) GetAllMeldung(ctx context.Context) ([]Meldung, error) {
 	rows, err := q.db.Query(ctx, getAllMeldung)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []*Meldung
+	items := []Meldung{}
 	for rows.Next() {
 		var i Meldung
 		if err := rows.Scan(
@@ -121,7 +122,7 @@ func (q *Queries) GetAllMeldung(ctx context.Context) ([]*Meldung, error) {
 		); err != nil {
 			return nil, err
 		}
-		items = append(items, &i)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -134,7 +135,7 @@ SELECT uuid, drv_revision_uuid, typ, bemerkung, abgemeldet, dns, dnf, dsq, zeitn
 WHERE uuid = $1 LIMIT 1
 `
 
-func (q *Queries) GetMeldungMinimal(ctx context.Context, argUuid uuid.UUID) (*Meldung, error) {
+func (q *Queries) GetMeldungMinimal(ctx context.Context, argUuid uuid.UUID) (Meldung, error) {
 	row := q.db.QueryRow(ctx, getMeldungMinimal, argUuid)
 	var i Meldung
 	err := row.Scan(
@@ -154,7 +155,7 @@ func (q *Queries) GetMeldungMinimal(ctx context.Context, argUuid uuid.UUID) (*Me
 		&i.VereinUuid,
 		&i.RennenUuid,
 	)
-	return &i, err
+	return i, err
 }
 
 const updateMeldungSetzung = `-- name: UpdateMeldungSetzung :exec
@@ -165,8 +166,8 @@ WHERE uuid = $1
 
 type UpdateMeldungSetzungParams struct {
 	Uuid      uuid.UUID `json:"uuid"`
-	Abteilung *int32    `json:"abteilung"`
-	Bahn      *int32    `json:"bahn"`
+	Abteilung int32     `json:"abteilung"`
+	Bahn      int32     `json:"bahn"`
 }
 
 func (q *Queries) UpdateMeldungSetzung(ctx context.Context, arg UpdateMeldungSetzungParams) error {
@@ -182,7 +183,7 @@ WHERE uuid = $1
 
 type UpdateStartNummerParams struct {
 	Uuid        uuid.UUID `json:"uuid"`
-	StartNummer *int32    `json:"start_nummer"`
+	StartNummer int32     `json:"start_nummer"`
 }
 
 func (q *Queries) UpdateStartNummer(ctx context.Context, arg UpdateStartNummerParams) error {

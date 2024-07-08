@@ -82,13 +82,12 @@ func GetUsersGroup(c *fiber.Ctx) error {
 }
 
 func GetUsersGroupByName(c *fiber.Ctx) error {
-	var ug *crud.UsersGroupWithUsers
 	name, err := api.GetStrParamFromCtx(c, "name")
 	if err != nil {
 		return err
 	}
 
-	ug, err = crud.GetUsersGroupByName(name)
+	ug, err := crud.GetUsersGroupByName(name)
 	if err != err {
 		return err
 	}

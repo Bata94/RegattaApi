@@ -25,11 +25,11 @@ type CreateAthletParams struct {
 	Name            string     `json:"name"`
 	Vorname         string     `json:"vorname"`
 	Jahrgang        string     `json:"jahrgang"`
-	Startberechtigt *bool      `json:"startberechtigt"`
+	Startberechtigt bool       `json:"startberechtigt"`
 	Geschlecht      Geschlecht `json:"geschlecht"`
 }
 
-func (q *Queries) CreateAthlet(ctx context.Context, arg CreateAthletParams) (*Athlet, error) {
+func (q *Queries) CreateAthlet(ctx context.Context, arg CreateAthletParams) (Athlet, error) {
 	row := q.db.QueryRow(ctx, createAthlet,
 		arg.Uuid,
 		arg.VereinUuid,
@@ -50,7 +50,7 @@ func (q *Queries) CreateAthlet(ctx context.Context, arg CreateAthletParams) (*At
 		&i.Startberechtigt,
 		&i.VereinUuid,
 	)
-	return &i, err
+	return i, err
 }
 
 const getAllAthlet = `-- name: GetAllAthlet :many
@@ -58,13 +58,13 @@ SELECT uuid, vorname, name, geschlecht, jahrgang, gewicht, startberechtigt, vere
 ORDER BY name ASC
 `
 
-func (q *Queries) GetAllAthlet(ctx context.Context) ([]*Athlet, error) {
+func (q *Queries) GetAllAthlet(ctx context.Context) ([]Athlet, error) {
 	rows, err := q.db.Query(ctx, getAllAthlet)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []*Athlet
+	items := []Athlet{}
 	for rows.Next() {
 		var i Athlet
 		if err := rows.Scan(
@@ -79,7 +79,7 @@ func (q *Queries) GetAllAthlet(ctx context.Context) ([]*Athlet, error) {
 		); err != nil {
 			return nil, err
 		}
-		items = append(items, &i)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -93,13 +93,13 @@ WHERE vorname = 'No' and name = 'Name' and jahrgang = '9999'
 ORDER BY verein_uuid ASC
 `
 
-func (q *Queries) GetAllNNAthleten(ctx context.Context) ([]*Athlet, error) {
+func (q *Queries) GetAllNNAthleten(ctx context.Context) ([]Athlet, error) {
 	rows, err := q.db.Query(ctx, getAllNNAthleten)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []*Athlet
+	items := []Athlet{}
 	for rows.Next() {
 		var i Athlet
 		if err := rows.Scan(
@@ -114,7 +114,7 @@ func (q *Queries) GetAllNNAthleten(ctx context.Context) ([]*Athlet, error) {
 		); err != nil {
 			return nil, err
 		}
-		items = append(items, &i)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -127,7 +127,7 @@ SELECT uuid, vorname, name, geschlecht, jahrgang, gewicht, startberechtigt, vere
 WHERE uuid = $1 LIMIT 1
 `
 
-func (q *Queries) GetAthletMinimal(ctx context.Context, argUuid uuid.UUID) (*Athlet, error) {
+func (q *Queries) GetAthletMinimal(ctx context.Context, argUuid uuid.UUID) (Athlet, error) {
 	row := q.db.QueryRow(ctx, getAthletMinimal, argUuid)
 	var i Athlet
 	err := row.Scan(
@@ -140,5 +140,5 @@ func (q *Queries) GetAthletMinimal(ctx context.Context, argUuid uuid.UUID) (*Ath
 		&i.Startberechtigt,
 		&i.VereinUuid,
 	)
-	return &i, err
+	return i, err
 }

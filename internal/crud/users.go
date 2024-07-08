@@ -53,7 +53,7 @@ func validUser(ulid ulid.ULID, p string) bool {
 	if err != nil {
 		return false
 	}
-	if !checkPasswordHash(p, *user.HashedPassword) {
+	if !checkPasswordHash(p, user.HashedPassword) {
 		return false
 	}
 	return true
@@ -85,7 +85,7 @@ type ReturnUser struct {
 func (u *User) ToReturnUser() ReturnUser {
 	return ReturnUser{
 		Ulid:      u.Ulid,
-		Username:  *u.Username,
+		Username:  u.Username,
 		UserGroup: u.UserGroup,
 	}
 }
@@ -95,7 +95,7 @@ type LoginParams struct {
 	Password string
 }
 
-func GetAllUsers() ([]*sqlc.User, error) {
+func GetAllUsers() ([]sqlc.User, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
@@ -105,7 +105,7 @@ func GetAllUsers() ([]*sqlc.User, error) {
 	}
 
 	if len(uLs) == 0 {
-		uLs = []*sqlc.User{}
+		uLs = []sqlc.User{}
 	}
 
 	return uLs, nil
@@ -133,7 +133,7 @@ func GetUserByUsername(name string) (*User, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	ulidStr, err := DB.Queries.GetUserUlidByName(ctx, &name)
+	ulidStr, err := DB.Queries.GetUserUlidByName(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -152,24 +152,24 @@ type CreateUserParams struct {
 	Password  string    `json:"password"`
 }
 
-func CreateUser(uInp CreateUserParams) (*sqlc.User, error) {
+func CreateUser(uInp CreateUserParams) (sqlc.User, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	hashedPW, err := hashPassword(uInp.Password)
 	if err != nil {
-		return nil, err
+		return sqlc.User{}, err
 	}
 
 	uParams := sqlc.CreateUserParams{
 		GroupUlid:      uInp.GroupUlid.String(),
-		Username:       &uInp.Username,
-		HashedPassword: &hashedPW,
+		Username:       uInp.Username,
+		HashedPassword: hashedPW,
 	}
 
 	u, err := DB.Queries.CreateUser(ctx, uParams)
 	if err != nil {
-		return nil, err
+		return sqlc.User{}, err
 	}
 
 	return u, nil
@@ -182,7 +182,7 @@ func AuthLogin(l LoginParams) (*ReturnUserWithJWT, error) {
 	}
 
 	tokenStr := ""
-	if checkPasswordHash(l.Password, *u.HashedPassword) {
+	if checkPasswordHash(l.Password, u.HashedPassword) {
 		tokenStr, err = genJWT(*u.User)
 		if err != nil {
 			retErr := &api.TOKEN_GENERATION_ERROR
@@ -200,7 +200,7 @@ func AuthLogin(l LoginParams) (*ReturnUserWithJWT, error) {
 	return &ReturnUserWithJWT{
 		Ulid:      u.User.Ulid,
 		Jwt:       tokenStr,
-		Username:  *u.User.Username,
+		Username:  u.User.Username,
 		UserGroup: u.UserGroup,
 	}, nil
 }

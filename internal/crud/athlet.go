@@ -8,22 +8,22 @@ import (
 	"github.com/google/uuid"
 )
 
-func GetAthletMinimal(uuid uuid.UUID) (*sqlc.Athlet, error) {
+func GetAthletMinimal(uuid uuid.UUID) (sqlc.Athlet, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	a, err := DB.Queries.GetAthletMinimal(ctx, uuid)
 	if err != nil {
 		if isNoRowError(err) {
-			return nil, &api.NOT_FOUND
+			return sqlc.Athlet{}, &api.NOT_FOUND
 		}
-		return nil, err
+		return sqlc.Athlet{}, err
 	}
 
 	return a, nil
 }
 
-func GetAllAthlet() ([]*sqlc.Athlet, error) {
+func GetAllAthlet() ([]sqlc.Athlet, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
@@ -32,13 +32,13 @@ func GetAllAthlet() ([]*sqlc.Athlet, error) {
 		return nil, err
 	}
 	if aLs == nil {
-		aLs = []*sqlc.Athlet{}
+		aLs = []sqlc.Athlet{}
 	}
 
 	return aLs, err
 }
 
-func GetAllNNAthleten() ([]*sqlc.Athlet, error) {
+func GetAllNNAthleten() ([]sqlc.Athlet, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
@@ -47,20 +47,20 @@ func GetAllNNAthleten() ([]*sqlc.Athlet, error) {
 		return nil, err
 	}
 	if aLs == nil {
-		aLs = []*sqlc.Athlet{}
+		aLs = []sqlc.Athlet{}
 	}
 
 	return aLs, err
 }
 
-func CreateAthlet(aParams sqlc.CreateAthletParams) (*sqlc.Athlet, error) {
+func CreateAthlet(aParams sqlc.CreateAthletParams) (sqlc.Athlet, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	a, err := DB.Queries.CreateAthlet(ctx, aParams)
 	if err != nil {
 		log.Error(err.Error())
-		return nil, err
+		return sqlc.Athlet{}, err
 	}
 
 	return a, nil

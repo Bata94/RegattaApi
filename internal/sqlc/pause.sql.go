@@ -27,11 +27,11 @@ type CreatePauseParams struct {
 	NachRennenUuid uuid.UUID `json:"nach_rennen_uuid"`
 }
 
-func (q *Queries) CreatePause(ctx context.Context, arg CreatePauseParams) (*Pause, error) {
+func (q *Queries) CreatePause(ctx context.Context, arg CreatePauseParams) (Pause, error) {
 	row := q.db.QueryRow(ctx, createPause, arg.Laenge, arg.NachRennenUuid)
 	var i Pause
 	err := row.Scan(&i.ID, &i.Laenge, &i.NachRennenUuid)
-	return &i, err
+	return i, err
 }
 
 const deletePause = `-- name: DeletePause :exec
@@ -49,19 +49,19 @@ SELECT id, laenge, nach_rennen_uuid FROM pause
 ORDER BY id ASC
 `
 
-func (q *Queries) GetAllPause(ctx context.Context) ([]*Pause, error) {
+func (q *Queries) GetAllPause(ctx context.Context) ([]Pause, error) {
 	rows, err := q.db.Query(ctx, getAllPause)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []*Pause
+	items := []Pause{}
 	for rows.Next() {
 		var i Pause
 		if err := rows.Scan(&i.ID, &i.Laenge, &i.NachRennenUuid); err != nil {
 			return nil, err
 		}
-		items = append(items, &i)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -74,11 +74,11 @@ SELECT id, laenge, nach_rennen_uuid FROM pause
 WHERE id = $1 LIMIT 1
 `
 
-func (q *Queries) GetPause(ctx context.Context, id int32) (*Pause, error) {
+func (q *Queries) GetPause(ctx context.Context, id int32) (Pause, error) {
 	row := q.db.QueryRow(ctx, getPause, id)
 	var i Pause
 	err := row.Scan(&i.ID, &i.Laenge, &i.NachRennenUuid)
-	return &i, err
+	return i, err
 }
 
 const updatePause = `-- name: UpdatePause :one
@@ -93,9 +93,9 @@ type UpdatePauseParams struct {
 	Laenge int32 `json:"laenge"`
 }
 
-func (q *Queries) UpdatePause(ctx context.Context, arg UpdatePauseParams) (*Pause, error) {
+func (q *Queries) UpdatePause(ctx context.Context, arg UpdatePauseParams) (Pause, error) {
 	row := q.db.QueryRow(ctx, updatePause, arg.ID, arg.Laenge)
 	var i Pause
 	err := row.Scan(&i.ID, &i.Laenge, &i.NachRennenUuid)
-	return &i, err
+	return i, err
 }

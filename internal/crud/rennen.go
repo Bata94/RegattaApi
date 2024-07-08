@@ -2,7 +2,6 @@ package crud
 
 import (
 	"cmp"
-	"errors"
 	"slices"
 
 	"github.com/gofiber/fiber/v2/log"
@@ -15,78 +14,50 @@ import (
 
 type GetAllRennenParams struct {
 	GetMeldungen  bool
+	GetAthleten   bool
 	ShowEmpty     bool
 	ShowStarted   bool
 	ShowWettkampf sqlc.NullWettkampf
 }
 
-func GetAllRennen(p *GetAllRennenParams) ([]*RennenWithMeldung, error) {
+func GetAllRennen(p GetAllRennenParams) ([]RennenWithMeldung, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	log.Debug("GetMeldungen: ", p.GetMeldungen, " ShowEmpty: ", p.ShowEmpty, " ShowStarted: ", p.ShowStarted, " ShowWettkampf: ", p.ShowWettkampf)
 	var (
-		q   []*sqlc.GetAllRennenWithMeldRow
-		err error
+		q                 []sqlc.GetAllRennenWithMeldRow
+		err               error
+		wettkampfFilterLs []sqlc.Wettkampf
 	)
+	allWettkampf := []sqlc.Wettkampf{
+		sqlc.WettkampfLangstrecke,
+		sqlc.WettkampfSlalom,
+		sqlc.WettkampfKurzstrecke,
+		sqlc.WettkampfStaffel,
+	}
 
-	if p.ShowWettkampf.Valid == false || p.ShowWettkampf.Wettkampf == "" {
-		q, err = DB.Queries.GetAllRennenWithMeld(ctx)
-		if err != nil {
-			return nil, err
-		}
+	if !p.ShowWettkampf.Valid {
+		wettkampfFilterLs = allWettkampf
 	} else {
-		qDirty, err := DB.Queries.GetAllRennenByWettkampf(ctx, p.ShowWettkampf.Wettkampf)
-		if err != nil {
-			return nil, err
-		}
-		for _, r := range qDirty {
-			q = append(q, &sqlc.GetAllRennenWithMeldRow{
-				Uuid:               r.Uuid,
-				SortID:             r.SortID,
-				Nummer:             r.Nummer,
-				Bezeichnung:        r.Bezeichnung,
-				BezeichnungLang:    r.BezeichnungLang,
-				Zusatz:             r.Zusatz,
-				Leichtgewicht:      r.Leichtgewicht,
-				Geschlecht:         r.Geschlecht,
-				Bootsklasse:        r.Bootsklasse,
-				BootsklasseLang:    r.BootsklasseLang,
-				Altersklasse:       r.Altersklasse,
-				AltersklasseLang:   r.AltersklasseLang,
-				Tag:                r.Tag,
-				Wettkampf:          r.Wettkampf,
-				KostenEur:          r.KostenEur,
-				Rennabstand:        r.Rennabstand,
-				Startzeit:          r.Startzeit,
-				Uuid_2:             r.Uuid_2,
-				DrvRevisionUuid:    r.DrvRevisionUuid,
-				Typ:                r.Typ,
-				Bemerkung:          r.Bemerkung,
-				Abgemeldet:         r.Abgemeldet,
-				Dns:                r.Dns,
-				Dnf:                r.Dnf,
-				Dsq:                r.Dsq,
-				ZeitnahmeBemerkung: r.ZeitnahmeBemerkung,
-				StartNummer:        r.StartNummer,
-				Abteilung:          r.Abteilung,
-				Bahn:               r.Bahn,
-				Kosten:             r.Kosten,
-				VereinUuid:         r.VereinUuid,
-				RennenUuid:         r.RennenUuid,
-			})
-		}
+		wettkampfFilterLs = []sqlc.Wettkampf{p.ShowWettkampf.Wettkampf}
+	}
+
+	q, err = DB.Queries.GetAllRennenWithMeld(ctx, wettkampfFilterLs)
+	if err != nil {
+		return nil, err
 	}
 
 	rLs, err := sqlcRennenToCrudRennen(q, true)
 	if err != nil {
+		log.Error("Error converting sqlc rennen to crud rennen")
 		return nil, err
 	}
-	retLs := []*RennenWithMeldung{}
+	log.Debug(len(rLs))
+	retLs := []RennenWithMeldung{}
 
 	for _, r := range rLs {
-		meldungen := []*sqlc.Meldung{}
-		if p.GetMeldungen == true {
+		meldungen := []sqlc.Meldung{}
+		if p.GetMeldungen {
 			meldungen = r.Meldungen
 		}
 		if p.ShowStarted == false {
@@ -96,130 +67,113 @@ func GetAllRennen(p *GetAllRennenParams) ([]*RennenWithMeldung, error) {
 			continue
 		}
 
-		retLs = append(retLs, &RennenWithMeldung{
+		retLs = append(retLs, RennenWithMeldung{
 			Rennen:    r.Rennen,
 			Meldungen: meldungen,
 		})
 	}
-
+	log.Debug("Crud GetAllRennen done...")
 	return retLs, nil
 }
 
 type Rennen struct {
-	Uuid             uuid.UUID           `json:"uuid"`
-	SortID           int32               `json:"sort_id"`
-	Nummer           string              `json:"nummer"`
-	Bezeichnung      *string             `json:"bezeichnung"`
-	BezeichnungLang  *string             `json:"bezeichnung_lang"`
-	Zusatz           *string             `json:"zusatz"`
-	Leichtgewicht    *bool               `json:"leichtgewicht"`
-	Geschlecht       sqlc.NullGeschlecht `json:"geschlecht"`
-	Bootsklasse      *string             `json:"bootsklasse"`
-	BootsklasseLang  *string             `json:"bootsklasse_lang"`
-	Altersklasse     *string             `json:"altersklasse"`
-	AltersklasseLang *string             `json:"altersklasse_lang"`
-	Tag              sqlc.Tag            `json:"tag"`
-	Wettkampf        sqlc.Wettkampf      `json:"wettkampf"`
-	KostenEur        *int32              `json:"kosten_eur"`
-	Rennabstand      *int32              `json:"rennabstand"`
-	Startzeit        *string             `json:"startzeit"`
-	NumMeldungen     int                 `json:"num_meldungen"`
-	NumAbteilungen   int                 `json:"num_abteilungen"`
+	Uuid             uuid.UUID       `json:"uuid"`
+	SortID           int             `json:"sort_id"`
+	Nummer           string          `json:"nummer"`
+	Bezeichnung      string          `json:"bezeichnung"`
+	BezeichnungLang  string          `json:"bezeichnung_lang"`
+	Zusatz           string          `json:"zusatz"`
+	Leichtgewicht    bool            `json:"leichtgewicht"`
+	Geschlecht       sqlc.Geschlecht `json:"geschlecht"`
+	Bootsklasse      string          `json:"bootsklasse"`
+	BootsklasseLang  string          `json:"bootsklasse_lang"`
+	Altersklasse     string          `json:"altersklasse"`
+	AltersklasseLang string          `json:"altersklasse_lang"`
+	Tag              sqlc.Tag        `json:"tag"`
+	Wettkampf        sqlc.Wettkampf  `json:"wettkampf"`
+	KostenEur        int             `json:"kosten_eur"`
+	Rennabstand      int             `json:"rennabstand"`
+	Startzeit        string          `json:"startzeit"`
+	NumMeldungen     int             `json:"num_meldungen"`
+	NumAbteilungen   int             `json:"num_abteilungen"`
+}
+
+func rennenFromSqlc(rennen sqlc.Rennen) Rennen {
+	return Rennen{
+		Uuid:             rennen.Uuid,
+		SortID:           int(rennen.SortID),
+		Nummer:           rennen.Nummer,
+		Bezeichnung:      rennen.Bezeichnung,
+		BezeichnungLang:  rennen.BezeichnungLang,
+		Zusatz:           rennen.Zusatz.String,
+		Leichtgewicht:    rennen.Leichtgewicht,
+		Geschlecht:       rennen.Geschlecht,
+		Bootsklasse:      rennen.Bootsklasse,
+		BootsklasseLang:  rennen.BootsklasseLang,
+		Altersklasse:     rennen.Altersklasse,
+		AltersklasseLang: rennen.AltersklasseLang,
+		Tag:              rennen.Tag,
+		Wettkampf:        rennen.Wettkampf,
+		KostenEur:        int(rennen.KostenEur.Int32),
+		Rennabstand:      int(rennen.Rennabstand.Int32),
+		Startzeit:        rennen.Startzeit.String,
+		NumMeldungen:     0,
+		NumAbteilungen:   0,
+	}
 }
 
 type RennenWithMeldung struct {
-	*Rennen
-	Meldungen []*sqlc.Meldung `json:"meldungen"`
+	Rennen
+	Meldungen []sqlc.Meldung `json:"meldungen"`
 }
 
-func sqlcRennenToCrudRennen(q []*sqlc.GetAllRennenWithMeldRow, getEmptyRennen bool) ([]*RennenWithMeldung, error) {
-	var (
-		rLs           []*RennenWithMeldung
-		currentRennen *RennenWithMeldung
-	)
+func sqlcRennenToCrudRennen(q []sqlc.GetAllRennenWithMeldRow, getEmptyRennen bool) ([]RennenWithMeldung, error) {
+	var curRennen RennenWithMeldung
+	rLs := []RennenWithMeldung{}
 
-	for _, m := range q {
-		rennenStruct := &Rennen{
-			Uuid:             m.Uuid,
-			SortID:           *m.SortID,
-			Nummer:           *m.Nummer,
-			Bezeichnung:      m.Bezeichnung,
-			BezeichnungLang:  m.BezeichnungLang,
-			Zusatz:           m.Zusatz,
-			Leichtgewicht:    m.Leichtgewicht,
-			Geschlecht:       m.Geschlecht,
-			Bootsklasse:      m.Bootsklasse,
-			BootsklasseLang:  m.BootsklasseLang,
-			Altersklasse:     m.Altersklasse,
-			AltersklasseLang: m.AltersklasseLang,
-			Tag:              sqlc.Tag(m.Tag.Tag),
-			Wettkampf:        sqlc.Wettkampf(m.Wettkampf.Wettkampf),
-			KostenEur:        m.KostenEur,
-			Rennabstand:      m.Rennabstand,
-			Startzeit:        m.Startzeit,
-		}
-		meldungStruct := &sqlc.Meldung{}
-		if m.Uuid_2 != uuid.Nil {
-			meldungStruct = &sqlc.Meldung{
-				Uuid:               m.Uuid_2,
-				DrvRevisionUuid:    m.DrvRevisionUuid,
-				Typ:                *m.Typ,
-				Bemerkung:          m.Bemerkung,
-				Abgemeldet:         m.Abgemeldet,
-				Dns:                m.Dns,
-				Dnf:                m.Dnf,
-				Dsq:                m.Dsq,
-				ZeitnahmeBemerkung: m.ZeitnahmeBemerkung,
-				StartNummer:        m.StartNummer,
-				Abteilung:          m.Abteilung,
-				Bahn:               m.Bahn,
-				Kosten:             *m.Kosten,
-				VereinUuid:         m.VereinUuid,
-				RennenUuid:         m.RennenUuid,
+	for i, row := range q {
+		if i == 0 {
+			curRennen = RennenWithMeldung{
+				Rennen:    rennenFromSqlc(row.Rennen),
+				Meldungen: []sqlc.Meldung{},
 			}
 		}
 
-		if len(rLs) == 0 && currentRennen == nil {
-			if m.Uuid_2 != uuid.Nil {
-				currentRennen = &RennenWithMeldung{
-					Rennen:    rennenStruct,
-					Meldungen: []*sqlc.Meldung{meldungStruct},
-				}
-			} else {
-				currentRennen = &RennenWithMeldung{
-					Rennen:    rennenStruct,
-					Meldungen: []*sqlc.Meldung{},
+		if row.Rennen.Uuid != curRennen.Uuid {
+			if getEmptyRennen || len(curRennen.Meldungen) != 0 {
+				rLs = append(rLs, curRennen)
+				curRennen = RennenWithMeldung{
+					Rennen:    rennenFromSqlc(row.Rennen),
+					Meldungen: []sqlc.Meldung{},
 				}
 			}
 		}
 
-		if currentRennen.Rennen.Uuid != rennenStruct.Uuid {
-			if len(currentRennen.Meldungen) > 0 || getEmptyRennen {
-				rLs = append(rLs, currentRennen)
-			}
-
-			if m.Uuid_2 != uuid.Nil {
-				currentRennen = &RennenWithMeldung{
-					Rennen:    rennenStruct,
-					Meldungen: []*sqlc.Meldung{meldungStruct},
-				}
-			} else {
-				currentRennen = &RennenWithMeldung{
-					Rennen:    rennenStruct,
-					Meldungen: []*sqlc.Meldung{},
-				}
-			}
-		} else if currentRennen.Rennen.Uuid == m.Uuid {
-			if m.Uuid_2 != uuid.Nil {
-				currentRennen.Meldungen = append(currentRennen.Meldungen, meldungStruct)
-			}
-		} else {
-			return nil, errors.New("This error should be happening!")
+		if row.Uuid_2 != uuid.Nil {
+			curRennen.Meldungen = append(curRennen.Meldungen, sqlc.Meldung{
+				Uuid:               row.Uuid_2,
+				DrvRevisionUuid:    row.DrvRevisionUuid,
+				Typ:                row.Typ.String,
+				Bemerkung:          row.Bemerkung,
+				Abgemeldet:         row.Abgemeldet.Bool,
+				Dns:                row.Dns.Bool,
+				Dnf:                row.Dnf.Bool,
+				Dsq:                row.Dsq.Bool,
+				ZeitnahmeBemerkung: row.ZeitnahmeBemerkung,
+				StartNummer:        row.StartNummer.Int32,
+				Abteilung:          row.Abteilung.Int32,
+				Bahn:               row.Bahn.Int32,
+				Kosten:             row.Kosten.Int32,
+				VereinUuid:         row.VereinUuid,
+				RennenUuid:         row.RennenUuid,
+			})
 		}
 	}
-
-	if rLs == nil {
-		rLs = []*RennenWithMeldung{}
+	// Make sure last rennen is added
+	if len(q) > 0 && rLs[len(rLs)-1].Rennen.Uuid != curRennen.Uuid {
+		if getEmptyRennen || len(curRennen.Meldungen) != 0 {
+			rLs = append(rLs, curRennen)
+		}
 	}
 
 	for i, r := range rLs {
@@ -228,111 +182,109 @@ func sqlcRennenToCrudRennen(q []*sqlc.GetAllRennenWithMeldRow, getEmptyRennen bo
 		maxAbt := 0
 		if len(r.Meldungen) != 0 {
 			for _, m := range r.Meldungen {
-				if maxAbt < int(*m.Abteilung) {
-					maxAbt = int(*m.Abteilung)
+				if maxAbt < int(m.Abteilung) {
+					maxAbt = int(m.Abteilung)
 				}
 			}
 		}
 		rLs[i].NumAbteilungen = maxAbt
 
-		slices.SortFunc(r.Meldungen, func(a, b *sqlc.Meldung) int {
+		slices.SortFunc(r.Meldungen, func(a, b sqlc.Meldung) int {
 			return cmp.Or(
-				cmp.Compare(*a.Abteilung, *b.Abteilung),
-				cmp.Compare(*a.Bahn, *b.Bahn),
+				cmp.Compare(a.Abteilung, b.Abteilung),
+				cmp.Compare(a.Bahn, b.Bahn),
 			)
 		})
-
 	}
 
 	return rLs, nil
 }
 
-func GetRennenMinimal(uuid uuid.UUID) (*sqlc.Rennen, error) {
+func GetRennenMinimal(uuid uuid.UUID) (sqlc.Rennen, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	r, err := DB.Queries.GetRennenMinimal(ctx, uuid)
 	if err != nil {
 		if isNoRowError(err) {
-			return nil, &api.NOT_FOUND
+			return sqlc.Rennen{}, &api.NOT_FOUND
 		}
-		return nil, err
+		return sqlc.Rennen{}, err
 	}
 
 	return r, nil
 }
 
-func GetRennen(uuidParam uuid.UUID) (*RennenWithMeldung, error) {
+func GetRennen(uuidParam uuid.UUID) (RennenWithMeldung, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	q, err := DB.Queries.GetRennen(ctx, uuidParam)
 	if err != nil {
 		if isNoRowError(err) {
-			return nil, &api.NOT_FOUND
+			return RennenWithMeldung{}, &api.NOT_FOUND
 		}
-		return nil, err
+		return RennenWithMeldung{}, err
 	}
 	if len(q) == 0 {
-		return nil, &api.NOT_FOUND
+		return RennenWithMeldung{}, &api.NOT_FOUND
 	}
 
 	r := RennenWithMeldung{
-		Rennen: &Rennen{
+		Rennen: Rennen{
 			Uuid:             q[0].Uuid,
-			SortID:           *q[0].SortID,
-			Nummer:           *q[0].Nummer,
-			Bezeichnung:      q[0].Bezeichnung,
-			BezeichnungLang:  q[0].BezeichnungLang,
-			Zusatz:           q[0].Zusatz,
-			Leichtgewicht:    q[0].Leichtgewicht,
-			Geschlecht:       q[0].Geschlecht,
-			Bootsklasse:      q[0].Bootsklasse,
-			BootsklasseLang:  q[0].BootsklasseLang,
-			Altersklasse:     q[0].Altersklasse,
-			AltersklasseLang: q[0].AltersklasseLang,
+			SortID:           int(q[0].SortID.Int32),
+			Nummer:           q[0].Nummer.String,
+			Bezeichnung:      q[0].Bezeichnung.String,
+			BezeichnungLang:  q[0].BezeichnungLang.String,
+			Zusatz:           q[0].Zusatz.String,
+			Leichtgewicht:    q[0].Leichtgewicht.Bool,
+			Geschlecht:       q[0].Geschlecht.Geschlecht,
+			Bootsklasse:      q[0].Bootsklasse.String,
+			BootsklasseLang:  q[0].BootsklasseLang.String,
+			Altersklasse:     q[0].Altersklasse.String,
+			AltersklasseLang: q[0].AltersklasseLang.String,
 			Tag:              q[0].Tag.Tag,
 			Wettkampf:        q[0].Wettkampf.Wettkampf,
-			KostenEur:        q[0].KostenEur,
-			Rennabstand:      q[0].Rennabstand,
-			Startzeit:        q[0].Startzeit,
+			KostenEur:        int(q[0].KostenEur.Int32),
+			Rennabstand:      int(q[0].Rennabstand.Int32),
+			Startzeit:        q[0].Startzeit.String,
 			NumMeldungen:     0,
 			NumAbteilungen:   0,
 		},
-		Meldungen: []*sqlc.Meldung{},
+		Meldungen: []sqlc.Meldung{},
 	}
 
-	numAbt := int32(0)
-  log.Debug(q[0].Uuid_2)
-  if q[0].Uuid_2 != uuid.Nil {
-    for _, row := range q {
-      if numAbt < *row.Abteilung {
-        numAbt = *row.Abteilung
-      }
+	numAbt := 0
+	if q[0].Uuid_2 != uuid.Nil {
+		for _, row := range q {
+			if numAbt < int(row.Abteilung.Int32) {
+				numAbt = int(row.Abteilung.Int32)
+			}
 
-      r.Meldungen = append(r.Meldungen, &sqlc.Meldung{
-        Uuid:               row.Uuid_2,
-        DrvRevisionUuid:    row.DrvRevisionUuid,
-        Typ:                *row.Typ,
-        Bemerkung:          row.Bemerkung,
-        Abgemeldet:         row.Abgemeldet,
-        Dns:                row.Dns,
-        Dnf:                row.Dnf,
-        Dsq:                row.Dsq,
-        ZeitnahmeBemerkung: row.ZeitnahmeBemerkung,
-        StartNummer:        row.StartNummer,
-        Abteilung:          row.Abteilung,
-        Bahn:               row.Bahn,
-        Kosten:             *row.Kosten,
-        VereinUuid:         row.VereinUuid,
-        RennenUuid:         row.RennenUuid,
-      })
-    }
-  }
-  r.NumMeldungen = len(r.Meldungen)
-  r.NumAbteilungen = int(numAbt)
+			r.Meldungen = append(r.Meldungen, sqlc.Meldung{
+				Uuid:               row.Uuid_2,
+				DrvRevisionUuid:    row.DrvRevisionUuid,
+				Typ:                row.Typ.String,
+				Bemerkung:          row.Bemerkung,
+				Abgemeldet:         row.Abgemeldet.Bool,
+				Dns:                row.Dns.Bool,
+				Dnf:                row.Dnf.Bool,
+				Dsq:                row.Dsq.Bool,
+				ZeitnahmeBemerkung: row.ZeitnahmeBemerkung,
+				StartNummer:        row.StartNummer.Int32,
+				Abteilung:          row.Abteilung.Int32,
+				Bahn:               row.Bahn.Int32,
+				Kosten:             row.Kosten.Int32,
+				VereinUuid:         row.VereinUuid,
+				RennenUuid:         row.RennenUuid,
+			})
+		}
+	}
+	r.NumMeldungen = len(r.Meldungen)
+	r.NumAbteilungen = int(numAbt)
 
-  return &r, nil
+	return r, nil
 }
 
 func UpdateStartZeit(params sqlc.UpdateStartZeitParams) error {
@@ -342,13 +294,13 @@ func UpdateStartZeit(params sqlc.UpdateStartZeitParams) error {
 	return DB.Queries.UpdateStartZeit(ctx, params)
 }
 
-func CreateRennen(rParams sqlc.CreateRennenParams) (*sqlc.Rennen, error) {
+func CreateRennen(rParams sqlc.CreateRennenParams) (sqlc.Rennen, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	v, err := DB.Queries.CreateRennen(ctx, rParams)
 	if err != nil {
-		return nil, err
+		return sqlc.Rennen{}, err
 	}
 
 	return v, nil

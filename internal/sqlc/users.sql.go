@@ -21,12 +21,12 @@ RETURNING ulid, username, hashed_password, is_active, group_ulid
 `
 
 type CreateUserParams struct {
-	GroupUlid      string  `json:"group_ulid"`
-	Username       *string `json:"username"`
-	HashedPassword *string `json:"hashed_password"`
+	GroupUlid      string `json:"group_ulid"`
+	Username       string `json:"username"`
+	HashedPassword string `json:"hashed_password"`
 }
 
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (*User, error) {
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
 	row := q.db.QueryRow(ctx, createUser, arg.GroupUlid, arg.Username, arg.HashedPassword)
 	var i User
 	err := row.Scan(
@@ -36,7 +36,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (*User, 
 		&i.IsActive,
 		&i.GroupUlid,
 	)
-	return &i, err
+	return i, err
 }
 
 const getAllUser = `-- name: GetAllUser :many
@@ -44,13 +44,13 @@ SELECT ulid, username, hashed_password, is_active, group_ulid FROM users
 ORDER BY ulid
 `
 
-func (q *Queries) GetAllUser(ctx context.Context) ([]*User, error) {
+func (q *Queries) GetAllUser(ctx context.Context) ([]User, error) {
 	rows, err := q.db.Query(ctx, getAllUser)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []*User
+	items := []User{}
 	for rows.Next() {
 		var i User
 		if err := rows.Scan(
@@ -62,7 +62,7 @@ func (q *Queries) GetAllUser(ctx context.Context) ([]*User, error) {
 		); err != nil {
 			return nil, err
 		}
-		items = append(items, &i)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -83,7 +83,7 @@ type GetUserRow struct {
 	UsersGroup UsersGroup `json:"users_group"`
 }
 
-func (q *Queries) GetUser(ctx context.Context, ulid string) (*GetUserRow, error) {
+func (q *Queries) GetUser(ctx context.Context, ulid string) (GetUserRow, error) {
 	row := q.db.QueryRow(ctx, getUser, ulid)
 	var i GetUserRow
 	err := row.Scan(
@@ -99,7 +99,7 @@ func (q *Queries) GetUser(ctx context.Context, ulid string) (*GetUserRow, error)
 		&i.UsersGroup.AllowedStartlisten,
 		&i.UsersGroup.AllowedRegattaleitung,
 	)
-	return &i, err
+	return i, err
 }
 
 const getUserMinimal = `-- name: GetUserMinimal :one
@@ -107,7 +107,7 @@ SELECT ulid, username, hashed_password, is_active, group_ulid FROM users
 WHERE ulid = $1 LIMIT 1
 `
 
-func (q *Queries) GetUserMinimal(ctx context.Context, ulid string) (*User, error) {
+func (q *Queries) GetUserMinimal(ctx context.Context, ulid string) (User, error) {
 	row := q.db.QueryRow(ctx, getUserMinimal, ulid)
 	var i User
 	err := row.Scan(
@@ -117,7 +117,7 @@ func (q *Queries) GetUserMinimal(ctx context.Context, ulid string) (*User, error
 		&i.IsActive,
 		&i.GroupUlid,
 	)
-	return &i, err
+	return i, err
 }
 
 const getUserUlidByName = `-- name: GetUserUlidByName :one
@@ -126,7 +126,7 @@ FROM users
 WHERE username = $1
 `
 
-func (q *Queries) GetUserUlidByName(ctx context.Context, username *string) (string, error) {
+func (q *Queries) GetUserUlidByName(ctx context.Context, username string) (string, error) {
 	row := q.db.QueryRow(ctx, getUserUlidByName, username)
 	var ulid string
 	err := row.Scan(&ulid)

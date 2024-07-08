@@ -14,19 +14,14 @@ SELECT * FROM rennen
 ORDER BY sort_id ASC;
 
 -- name: GetAllRennenWithMeld :many
-SELECT *
+SELECT sqlc.embed(rennen), meldung.*, verein.*
 FROM rennen
 FULL JOIN meldung
 ON rennen.uuid = meldung.rennen_uuid
+FULL JOIN verein
+ON meldung.verein_uuid = verein.uuid
+WHERE wettkampf = ANY($1::wettkampf[])
 ORDER BY rennen.sort_id;
-
--- name: GetAllRennenByWettkampf :many
-SELECT *
-FROM rennen
-FULL JOIN meldung
-ON rennen.uuid = meldung.rennen_uuid
-WHERE wettkampf = $1
-ORDER BY sort_id ASC;
 
 -- name: UpdateStartZeit :exec
 UPDATE rennen SET startzeit = $1 WHERE uuid = $2;

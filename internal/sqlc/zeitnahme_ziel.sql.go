@@ -28,14 +28,14 @@ INSERT INTO zeitnahme_ziel (
 `
 
 type CreateZeitnahmeZielParams struct {
-	RennenNummer    *string          `json:"rennen_nummer"`
-	StartNummer     *string          `json:"start_nummer"`
+	RennenNummer    pgtype.Text      `json:"rennen_nummer"`
+	StartNummer     string           `json:"start_nummer"`
 	TimeClient      pgtype.Timestamp `json:"time_client"`
 	TimeServer      pgtype.Timestamp `json:"time_server"`
-	MeasuredLatency *int32           `json:"measured_latency"`
+	MeasuredLatency pgtype.Int4      `json:"measured_latency"`
 }
 
-func (q *Queries) CreateZeitnahmeZiel(ctx context.Context, arg CreateZeitnahmeZielParams) (*ZeitnahmeZiel, error) {
+func (q *Queries) CreateZeitnahmeZiel(ctx context.Context, arg CreateZeitnahmeZielParams) (ZeitnahmeZiel, error) {
 	row := q.db.QueryRow(ctx, createZeitnahmeZiel,
 		arg.RennenNummer,
 		arg.StartNummer,
@@ -53,7 +53,7 @@ func (q *Queries) CreateZeitnahmeZiel(ctx context.Context, arg CreateZeitnahmeZi
 		&i.MeasuredLatency,
 		&i.Verarbeitet,
 	)
-	return &i, err
+	return i, err
 }
 
 const getAllZeitnahmeZiel = `-- name: GetAllZeitnahmeZiel :many
@@ -61,13 +61,13 @@ SELECT id, rennen_nummer, start_nummer, time_client, time_server, measured_laten
 ORDER BY id ASC
 `
 
-func (q *Queries) GetAllZeitnahmeZiel(ctx context.Context) ([]*ZeitnahmeZiel, error) {
+func (q *Queries) GetAllZeitnahmeZiel(ctx context.Context) ([]ZeitnahmeZiel, error) {
 	rows, err := q.db.Query(ctx, getAllZeitnahmeZiel)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []*ZeitnahmeZiel
+	items := []ZeitnahmeZiel{}
 	for rows.Next() {
 		var i ZeitnahmeZiel
 		if err := rows.Scan(
@@ -81,7 +81,7 @@ func (q *Queries) GetAllZeitnahmeZiel(ctx context.Context) ([]*ZeitnahmeZiel, er
 		); err != nil {
 			return nil, err
 		}
-		items = append(items, &i)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -94,7 +94,7 @@ SELECT id, rennen_nummer, start_nummer, time_client, time_server, measured_laten
 WHERE id = $1 LIMIT 1
 `
 
-func (q *Queries) GetZeitnahmeZiel(ctx context.Context, id int32) (*ZeitnahmeZiel, error) {
+func (q *Queries) GetZeitnahmeZiel(ctx context.Context, id int32) (ZeitnahmeZiel, error) {
 	row := q.db.QueryRow(ctx, getZeitnahmeZiel, id)
 	var i ZeitnahmeZiel
 	err := row.Scan(
@@ -106,5 +106,5 @@ func (q *Queries) GetZeitnahmeZiel(ctx context.Context, id int32) (*ZeitnahmeZie
 		&i.MeasuredLatency,
 		&i.Verarbeitet,
 	)
-	return &i, err
+	return i, err
 }

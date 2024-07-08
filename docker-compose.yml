@@ -1,0 +1,10 @@
+services:
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    ports:
+      - "3000:3000"
+    command:
+      - "gotenberg"
+      - "--chromium-clear-cache=true"
+      - "--chromium-auto-start=true"
+

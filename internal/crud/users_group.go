@@ -7,7 +7,7 @@ import (
 	"github.com/oklog/ulid/v2"
 )
 
-func GetAllUsersGroups() ([]*sqlc.UsersGroup, error) {
+func GetAllUsersGroups() ([]sqlc.UsersGroup, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
@@ -17,86 +17,86 @@ func GetAllUsersGroups() ([]*sqlc.UsersGroup, error) {
 	}
 
 	if len(ugLs) == 0 {
-		ugLs = []*sqlc.UsersGroup{}
+		ugLs = []sqlc.UsersGroup{}
 	}
 
 	return ugLs, nil
 }
 
-func GetUsersGroupsMinimal(ulid ulid.ULID) (*sqlc.UsersGroup, error) {
+func GetUsersGroupsMinimal(ulid ulid.ULID) (sqlc.UsersGroup, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	ug, err := DB.Queries.GetUserGroupMinimal(ctx, ulid.String())
 	if err != nil {
 		if isNoRowError(err) {
-			return nil, &api.NOT_FOUND
+			return sqlc.UsersGroup{}, &api.NOT_FOUND
 		}
-		return nil, err
+		return sqlc.UsersGroup{}, err
 	}
 
 	return ug, nil
 }
 
 type UsersGroupWithUsers struct {
-	*sqlc.UsersGroup
-	Users []*ReturnUserMinimal
+	sqlc.UsersGroup
+	Users []ReturnUserMinimal
 }
 
-func UGwUsersFromSQLC(q []*sqlc.GetUserGroupRow, ulid ulid.ULID) (*UsersGroupWithUsers, error) {
-	users := []*ReturnUserMinimal{}
+func UGwUsersFromSQLC(q []sqlc.GetUserGroupRow, ulid ulid.ULID) (UsersGroupWithUsers, error) {
+	users := []ReturnUserMinimal{}
 	var (
-		ug  *sqlc.UsersGroup
+		ug  sqlc.UsersGroup
 		err error
 	)
 	if len(q) == 0 {
 		ug, err = GetUsersGroupsMinimal(ulid)
 		if err != nil {
-			return nil, err
+			return UsersGroupWithUsers{}, err
 		}
 	} else {
-		ug = &q[0].UsersGroup
+		ug = q[0].UsersGroup
 		for _, u := range q {
-			users = append(users, &ReturnUserMinimal{
+			users = append(users, ReturnUserMinimal{
 				Ulid:     u.User.Ulid,
-				Username: *u.User.Username,
+				Username: u.User.Username,
 			})
 		}
 	}
 
-	return &UsersGroupWithUsers{
+	return UsersGroupWithUsers{
 		UsersGroup: ug,
 		Users:      users,
 	}, nil
 }
 
-func GetUsersGroup(ulid ulid.ULID) (*UsersGroupWithUsers, error) {
+func GetUsersGroup(ulid ulid.ULID) (UsersGroupWithUsers, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	q, err := DB.Queries.GetUserGroup(ctx, ulid.String())
 	if err != nil {
 		if isNoRowError(err) {
-			return nil, &api.NOT_FOUND
+			return UsersGroupWithUsers{}, &api.NOT_FOUND
 		}
-		return nil, err
+		return UsersGroupWithUsers{}, err
 	}
 
 	return UGwUsersFromSQLC(q, ulid)
 }
 
-func GetUsersGroupByName(name string) (*UsersGroupWithUsers, error) {
+func GetUsersGroupByName(name string) (UsersGroupWithUsers, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	ulidStr, err := DB.Queries.GetUserGroupUlidByName(ctx, &name)
+	ulidStr, err := DB.Queries.GetUserGroupUlidByName(ctx, name)
 	if err != nil {
-		return nil, err
+		return UsersGroupWithUsers{}, err
 	}
 
 	ulid, err := ulid.Parse(ulidStr)
 	if err != nil {
-		return nil, err
+		return UsersGroupWithUsers{}, err
 	}
 
 	return GetUsersGroup(ulid)

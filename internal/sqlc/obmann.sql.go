@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createObmann = `-- name: CreateObmann :one
@@ -24,14 +25,14 @@ INSERT INTO obmann (
 `
 
 type CreateObmannParams struct {
-	Uuid       uuid.UUID `json:"uuid"`
-	VereinUuid uuid.UUID `json:"verein_uuid"`
-	Name       *string   `json:"name"`
-	Email      *string   `json:"email"`
-	Phone      *string   `json:"phone"`
+	Uuid       uuid.UUID   `json:"uuid"`
+	VereinUuid uuid.UUID   `json:"verein_uuid"`
+	Name       pgtype.Text `json:"name"`
+	Email      pgtype.Text `json:"email"`
+	Phone      pgtype.Text `json:"phone"`
 }
 
-func (q *Queries) CreateObmann(ctx context.Context, arg CreateObmannParams) (*Obmann, error) {
+func (q *Queries) CreateObmann(ctx context.Context, arg CreateObmannParams) (Obmann, error) {
 	row := q.db.QueryRow(ctx, createObmann,
 		arg.Uuid,
 		arg.VereinUuid,
@@ -47,7 +48,7 @@ func (q *Queries) CreateObmann(ctx context.Context, arg CreateObmannParams) (*Ob
 		&i.Phone,
 		&i.VereinUuid,
 	)
-	return &i, err
+	return i, err
 }
 
 const getAllObmann = `-- name: GetAllObmann :many
@@ -55,13 +56,13 @@ SELECT uuid, name, email, phone, verein_uuid FROM obmann
 ORDER BY name ASC
 `
 
-func (q *Queries) GetAllObmann(ctx context.Context) ([]*Obmann, error) {
+func (q *Queries) GetAllObmann(ctx context.Context) ([]Obmann, error) {
 	rows, err := q.db.Query(ctx, getAllObmann)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []*Obmann
+	items := []Obmann{}
 	for rows.Next() {
 		var i Obmann
 		if err := rows.Scan(
@@ -73,7 +74,7 @@ func (q *Queries) GetAllObmann(ctx context.Context) ([]*Obmann, error) {
 		); err != nil {
 			return nil, err
 		}
-		items = append(items, &i)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -86,7 +87,7 @@ SELECT uuid, name, email, phone, verein_uuid FROM obmann
 WHERE uuid = $1 LIMIT 1
 `
 
-func (q *Queries) GetObmannMinimal(ctx context.Context, argUuid uuid.UUID) (*Obmann, error) {
+func (q *Queries) GetObmannMinimal(ctx context.Context, argUuid uuid.UUID) (Obmann, error) {
 	row := q.db.QueryRow(ctx, getObmannMinimal, argUuid)
 	var i Obmann
 	err := row.Scan(
@@ -96,5 +97,5 @@ func (q *Queries) GetObmannMinimal(ctx context.Context, argUuid uuid.UUID) (*Obm
 		&i.Phone,
 		&i.VereinUuid,
 	)
-	return &i, err
+	return i, err
 }

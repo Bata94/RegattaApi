@@ -11,12 +11,78 @@ import (
 	"time"
 
 	"github.com/bata94/RegattaApi/internal/crud"
+	"github.com/bata94/RegattaApi/internal/handlers"
 	"github.com/bata94/RegattaApi/internal/handlers/api"
 	"github.com/bata94/RegattaApi/internal/sqlc"
+	"github.com/bata94/RegattaApi/internal/templates/pdf"
+	"github.com/jackc/pgx/v5/pgtype"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 )
+
+func GetMeldeergebnisHtml(c *fiber.Ctx) error {
+	rLs, err := crud.GetAllRennen(crud.GetAllRennenParams{
+		GetMeldungen:  true,
+		ShowEmpty:     true,
+		ShowStarted:   true,
+		ShowWettkampf: sqlc.NullWettkampf{},
+	})
+	if err != nil {
+		return err
+	}
+
+	rLsParsed := []pdf_templates.RennenMeldeergebnisPDF{}
+	for _, r := range rLs {
+		rParsed := pdf_templates.RennenMeldeergebnisPDF{
+			RennNr:         r.Nummer,
+			Bezeichnung:    r.Bezeichnung,
+			Startzeit:      r.Startzeit,
+			Rennabstand:    r.Rennabstand,
+			Tag:            string(r.Tag),
+			NumMeldungen:   r.NumMeldungen,
+			NumAbteilungen: r.NumAbteilungen,
+			Abteilungen:    make([]pdf_templates.AbteilungenMeldeergebnisPDF, r.NumAbteilungen),
+			Abmeldungen:    []pdf_templates.MeldungMeldeergebnisPDF{},
+		}
+
+		if r.NumMeldungen == 0 {
+			rLsParsed = append(rLsParsed, rParsed)
+			continue
+		}
+		for _, m := range r.Meldungen {
+			if m.Abgemeldet {
+				rParsed.Abmeldungen = append(rParsed.Abmeldungen, pdf_templates.MeldungMeldeergebnisPDF{
+					Bahn:   0,
+					Verein: "Error!",
+				})
+				continue
+			}
+
+			abteilung := int(m.Abteilung)
+			verein := "Error!"
+			mParsed := pdf_templates.MeldungMeldeergebnisPDF{
+				Bahn:   int(m.Bahn),
+				Verein: verein,
+			}
+			log.Debugf("RennNr %s numAbt %d lenAbt %d curAbt %d", r.Nummer, r.NumAbteilungen, len(rParsed.Abteilungen), abteilung)
+			rParsed.Abteilungen[abteilung-1].Meldungen = append(rParsed.Abteilungen[abteilung-1].Meldungen, mParsed)
+		}
+
+		rLsParsed = append(rLsParsed, rParsed)
+	}
+
+	return handlers.RenderPdf(
+		c,
+		fmt.Sprintf("Meldeergebnis_%s", time.Now().Format("2006-01-02_15-04-05")),
+		pdf_templates.MeldeErgebnis(rLsParsed),
+	)
+}
+
+func GenerateMeldeergebnis(c *fiber.Ctx) error {
+	return &api.INTERNAL_SERVER_ERROR
+}
 
 func DrvMeldungUpload(c *fiber.Ctx) error {
 	file, err := c.FormFile("file")
@@ -42,7 +108,6 @@ func DrvMeldungUpload(c *fiber.Ctx) error {
 
 	err = ImportDrvJson(dest)
 	if err != nil {
-		log.Error("TopLevelError!")
 		return &api.ReqError{
 			Code:       500,
 			StatusCode: fiber.StatusInternalServerError,
@@ -196,16 +261,15 @@ func ImportDrvJson(filePath string) error {
 				return err
 			}
 		}
-		if verein != nil {
-			// log.Debug("Verein already exists: ", verein.Name)
+		if verein.Uuid != uuid.Nil {
 			continue
 		}
 
 		newVerein := sqlc.CreateVereinParams{
 			Uuid:     v.Id,
-			Name:     &v.Name,
-			Kurzform: &v.ShortName,
-			Kuerzel:  &v.Code,
+			Name:     v.Name,
+			Kurzform: v.ShortName,
+			Kuerzel:  v.Code,
 		}
 		_, err = crud.CreateVerein(newVerein)
 		if err != nil {
@@ -225,7 +289,7 @@ func ImportDrvJson(filePath string) error {
 			Name:            "Name",
 			Vorname:         "No",
 			Jahrgang:        "9999",
-			Startberechtigt: &startberechtigt,
+			Startberechtigt: startberechtigt,
 			Geschlecht:      "x",
 		}
 		_, err = crud.CreateAthlet(nnAthletParams)
@@ -245,8 +309,8 @@ func ImportDrvJson(filePath string) error {
 				return err
 			}
 		}
-		if rennen != nil {
-			// log.Debugf("Rennen already exists: %s - %s", rennen.Nummer, *rennen.BezeichnungLang)
+		if rennen.Uuid != uuid.Nil {
+			log.Debugf("Rennen already exists: %s - %s", rennen.Nummer, rennen.BezeichnungLang)
 			continue
 		}
 
@@ -264,25 +328,22 @@ func ImportDrvJson(filePath string) error {
 		}
 
 		newRennen := sqlc.CreateRennenParams{
-			Uuid:            r.Id,
-			SortID:          int32(r.Days[0].SortOrder),
-			Nummer:          r.Number,
-			Bezeichnung:     &r.Code,
-			BezeichnungLang: &r.Name,
-			Zusatz:          &r.Addition,
-			Leichtgewicht:   &r.Weighed,
-			Geschlecht: sqlc.NullGeschlecht{
-				Geschlecht: sqlc.Geschlecht(sex),
-				Valid:      true,
-			},
-			Bootsklasse:      &r.BoatType.Code,
-			BootsklasseLang:  &r.BoatType.Name,
-			Altersklasse:     &r.Category.Code,
-			AltersklasseLang: &r.Category.Name,
+			Uuid:             r.Id,
+			SortID:           int32(r.Days[0].SortOrder),
+			Nummer:           r.Number,
+			Bezeichnung:      r.Code,
+			BezeichnungLang:  r.Name,
+			Zusatz:           pgtype.Text{String: r.Addition, Valid: true},
+			Leichtgewicht:    r.Weighed,
+			Geschlecht:       sqlc.Geschlecht(sex),
+			Bootsklasse:      r.BoatType.Code,
+			BootsklasseLang:  r.BoatType.Name,
+			Altersklasse:     r.Category.Code,
+			AltersklasseLang: r.Category.Name,
 			Tag:              *tag,
 			Wettkampf:        *wettkampf,
-			KostenEur:        &kosten,
-			Rennabstand:      rennabstand,
+			KostenEur:        pgtype.Int4{Int32: kosten, Valid: true},
+			Rennabstand:      pgtype.Int4{Int32: rennabstand, Valid: true},
 		}
 
 		_, err = crud.CreateRennen(newRennen)
@@ -293,7 +354,7 @@ func ImportDrvJson(filePath string) error {
 		}
 	}
 
-	allRennen, err := crud.GetAllRennen(&crud.GetAllRennenParams{
+	allRennen, err := crud.GetAllRennen(crud.GetAllRennenParams{
 		GetMeldungen:  false,
 		ShowEmpty:     true,
 		ShowStarted:   true,
@@ -302,6 +363,7 @@ func ImportDrvJson(filePath string) error {
 	if err != nil {
 		return err
 	}
+	log.Debug("Len All Rennen: ", len(allRennen))
 
 	for _, a := range drvMeldung.ClubMembers {
 		athlet, err := crud.GetAthletMinimal(a.Id)
@@ -312,8 +374,7 @@ func ImportDrvJson(filePath string) error {
 				return err
 			}
 		}
-		if athlet != nil {
-			// log.Debugf("Athlet already exists: %s %s", athlet.Vorname, athlet.Name)
+		if athlet.Uuid != uuid.Nil {
 			continue
 		}
 
@@ -322,10 +383,10 @@ func ImportDrvJson(filePath string) error {
 		newAthlet := sqlc.CreateAthletParams{
 			Uuid:            a.Id,
 			VereinUuid:      a.ClubId,
-			Name:            a.Person.Firstname,
-			Vorname:         a.Person.Lastname,
+			Name:            a.Person.Lastname,
+			Vorname:         a.Person.Firstname,
 			Jahrgang:        a.Person.YearOfBirth,
-			Startberechtigt: &startberechtigt,
+			Startberechtigt: startberechtigt,
 			Geschlecht:      sqlc.Geschlecht(strings.ToLower(a.Person.Sex)),
 		}
 
@@ -337,6 +398,7 @@ func ImportDrvJson(filePath string) error {
 		}
 	}
 
+	log.Debug("Import Entries Loop...")
 	for _, m := range drvMeldung.Entries {
 		meldung, err := crud.GetMeldungMinimal(m.Id)
 		if err != nil {
@@ -346,7 +408,7 @@ func ImportDrvJson(filePath string) error {
 				return err
 			}
 		}
-		if meldung != nil {
+		if meldung.Uuid != uuid.Nil {
 			if meldung.DrvRevisionUuid.ClockSequence() == m.RevisionId.ClockSequence() {
 				continue
 			}
@@ -382,7 +444,7 @@ func ImportDrvJson(filePath string) error {
 			log.Debug("Alternativ Meldung gefunden!")
 			typ += fmt.Sprintf(" - Alternative zu RennenUUID: %s", m.AltEventID.String())
 			abgemeldet = true
-			*kosten = int32(0)
+			kosten = int32(0)
 		}
 
 		for _, a := range m.Members {
@@ -405,20 +467,20 @@ func ImportDrvJson(filePath string) error {
 			if role == "cox" {
 				athleten = append(athleten, crud.MeldungAthlet{
 					Uuid:     aUuid,
-					Position: &position,
+					Position: position,
 					Rolle:    sqlc.RolleStm,
 				})
 			} else if role == "coach" {
 				athleten = append(athleten, crud.MeldungAthlet{
 					Uuid:     aUuid,
-					Position: &position,
+					Position: position,
 					Rolle:    sqlc.RolleTrainer,
 				})
 				continue
 			} else if role == "rower" {
 				athleten = append(athleten, crud.MeldungAthlet{
 					Uuid:     aUuid,
-					Position: &position,
+					Position: position,
 					Rolle:    sqlc.RolleRuderer,
 				})
 			} else {
@@ -427,16 +489,17 @@ func ImportDrvJson(filePath string) error {
 			}
 		}
 
+		log.Debug("Members done... Creating Meldung")
 		newMeldung := crud.CreateMeldungParams{
-			CreateMeldungParams: &sqlc.CreateMeldungParams{
+			CreateMeldungParams: sqlc.CreateMeldungParams{
 				Uuid:            m.Id,
 				VereinUuid:      m.ClubId,
 				RennenUuid:      m.EventId,
 				DrvRevisionUuid: m.RevisionId,
-				Abgemeldet:      &abgemeldet,
-				Kosten:          *kosten,
+				Abgemeldet:      abgemeldet,
+				Kosten:          kosten,
 				Typ:             typ,
-				Bemerkung:       &bemerkung,
+				Bemerkung:       pgtype.Text{String: bemerkung},
 			},
 			Athleten: athleten,
 		}
@@ -452,23 +515,24 @@ func ImportDrvJson(filePath string) error {
 	return nil
 }
 
-func getKostenForMeld(rennen []*crud.RennenWithMeldung, m DrvEntries) (*int32, error) {
+func getKostenForMeld(rennen []crud.RennenWithMeldung, m DrvEntries) (int32, error) {
 	kosten := int32(0)
 
 	for _, r := range rennen {
 		if r.Uuid == m.EventId {
-			kosten = *r.KostenEur
+			kosten = int32(r.KostenEur)
 		}
 	}
 
 	if kosten == 0 {
-		return nil, errors.New("RennenUUID von Meldung nicht gefunden!")
+		log.Error(m.EventId)
+		return 0, errors.New("RennenUUID von Meldung nicht gefunden!")
 	}
 
-	return &kosten, nil
+	return kosten, nil
 }
 
-func getRennInfo(regattaDays []string, event DrvEvents) (*sqlc.Wettkampf, *sqlc.Tag, *int32, error) {
+func getRennInfo(regattaDays []string, event DrvEvents) (*sqlc.Wettkampf, *sqlc.Tag, int32, error) {
 	var (
 		wettkampf   sqlc.Wettkampf
 		tag         sqlc.Tag
@@ -478,7 +542,7 @@ func getRennInfo(regattaDays []string, event DrvEvents) (*sqlc.Wettkampf, *sqlc.
 	)
 	rennNr, err = strconv.ParseInt(event.Number, 10, 32)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, 0, err
 	}
 
 	if event.Days[0].Date == regattaDays[0] {
@@ -504,23 +568,23 @@ func getRennInfo(regattaDays []string, event DrvEvents) (*sqlc.Wettkampf, *sqlc.
 			wettkampf = sqlc.WettkampfKurzstrecke
 			rennabstand = 3
 		} else {
-			wettkampf = sqlc.WettkampfSlalom
+			wettkampf = sqlc.WettkampfStaffel
 			rennabstand = 10
 		}
 	} else {
-		return nil, nil, nil, errors.New("Could not find valid Date")
+		return nil, nil, 0, errors.New("Could not find valid Date")
 	}
 
-	return &wettkampf, &tag, &rennabstand, nil
+	return &wettkampf, &tag, rennabstand, nil
 }
 
 // TODO: Move Func
-// shuffle shuffles the elements of an array in place
-func shuffle(array []*sqlc.Meldung) {
-	for i := range array { //run the loop till the range of array
-		j := rand.IntN(i + 1)                   //choose any random number
-		array[i], array[j] = array[j], array[i] //swap the random element with current element
+func shuffle(array []sqlc.Meldung) []sqlc.Meldung {
+	for i := range array {
+		j := rand.IntN(i + 1)
+		array[i], array[j] = array[j], array[i]
 	}
+	return array
 }
 
 func SetzungsLosung(c *fiber.Ctx) error {
@@ -535,7 +599,7 @@ func SetzungsLosung(c *fiber.Ctx) error {
 		return retErr
 	}
 
-	rLs, err := crud.GetAllRennen(&crud.GetAllRennenParams{
+	rLs, err := crud.GetAllRennen(crud.GetAllRennenParams{
 		GetMeldungen:  true,
 		ShowEmpty:     true,
 		ShowStarted:   true,
@@ -548,7 +612,7 @@ func SetzungsLosung(c *fiber.Ctx) error {
 	for _, r := range rLs {
 		numMeld := 0
 		for _, m := range r.Meldungen {
-			if *m.Abgemeldet == false {
+			if m.Abgemeldet == false {
 				numMeld++
 			}
 		}
@@ -573,17 +637,17 @@ func SetzungsLosung(c *fiber.Ctx) error {
 			letzteVolleAbteilung--
 		}
 
-		shuffle(r.Meldungen)
+		r.Meldungen = shuffle(r.Meldungen)
 
 		for _, m := range r.Meldungen {
-			if *m.Abgemeldet {
+			if m.Abgemeldet {
 				continue
 			}
 
 			updateParams := sqlc.UpdateMeldungSetzungParams{
 				Uuid:      m.Uuid,
-				Abteilung: &abteilung,
-				Bahn:      &bahn,
+				Abteilung: abteilung,
+				Bahn:      bahn,
 			}
 			err := crud.UpdateMeldungSetzung(updateParams)
 			if err != nil {
@@ -598,7 +662,7 @@ func SetzungsLosung(c *fiber.Ctx) error {
 		}
 	}
 
-	_, err = crud.GetAllRennen(&crud.GetAllRennenParams{
+	_, err = crud.GetAllRennen(crud.GetAllRennenParams{
 		GetMeldungen:  true,
 		ShowEmpty:     true,
 		ShowStarted:   true,
@@ -623,8 +687,8 @@ func ResetSetzung(c *fiber.Ctx) error {
 	for _, m := range mLs {
 		updateParams := sqlc.UpdateMeldungSetzungParams{
 			Uuid:      m.Uuid,
-			Abteilung: &zero,
-			Bahn:      &zero,
+			Abteilung: zero,
+			Bahn:      zero,
 		}
 		err := crud.UpdateMeldungSetzung(updateParams)
 		if err != nil {
@@ -636,7 +700,7 @@ func ResetSetzung(c *fiber.Ctx) error {
 }
 
 func SetStartnummern(c *fiber.Ctx) error {
-	rLs, err := crud.GetAllRennen(&crud.GetAllRennenParams{
+	rLs, err := crud.GetAllRennen(crud.GetAllRennenParams{
 		GetMeldungen:  true,
 		ShowEmpty:     true,
 		ShowStarted:   true,
@@ -656,15 +720,15 @@ func SetStartnummern(c *fiber.Ctx) error {
 			curStartNummer = 1
 		}
 		for _, m := range r.Meldungen {
-			if *m.Abgemeldet {
+			if m.Abgemeldet {
 				err = crud.UpdateStartNummer(sqlc.UpdateStartNummerParams{
 					Uuid:        m.Uuid,
-					StartNummer: &abgStartNummer,
+					StartNummer: abgStartNummer,
 				})
 			} else {
 				err = crud.UpdateStartNummer(sqlc.UpdateStartNummerParams{
 					Uuid:        m.Uuid,
-					StartNummer: &curStartNummer,
+					StartNummer: curStartNummer,
 				})
 				curStartNummer++
 			}
@@ -689,7 +753,7 @@ func SetZeitplan(c *fiber.Ctx) error {
 		return err
 	}
 
-	rLs, err := crud.GetAllRennen(&crud.GetAllRennenParams{
+	rLs, err := crud.GetAllRennen(crud.GetAllRennenParams{
 		GetMeldungen:  true,
 		ShowEmpty:     true,
 		ShowStarted:   true,
@@ -699,10 +763,10 @@ func SetZeitplan(c *fiber.Ctx) error {
 		return err
 	}
 
-  pLs, err := crud.GetAllPausen()
-  if err != nil {
-    return err
-  }
+	pLs, err := crud.GetAllPausen()
+	if err != nil {
+		return err
+	}
 
 	curStartTimeSa, err := time.Parse("15:04", fmt.Sprintf("%d:00", param.SaStartStunde))
 	curStartTimeSo, err := time.Parse("15:04", fmt.Sprintf("%d:00", param.SoStartStunde))
@@ -712,67 +776,67 @@ func SetZeitplan(c *fiber.Ctx) error {
 			saTimeStr := curStartTimeSa.Format("15:04")
 
 			err := crud.UpdateStartZeit(sqlc.UpdateStartZeitParams{
-				Startzeit: &saTimeStr,
+				Startzeit: pgtype.Text{String: saTimeStr},
 				Uuid:      r.Uuid,
 			})
 			if err != nil {
 				return err
 			}
 
-			rennenDur := time.Duration(r.NumAbteilungen*int(*r.Rennabstand)) * time.Minute
-      if r.Wettkampf == sqlc.WettkampfLangstrecke {
-        rennenDur = time.Duration(r.NumMeldungen*int(*r.Rennabstand)) * time.Minute
-      }
+			rennenDur := time.Duration(r.NumAbteilungen*int(r.Rennabstand)) * time.Minute
+			if r.Wettkampf == sqlc.WettkampfLangstrecke {
+				rennenDur = time.Duration(r.NumMeldungen*int(r.Rennabstand)) * time.Minute
+			}
 			curStartTimeSa = curStartTimeSa.Add(rennenDur)
 
-      for _, p := range pLs {
-        if p.NachRennenUuid == r.Uuid {
-          pausenDur := time.Duration(p.Laenge) * time.Minute
-          curStartTimeSa = curStartTimeSa.Add(pausenDur)
+			for _, p := range pLs {
+				if p.NachRennenUuid == r.Uuid {
+					pausenDur := time.Duration(p.Laenge) * time.Minute
+					curStartTimeSa = curStartTimeSa.Add(pausenDur)
 
-          curMinuteStr := fmt.Sprint(curStartTimeSa.Minute())
-          curMinute, err := strconv.Atoi(curMinuteStr[1:])
-          if err != nil {
-            log.Error(err)
-            continue
-          }
+					curMinuteStr := fmt.Sprint(curStartTimeSa.Minute())
+					curMinute, err := strconv.Atoi(curMinuteStr[1:])
+					if err != nil {
+						log.Error(err)
+						continue
+					}
 
-          roundingMinutes := 10 - curMinute
-          roundingDur := time.Duration(roundingMinutes) * time.Minute
-          curStartTimeSa = curStartTimeSa.Add(roundingDur)
-        }
-      }
+					roundingMinutes := 10 - curMinute
+					roundingDur := time.Duration(roundingMinutes) * time.Minute
+					curStartTimeSa = curStartTimeSa.Add(roundingDur)
+				}
+			}
 		} else if r.Tag == sqlc.TagSo {
 			soTimeStr := curStartTimeSo.Format("15:04")
 
 			err := crud.UpdateStartZeit(sqlc.UpdateStartZeitParams{
-				Startzeit: &soTimeStr,
+				Startzeit: pgtype.Text{String: soTimeStr},
 				Uuid:      r.Uuid,
 			})
 			if err != nil {
 				return err
 			}
 
-			rennenDur := time.Duration(r.NumAbteilungen*int(*r.Rennabstand)) * time.Minute
+			rennenDur := time.Duration(r.NumAbteilungen*int(r.Rennabstand)) * time.Minute
 			curStartTimeSo = curStartTimeSo.Add(rennenDur)
 
-      for _, p := range pLs {
-        if p.NachRennenUuid == r.Uuid {
-          pausenDur := time.Duration(p.Laenge) * time.Minute
-          curStartTimeSo = curStartTimeSo.Add(pausenDur)
+			for _, p := range pLs {
+				if p.NachRennenUuid == r.Uuid {
+					pausenDur := time.Duration(p.Laenge) * time.Minute
+					curStartTimeSo = curStartTimeSo.Add(pausenDur)
 
-          curMinuteStr := fmt.Sprint(curStartTimeSo.Minute())
-          curMinute, err := strconv.Atoi(curMinuteStr[1:])
-          if err != nil {
-            log.Error(err)
-            continue
-          }
+					curMinuteStr := fmt.Sprint(curStartTimeSo.Minute())
+					curMinute, err := strconv.Atoi(curMinuteStr[1:])
+					if err != nil {
+						log.Error(err)
+						continue
+					}
 
-          roundingMinutes := 10 - curMinute
-          roundingDur := time.Duration(roundingMinutes) * time.Minute
-          curStartTimeSo = curStartTimeSo.Add(roundingDur)
-        }
-      }
+					roundingMinutes := 10 - curMinute
+					roundingDur := time.Duration(roundingMinutes) * time.Minute
+					curStartTimeSo = curStartTimeSo.Add(roundingDur)
+				}
+			}
 		} else {
 			log.Errorf("RennenNummer %s Tag Error %s", r.Nummer, r.Tag)
 		}

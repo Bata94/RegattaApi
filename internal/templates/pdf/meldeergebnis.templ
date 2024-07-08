@@ -1,7 +1,65 @@
-package templates
+package pdf_templates
 
-templ MeldeErgebnis() {
-  PdfLayout(
-  <h1>MeldeErgebnis</h1>
-  )
+import (
+  "time"
+	"strconv"
+)
+
+func curDayCheck(i int, rennen []RennenMeldeergebnisPDF) string {
+  if i == 0 || rennen[i-1].Tag != rennen[i].Tag {
+    if rennen[i].Tag == "sa" {
+      return "Samstag:"
+    } else if rennen[i].Tag == "so" {
+      return "Sonntag:"
+    } else {
+      return "Error?!"
+    }
+  }
+  return ""
+}
+
+type RennenMeldeergebnisPDF struct {
+  RennNr string
+  Bezeichnung string
+  Startzeit string
+  Rennabstand int
+  Tag string
+  NumMeldungen int
+  NumAbteilungen int
+  Abteilungen []AbteilungenMeldeergebnisPDF
+  Abmeldungen []MeldungMeldeergebnisPDF
+}
+
+type AbteilungenMeldeergebnisPDF struct {
+  Nummer int
+  Meldungen []MeldungMeldeergebnisPDF
+}
+
+type MeldungMeldeergebnisPDF struct {
+  Bahn int
+  Verein string
+}
+
+templ MeldeErgebnis(rennen []RennenMeldeergebnisPDF) {
+  <h1>Meldeergebnis</h1>
+  <h1>34. Mülheimer Jungen- und Mädchen-Regatta 2024</h1>
+  <h6>Stand: {time.Now().Format("02.01.2006 - 15:04:05 Uhr")}</h6>
+
+  for i, r := range rennen {
+    <h3>{curDayCheck(i, rennen)}</h3>
+    <h4>Rennen {r.RennNr} - {r.Bezeichnung}</h4>
+    if r.NumAbteilungen != 0 {
+      <h5>Startzeit: {r.Startzeit} Uhr, Rennabstand: {strconv.Itoa(r.Rennabstand)} Minute(n)</h5>
+      <table>
+      </table>
+    } else {
+      <p>Keine Meldungen, Rennen entfällt!</p>
+    }
+
+    if len(r.Abmeldungen) != 0 {
+      <h5>Abmeldungen:</h5>
+      <table>
+      </table>
+    }
+  }
 }

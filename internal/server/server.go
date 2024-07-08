@@ -165,6 +165,8 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		bueroV1.Post("/kasse/einzahlung", api_v1.KasseEinzahlung)
 
 		leitungV1 := v1.Group("/leitung")
+		leitungV1.Get("/meldeergebnis", api_v1.GetMeldeergebnisHtml)
+		leitungV1.Post("/meldeergebnis", api_v1.GenerateMeldeergebnis)
 		leitungV1.Post("/drv_meldung_upload", api_v1.DrvMeldungUpload)
 		leitungV1.Post("/SetzungsLosung", api_v1.SetzungsLosung)
 		leitungV1.Post("/SetzungsLosung/reset", api_v1.ResetSetzung)

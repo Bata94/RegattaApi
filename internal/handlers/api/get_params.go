@@ -56,6 +56,15 @@ func GetId32FromCtx(c *fiber.Ctx) (int32, error) {
 	return int32(id64), nil
 }
 
+func GetIdFromCtx(c *fiber.Ctx) (int, error) {
+	id64, err := GetId64FromCtx(c)
+	if err != nil {
+		return 0, err
+	}
+
+	return int(id64), nil
+}
+
 func GetStrParamFromCtx(c *fiber.Ctx, param string) (string, error) {
 	str := c.Params(param, "")
 	if str == "" {
