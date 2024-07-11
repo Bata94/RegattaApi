@@ -22,6 +22,7 @@ tmp/
 # Temp/Build templ Files
 internal/templates/**/*.txt
 internal/templates/**/*_templ.go
+drvFiles/
 
 # Embedded Replicas (Turso/LibSQL)
 **/*.db

@@ -126,7 +126,7 @@ CREATE TABLE zeitnahme_ergebnis (
 );
 
 CREATE TABLE users_group (
-  ulid ulid PRIMARY KEY DEFAULT gen_monotonic_ulid(),
+  ulid ulid PRIMARY KEY DEFAULT gen_ulid(),
   name text NOT NULL,
   allowed_admin boolean DEFAULT false NOT NULL,
   allowed_zeitnahme boolean DEFAULT false NOT NULL,
@@ -135,7 +135,7 @@ CREATE TABLE users_group (
 );
 
 CREATE TABLE users (
-  ulid ulid PRIMARY KEY DEFAULT gen_monotonic_ulid(),
+  ulid ulid PRIMARY KEY DEFAULT gen_ulid(),
   username text UNIQUE NOT NULL,
   hashed_password text NOT NULL,
   is_active boolean DEFAULT false NOT NULL,
