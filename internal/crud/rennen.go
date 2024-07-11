@@ -4,8 +4,6 @@ import (
 	"cmp"
 	"slices"
 
-	"github.com/gofiber/fiber/v2/log"
-
 	"github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/handlers/api"
 	"github.com/bata94/RegattaApi/internal/sqlc"
@@ -47,16 +45,11 @@ func GetAllRennen(p GetAllRennenParams) ([]RennenWithMeldung, error) {
 		return nil, err
 	}
 
-	rLs, err := sqlcRennenToCrudRennen(q, true)
-	if err != nil {
-		log.Error("Error converting sqlc rennen to crud rennen")
-		return nil, err
-	}
-	log.Debug(len(rLs))
+	rLs := sqlcRennenToCrudRennen(q, true)
 	retLs := []RennenWithMeldung{}
 
 	for _, r := range rLs {
-		meldungen := []sqlc.Meldung{}
+		meldungen := []MeldungMinimal{}
 		if p.GetMeldungen {
 			meldungen = r.Meldungen
 		}
@@ -72,7 +65,6 @@ func GetAllRennen(p GetAllRennenParams) ([]RennenWithMeldung, error) {
 			Meldungen: meldungen,
 		})
 	}
-	log.Debug("Crud GetAllRennen done...")
 	return retLs, nil
 }
 
@@ -124,10 +116,10 @@ func rennenFromSqlc(rennen sqlc.Rennen) Rennen {
 
 type RennenWithMeldung struct {
 	Rennen
-	Meldungen []sqlc.Meldung `json:"meldungen"`
+	Meldungen []MeldungMinimal `json:"meldungen"`
 }
 
-func sqlcRennenToCrudRennen(q []sqlc.GetAllRennenWithMeldRow, getEmptyRennen bool) ([]RennenWithMeldung, error) {
+func sqlcRennenToCrudRennen(q []sqlc.GetAllRennenWithMeldRow, getEmptyRennen bool) []RennenWithMeldung {
 	var curRennen RennenWithMeldung
 	rLs := []RennenWithMeldung{}
 
@@ -135,7 +127,7 @@ func sqlcRennenToCrudRennen(q []sqlc.GetAllRennenWithMeldRow, getEmptyRennen boo
 		if i == 0 {
 			curRennen = RennenWithMeldung{
 				Rennen:    rennenFromSqlc(row.Rennen),
-				Meldungen: []sqlc.Meldung{},
+				Meldungen: []MeldungMinimal{},
 			}
 		}
 
@@ -144,13 +136,13 @@ func sqlcRennenToCrudRennen(q []sqlc.GetAllRennenWithMeldRow, getEmptyRennen boo
 				rLs = append(rLs, curRennen)
 				curRennen = RennenWithMeldung{
 					Rennen:    rennenFromSqlc(row.Rennen),
-					Meldungen: []sqlc.Meldung{},
+					Meldungen: []MeldungMinimal{},
 				}
 			}
 		}
 
 		if row.Uuid_2 != uuid.Nil {
-			curRennen.Meldungen = append(curRennen.Meldungen, sqlc.Meldung{
+			curRennen.Meldungen = append(curRennen.Meldungen, sqlcMeldungMinmalToCrudMeldungMinimal(sqlc.Meldung{
 				Uuid:               row.Uuid_2,
 				DrvRevisionUuid:    row.DrvRevisionUuid,
 				Typ:                row.Typ.String,
@@ -166,7 +158,7 @@ func sqlcRennenToCrudRennen(q []sqlc.GetAllRennenWithMeldRow, getEmptyRennen boo
 				Kosten:             row.Kosten.Int32,
 				VereinUuid:         row.VereinUuid,
 				RennenUuid:         row.RennenUuid,
-			})
+			}))
 		}
 	}
 	// Make sure last rennen is added
@@ -189,7 +181,7 @@ func sqlcRennenToCrudRennen(q []sqlc.GetAllRennenWithMeldRow, getEmptyRennen boo
 		}
 		rLs[i].NumAbteilungen = maxAbt
 
-		slices.SortFunc(r.Meldungen, func(a, b sqlc.Meldung) int {
+		slices.SortFunc(r.Meldungen, func(a, b MeldungMinimal) int {
 			return cmp.Or(
 				cmp.Compare(a.Abteilung, b.Abteilung),
 				cmp.Compare(a.Bahn, b.Bahn),
@@ -197,7 +189,7 @@ func sqlcRennenToCrudRennen(q []sqlc.GetAllRennenWithMeldRow, getEmptyRennen boo
 		})
 	}
 
-	return rLs, nil
+	return rLs
 }
 
 func GetRennenMinimal(uuid uuid.UUID) (sqlc.Rennen, error) {
@@ -252,7 +244,7 @@ func GetRennen(uuidParam uuid.UUID) (RennenWithMeldung, error) {
 			NumMeldungen:     0,
 			NumAbteilungen:   0,
 		},
-		Meldungen: []sqlc.Meldung{},
+		Meldungen: []MeldungMinimal{},
 	}
 
 	numAbt := 0
@@ -262,7 +254,7 @@ func GetRennen(uuidParam uuid.UUID) (RennenWithMeldung, error) {
 				numAbt = int(row.Abteilung.Int32)
 			}
 
-			r.Meldungen = append(r.Meldungen, sqlc.Meldung{
+			r.Meldungen = append(r.Meldungen, sqlcMeldungMinmalToCrudMeldungMinimal(sqlc.Meldung{
 				Uuid:               row.Uuid_2,
 				DrvRevisionUuid:    row.DrvRevisionUuid,
 				Typ:                row.Typ.String,
@@ -278,7 +270,7 @@ func GetRennen(uuidParam uuid.UUID) (RennenWithMeldung, error) {
 				Kosten:             row.Kosten.Int32,
 				VereinUuid:         row.VereinUuid,
 				RennenUuid:         row.RennenUuid,
-			})
+			}))
 		}
 	}
 	r.NumMeldungen = len(r.Meldungen)

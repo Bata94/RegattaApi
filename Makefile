@@ -17,6 +17,15 @@ db-up-by-one:
 db-down:
 	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose down
 
+db-reset:
+	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose reset
+
+db-redo:
+	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose redo
+
+db-status:
+	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose status 
+
 # Generate Templ
 templ:
 	@echo "Generating Templ..."
@@ -43,7 +52,7 @@ build: templ # tailwind-gen # swagger-gen
 	@echo "Building..."
 	@go build -o bin/main main.go
 
-full-build: sqlc build # swagger-fmt build
+full-build: sqlc build db-up # swagger-fmt build
 	@echo "Full-Building..."
 
 # Run the application

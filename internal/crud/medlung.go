@@ -6,8 +6,52 @@ import (
 	"github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/handlers/api"
 	"github.com/bata94/RegattaApi/internal/sqlc"
+
 	"github.com/google/uuid"
 )
+
+type MeldungMinimal struct {
+	Uuid               uuid.UUID
+	DrvRevisionUuid    uuid.UUID
+	Typ                string
+	Bemerkung          string
+	Abgemeldet         bool
+	Dns                bool
+	Dnf                bool
+	Dsq                bool
+	ZeitnahmeBemerkung string
+	StartNummer        int
+	Abteilung          int
+	Bahn               int
+	Kosten             int
+	VereinUuid         uuid.UUID
+	RennenUuid         uuid.UUID
+}
+
+type Meldung struct {
+	MeldungMinimal
+	Verein sqlc.Verein
+}
+
+func sqlcMeldungMinmalToCrudMeldungMinimal(q sqlc.Meldung) MeldungMinimal {
+	return MeldungMinimal{
+		Uuid:               q.Uuid,
+		DrvRevisionUuid:    q.DrvRevisionUuid,
+		Typ:                q.Typ,
+		Bemerkung:          q.Bemerkung.String,
+		Abgemeldet:         q.Abgemeldet,
+		Dns:                q.Dns,
+		Dnf:                q.Dnf,
+		Dsq:                q.Dsq,
+		ZeitnahmeBemerkung: q.ZeitnahmeBemerkung.String,
+		StartNummer:        int(q.StartNummer),
+		Abteilung:          int(q.Abteilung),
+		Bahn:               int(q.Bahn),
+		Kosten:             int(q.Kosten),
+		VereinUuid:         q.VereinUuid,
+		RennenUuid:         q.RennenUuid,
+	}
+}
 
 type UpdateSetzungBatchParams struct {
 	RennenUUID uuid.UUID                         `json:"rennen_uuid"`

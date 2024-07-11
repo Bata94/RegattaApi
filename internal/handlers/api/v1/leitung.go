@@ -579,7 +579,7 @@ func getRennInfo(regattaDays []string, event DrvEvents) (*sqlc.Wettkampf, *sqlc.
 }
 
 // TODO: Move Func
-func shuffle(array []sqlc.Meldung) []sqlc.Meldung {
+func shuffle(array []crud.MeldungMinimal) []crud.MeldungMinimal {
 	for i := range array {
 		j := rand.IntN(i + 1)
 		array[i], array[j] = array[j], array[i]

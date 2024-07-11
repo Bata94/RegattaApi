@@ -1,3 +1,7 @@
+volumes:
+  postgres:
+  pgadmin:
+
 services:
   gotenberg:
     image: gotenberg/gotenberg:8
@@ -7,4 +11,79 @@ services:
       - "gotenberg"
       - "--chromium-clear-cache=true"
       - "--chromium-auto-start=true"
+
+  db:
+    platform: linux/amd64
+    image: postgres:16
+    ports:
+      - 5432:5432
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    environment:
+      PGUSER: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready", "-d", "postgres" ]
+      interval: 30s
+      timeout: 60s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  pgadmin:
+    platform: linux/amd64
+    image: dpage/pgadmin4:latest
+    depends_on:
+      - db
+    ports:
+      - "5431:53603"
+      - "5430:80"
+    volumes:
+      - pgadmin:/var/lib/pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@sits.ruhr
+      PGADMIN_DEFAULT_PASSWORD: admin
+    restart: unless-stopped
+
+  api:
+    build:
+      dockerfile: Dockerfile
+      context: ./
+      target: dev
+    tty: true
+    stdin_open: true
+    volumes:
+      - ./:/opt/app
+    ports:
+      - 8000:8000
+    env_file: ".env"
+    depends_on:
+      - gotenberg
+      - db
+
+  # api-templ:
+  #   build:
+  #     dockerfile: Dockerfile
+  #     context: ./
+  #     target: templ-dev
+  #   tty: true
+  #   stdin_open: true
+  #   volumes:
+  #     - ./:/opt/goTest
+  #   ports:
+  #     - 7331:7331
+
+  # api-tailwind:
+  #   build:
+  #     dockerfile: Dockerfile
+  #     context: ./
+  #     target: tailwind-dev
+  #   tty: true
+  #   stdin_open: true
+  #   volumes:
+  #     - ./templates:/opt/goTest/templates
+  #     - ./static/css:/opt/goTest/static/css
+  #     - ./tailwind.config.js:/opt/goTest/tailwind.config.js
+
 
