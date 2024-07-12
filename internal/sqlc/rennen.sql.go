@@ -97,37 +97,145 @@ func (q *Queries) CreateRennen(ctx context.Context, arg CreateRennenParams) (Ren
 }
 
 const getAllRennen = `-- name: GetAllRennen :many
-SELECT uuid, sort_id, nummer, bezeichnung, bezeichnung_lang, zusatz, leichtgewicht, geschlecht, bootsklasse, bootsklasse_lang, altersklasse, altersklasse_lang, tag, wettkampf, kosten_eur, rennabstand, startzeit FROM rennen
+SELECT rennen.uuid, rennen.sort_id, rennen.nummer, rennen.bezeichnung, rennen.bezeichnung_lang, rennen.zusatz, rennen.leichtgewicht, rennen.geschlecht, rennen.bootsklasse, rennen.bootsklasse_lang, rennen.altersklasse, rennen.altersklasse_lang, rennen.tag, rennen.wettkampf, rennen.kosten_eur, rennen.rennabstand, rennen.startzeit,
+(SELECT COUNT(meldung.uuid) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid AND meldung.abgemeldet = false) as num_meldungen,
+(SELECT COALESCE(MAX(meldung.abteilung),0) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid) as num_abteilungen
+FROM rennen
 ORDER BY sort_id ASC
 `
 
-func (q *Queries) GetAllRennen(ctx context.Context) ([]Rennen, error) {
+type GetAllRennenRow struct {
+	Rennen         Rennen      `json:"rennen"`
+	NumMeldungen   int64       `json:"num_meldungen"`
+	NumAbteilungen interface{} `json:"num_abteilungen"`
+}
+
+func (q *Queries) GetAllRennen(ctx context.Context) ([]GetAllRennenRow, error) {
 	rows, err := q.db.Query(ctx, getAllRennen)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Rennen{}
+	items := []GetAllRennenRow{}
 	for rows.Next() {
-		var i Rennen
+		var i GetAllRennenRow
 		if err := rows.Scan(
-			&i.Uuid,
-			&i.SortID,
-			&i.Nummer,
-			&i.Bezeichnung,
-			&i.BezeichnungLang,
-			&i.Zusatz,
-			&i.Leichtgewicht,
-			&i.Geschlecht,
-			&i.Bootsklasse,
-			&i.BootsklasseLang,
-			&i.Altersklasse,
-			&i.AltersklasseLang,
-			&i.Tag,
-			&i.Wettkampf,
-			&i.KostenEur,
-			&i.Rennabstand,
-			&i.Startzeit,
+			&i.Rennen.Uuid,
+			&i.Rennen.SortID,
+			&i.Rennen.Nummer,
+			&i.Rennen.Bezeichnung,
+			&i.Rennen.BezeichnungLang,
+			&i.Rennen.Zusatz,
+			&i.Rennen.Leichtgewicht,
+			&i.Rennen.Geschlecht,
+			&i.Rennen.Bootsklasse,
+			&i.Rennen.BootsklasseLang,
+			&i.Rennen.Altersklasse,
+			&i.Rennen.AltersklasseLang,
+			&i.Rennen.Tag,
+			&i.Rennen.Wettkampf,
+			&i.Rennen.KostenEur,
+			&i.Rennen.Rennabstand,
+			&i.Rennen.Startzeit,
+			&i.NumMeldungen,
+			&i.NumAbteilungen,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAllRennenWithAthlet = `-- name: GetAllRennenWithAthlet :many
+SELECT rennen.uuid, rennen.sort_id, rennen.nummer, rennen.bezeichnung, rennen.bezeichnung_lang, rennen.zusatz, rennen.leichtgewicht, rennen.geschlecht, rennen.bootsklasse, rennen.bootsklasse_lang, rennen.altersklasse, rennen.altersklasse_lang, rennen.tag, rennen.wettkampf, rennen.kosten_eur, rennen.rennabstand, rennen.startzeit, meldung.uuid, meldung.drv_revision_uuid, meldung.typ, meldung.bemerkung, meldung.abgemeldet, meldung.dns, meldung.dnf, meldung.dsq, meldung.zeitnahme_bemerkung, meldung.start_nummer, meldung.abteilung, meldung.bahn, meldung.kosten, meldung.verein_uuid, meldung.rennen_uuid, athlet.uuid, athlet.vorname, athlet.name, athlet.geschlecht, athlet.jahrgang, athlet.gewicht, athlet.startberechtigt, athlet.verein_uuid, verein.uuid, verein.name, verein.kurzform, verein.kuerzel, link_meldung_athlet.position, link_meldung_athlet.rolle,
+(SELECT COUNT(meldung.uuid) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid AND meldung.abgemeldet = false) as num_meldungen,
+(SELECT COALESCE(MAX(meldung.abteilung),0) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid) as num_abteilungen
+FROM rennen
+JOIN meldung
+ON rennen.uuid = meldung.rennen_uuid
+JOIN verein
+ON meldung.verein_uuid = verein.uuid
+JOIN link_meldung_athlet
+ON meldung.uuid = link_meldung_athlet.meldung_uuid
+JOIN athlet
+ON link_meldung_athlet.athlet_uuid = athlet.uuid
+WHERE wettkampf = ANY($1::wettkampf[])
+ORDER BY rennen.sort_id, meldung.uuid, link_meldung_athlet.rolle, link_meldung_athlet.position
+`
+
+type GetAllRennenWithAthletRow struct {
+	Rennen         Rennen      `json:"rennen"`
+	Meldung        Meldung     `json:"meldung"`
+	Athlet         Athlet      `json:"athlet"`
+	Verein         Verein      `json:"verein"`
+	Position       int32       `json:"position"`
+	Rolle          Rolle       `json:"rolle"`
+	NumMeldungen   int64       `json:"num_meldungen"`
+	NumAbteilungen interface{} `json:"num_abteilungen"`
+}
+
+func (q *Queries) GetAllRennenWithAthlet(ctx context.Context, dollar_1 []Wettkampf) ([]GetAllRennenWithAthletRow, error) {
+	rows, err := q.db.Query(ctx, getAllRennenWithAthlet, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetAllRennenWithAthletRow{}
+	for rows.Next() {
+		var i GetAllRennenWithAthletRow
+		if err := rows.Scan(
+			&i.Rennen.Uuid,
+			&i.Rennen.SortID,
+			&i.Rennen.Nummer,
+			&i.Rennen.Bezeichnung,
+			&i.Rennen.BezeichnungLang,
+			&i.Rennen.Zusatz,
+			&i.Rennen.Leichtgewicht,
+			&i.Rennen.Geschlecht,
+			&i.Rennen.Bootsklasse,
+			&i.Rennen.BootsklasseLang,
+			&i.Rennen.Altersklasse,
+			&i.Rennen.AltersklasseLang,
+			&i.Rennen.Tag,
+			&i.Rennen.Wettkampf,
+			&i.Rennen.KostenEur,
+			&i.Rennen.Rennabstand,
+			&i.Rennen.Startzeit,
+			&i.Meldung.Uuid,
+			&i.Meldung.DrvRevisionUuid,
+			&i.Meldung.Typ,
+			&i.Meldung.Bemerkung,
+			&i.Meldung.Abgemeldet,
+			&i.Meldung.Dns,
+			&i.Meldung.Dnf,
+			&i.Meldung.Dsq,
+			&i.Meldung.ZeitnahmeBemerkung,
+			&i.Meldung.StartNummer,
+			&i.Meldung.Abteilung,
+			&i.Meldung.Bahn,
+			&i.Meldung.Kosten,
+			&i.Meldung.VereinUuid,
+			&i.Meldung.RennenUuid,
+			&i.Athlet.Uuid,
+			&i.Athlet.Vorname,
+			&i.Athlet.Name,
+			&i.Athlet.Geschlecht,
+			&i.Athlet.Jahrgang,
+			&i.Athlet.Gewicht,
+			&i.Athlet.Startberechtigt,
+			&i.Athlet.VereinUuid,
+			&i.Verein.Uuid,
+			&i.Verein.Name,
+			&i.Verein.Kurzform,
+			&i.Verein.Kuerzel,
+			&i.Position,
+			&i.Rolle,
+			&i.NumMeldungen,
+			&i.NumAbteilungen,
 		); err != nil {
 			return nil, err
 		}
@@ -140,7 +248,9 @@ func (q *Queries) GetAllRennen(ctx context.Context) ([]Rennen, error) {
 }
 
 const getAllRennenWithMeld = `-- name: GetAllRennenWithMeld :many
-SELECT rennen.uuid, rennen.sort_id, rennen.nummer, rennen.bezeichnung, rennen.bezeichnung_lang, rennen.zusatz, rennen.leichtgewicht, rennen.geschlecht, rennen.bootsklasse, rennen.bootsklasse_lang, rennen.altersklasse, rennen.altersklasse_lang, rennen.tag, rennen.wettkampf, rennen.kosten_eur, rennen.rennabstand, rennen.startzeit, meldung.uuid, meldung.drv_revision_uuid, meldung.typ, meldung.bemerkung, meldung.abgemeldet, meldung.dns, meldung.dnf, meldung.dsq, meldung.zeitnahme_bemerkung, meldung.start_nummer, meldung.abteilung, meldung.bahn, meldung.kosten, meldung.verein_uuid, meldung.rennen_uuid, verein.uuid, verein.name, verein.kurzform, verein.kuerzel
+SELECT rennen.uuid, rennen.sort_id, rennen.nummer, rennen.bezeichnung, rennen.bezeichnung_lang, rennen.zusatz, rennen.leichtgewicht, rennen.geschlecht, rennen.bootsklasse, rennen.bootsklasse_lang, rennen.altersklasse, rennen.altersklasse_lang, rennen.tag, rennen.wettkampf, rennen.kosten_eur, rennen.rennabstand, rennen.startzeit, meldung.uuid, meldung.drv_revision_uuid, meldung.typ, meldung.bemerkung, meldung.abgemeldet, meldung.dns, meldung.dnf, meldung.dsq, meldung.zeitnahme_bemerkung, meldung.start_nummer, meldung.abteilung, meldung.bahn, meldung.kosten, meldung.verein_uuid, meldung.rennen_uuid, verein.name, verein.kuerzel, verein.kurzform,
+(SELECT COUNT(meldung.uuid) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid AND meldung.abgemeldet = false) as num_meldungen,
+(SELECT COALESCE(MAX(meldung.abteilung),0) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid) as num_abteilungen
 FROM rennen
 FULL JOIN meldung
 ON rennen.uuid = meldung.rennen_uuid
@@ -167,10 +277,11 @@ type GetAllRennenWithMeldRow struct {
 	Kosten             pgtype.Int4 `json:"kosten"`
 	VereinUuid         uuid.UUID   `json:"verein_uuid"`
 	RennenUuid         uuid.UUID   `json:"rennen_uuid"`
-	Uuid_2             uuid.UUID   `json:"uuid_2"`
 	Name               pgtype.Text `json:"name"`
-	Kurzform           pgtype.Text `json:"kurzform"`
 	Kuerzel            pgtype.Text `json:"kuerzel"`
+	Kurzform           pgtype.Text `json:"kurzform"`
+	NumMeldungen       int64       `json:"num_meldungen"`
+	NumAbteilungen     interface{} `json:"num_abteilungen"`
 }
 
 func (q *Queries) GetAllRennenWithMeld(ctx context.Context, dollar_1 []Wettkampf) ([]GetAllRennenWithMeldRow, error) {
@@ -215,10 +326,11 @@ func (q *Queries) GetAllRennenWithMeld(ctx context.Context, dollar_1 []Wettkampf
 			&i.Kosten,
 			&i.VereinUuid,
 			&i.RennenUuid,
-			&i.Uuid_2,
 			&i.Name,
-			&i.Kurzform,
 			&i.Kuerzel,
+			&i.Kurzform,
+			&i.NumMeldungen,
+			&i.NumAbteilungen,
 		); err != nil {
 			return nil, err
 		}

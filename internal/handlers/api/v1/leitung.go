@@ -592,7 +592,6 @@ func SetzungsLosung(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-
 	if check {
 		retErr := &api.BAD_REQUEST
 		retErr.Msg = "Setzung bereits erledigt! Vorher reseten um zu wiederholen!"
@@ -610,13 +609,7 @@ func SetzungsLosung(c *fiber.Ctx) error {
 	}
 
 	for _, r := range rLs {
-		numMeld := 0
-		for _, m := range r.Meldungen {
-			if m.Abgemeldet == false {
-				numMeld++
-			}
-		}
-
+		numMeld := r.NumMeldungen
 		abteilung := int32(1)
 		bahn := int32(1)
 		maxBahnen := 1
@@ -643,17 +636,14 @@ func SetzungsLosung(c *fiber.Ctx) error {
 			if m.Abgemeldet {
 				continue
 			}
-
-			updateParams := sqlc.UpdateMeldungSetzungParams{
+			log.Debugf("Setzung: %s Abt: %d Bahn: %d", m.Uuid, abteilung, bahn)
+			if err := crud.UpdateMeldungSetzung(sqlc.UpdateMeldungSetzungParams{
 				Uuid:      m.Uuid,
 				Abteilung: abteilung,
 				Bahn:      bahn,
-			}
-			err := crud.UpdateMeldungSetzung(updateParams)
-			if err != nil {
+			}); err != nil {
 				return err
 			}
-
 			bahn++
 			if bahn > int32(maxBahnen) {
 				abteilung++
@@ -661,18 +651,6 @@ func SetzungsLosung(c *fiber.Ctx) error {
 			}
 		}
 	}
-
-	_, err = crud.GetAllRennen(crud.GetAllRennenParams{
-		GetMeldungen:  true,
-		ShowEmpty:     true,
-		ShowStarted:   true,
-		ShowWettkampf: sqlc.NullWettkampf{},
-	})
-	if err != nil {
-		return err
-	}
-
-	// return c.JSON(retLs)
 	return c.JSON("Setzung erfolgreich erstellt!")
 }
 

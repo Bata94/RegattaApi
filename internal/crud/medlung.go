@@ -30,10 +30,11 @@ type MeldungMinimal struct {
 
 type Meldung struct {
 	MeldungMinimal
-	Verein sqlc.Verein
+	Verein   sqlc.Verein
+	Athleten []AthletWithPos
 }
 
-func sqlcMeldungMinmalToCrudMeldungMinimal(q sqlc.Meldung) MeldungMinimal {
+func SqlcMeldungMinmalToCrudMeldungMinimal(q sqlc.Meldung) MeldungMinimal {
 	return MeldungMinimal{
 		Uuid:               q.Uuid,
 		DrvRevisionUuid:    q.DrvRevisionUuid,

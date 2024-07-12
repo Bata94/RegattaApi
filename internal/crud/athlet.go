@@ -8,6 +8,12 @@ import (
 	"github.com/google/uuid"
 )
 
+type AthletWithPos struct {
+	sqlc.Athlet
+	Rolle    sqlc.Rolle
+	Position int
+}
+
 func GetAthletMinimal(uuid uuid.UUID) (sqlc.Athlet, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()

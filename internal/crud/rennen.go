@@ -7,6 +7,7 @@ import (
 	"github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/handlers/api"
 	"github.com/bata94/RegattaApi/internal/sqlc"
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 )
 
@@ -89,8 +90,17 @@ type Rennen struct {
 	NumMeldungen     int             `json:"num_meldungen"`
 	NumAbteilungen   int             `json:"num_abteilungen"`
 }
+type RennenWithMeldungAndAthlet struct {
+	Rennen
+	Meldungen []Meldung
+}
 
-func rennenFromSqlc(rennen sqlc.Rennen) Rennen {
+func RennenFromSqlc(rennen sqlc.Rennen, numMeld int, numAbt interface{}) Rennen {
+	numAbteilungen, err := numAbt.(int)
+	if err {
+		log.Error("Error converting numAbt to int", numAbt)
+		numAbteilungen = 0
+	}
 	return Rennen{
 		Uuid:             rennen.Uuid,
 		SortID:           int(rennen.SortID),
@@ -109,8 +119,8 @@ func rennenFromSqlc(rennen sqlc.Rennen) Rennen {
 		KostenEur:        int(rennen.KostenEur.Int32),
 		Rennabstand:      int(rennen.Rennabstand.Int32),
 		Startzeit:        rennen.Startzeit.String,
-		NumMeldungen:     0,
-		NumAbteilungen:   0,
+		NumMeldungen:     numMeld,
+		NumAbteilungen:   numAbteilungen,
 	}
 }
 
@@ -126,7 +136,7 @@ func sqlcRennenToCrudRennen(q []sqlc.GetAllRennenWithMeldRow, getEmptyRennen boo
 	for i, row := range q {
 		if i == 0 {
 			curRennen = RennenWithMeldung{
-				Rennen:    rennenFromSqlc(row.Rennen),
+				Rennen:    RennenFromSqlc(row.Rennen, int(row.NumMeldungen), row.NumAbteilungen),
 				Meldungen: []MeldungMinimal{},
 			}
 		}
@@ -135,15 +145,15 @@ func sqlcRennenToCrudRennen(q []sqlc.GetAllRennenWithMeldRow, getEmptyRennen boo
 			if getEmptyRennen || len(curRennen.Meldungen) != 0 {
 				rLs = append(rLs, curRennen)
 				curRennen = RennenWithMeldung{
-					Rennen:    rennenFromSqlc(row.Rennen),
+					Rennen:    RennenFromSqlc(row.Rennen, int(row.NumMeldungen), row.NumAbteilungen),
 					Meldungen: []MeldungMinimal{},
 				}
 			}
 		}
 
-		if row.Uuid_2 != uuid.Nil {
-			curRennen.Meldungen = append(curRennen.Meldungen, sqlcMeldungMinmalToCrudMeldungMinimal(sqlc.Meldung{
-				Uuid:               row.Uuid_2,
+		if row.Uuid != uuid.Nil {
+			curRennen.Meldungen = append(curRennen.Meldungen, SqlcMeldungMinmalToCrudMeldungMinimal(sqlc.Meldung{
+				Uuid:               row.Uuid,
 				DrvRevisionUuid:    row.DrvRevisionUuid,
 				Typ:                row.Typ.String,
 				Bemerkung:          row.Bemerkung,
@@ -168,19 +178,8 @@ func sqlcRennenToCrudRennen(q []sqlc.GetAllRennenWithMeldRow, getEmptyRennen boo
 		}
 	}
 
-	for i, r := range rLs {
-		rLs[i].NumMeldungen = len(r.Meldungen)
-
-		maxAbt := 0
-		if len(r.Meldungen) != 0 {
-			for _, m := range r.Meldungen {
-				if maxAbt < int(m.Abteilung) {
-					maxAbt = int(m.Abteilung)
-				}
-			}
-		}
-		rLs[i].NumAbteilungen = maxAbt
-
+	// sort Meldungen
+	for _, r := range rLs {
 		slices.SortFunc(r.Meldungen, func(a, b MeldungMinimal) int {
 			return cmp.Or(
 				cmp.Compare(a.Abteilung, b.Abteilung),
@@ -254,7 +253,7 @@ func GetRennen(uuidParam uuid.UUID) (RennenWithMeldung, error) {
 				numAbt = int(row.Abteilung.Int32)
 			}
 
-			r.Meldungen = append(r.Meldungen, sqlcMeldungMinmalToCrudMeldungMinimal(sqlc.Meldung{
+			r.Meldungen = append(r.Meldungen, SqlcMeldungMinmalToCrudMeldungMinimal(sqlc.Meldung{
 				Uuid:               row.Uuid_2,
 				DrvRevisionUuid:    row.DrvRevisionUuid,
 				Typ:                row.Typ.String,
