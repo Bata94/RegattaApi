@@ -10,8 +10,8 @@ import (
 
 type AthletWithPos struct {
 	sqlc.Athlet
-	Rolle    sqlc.Rolle
-	Position int
+	Rolle    sqlc.Rolle `json:"rolle"`
+	Position int        `json:"position"`
 }
 
 func GetAthletMinimal(uuid uuid.UUID) (sqlc.Athlet, error) {

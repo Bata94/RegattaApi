@@ -3,11 +3,34 @@ SELECT * FROM rennen
 WHERE uuid = $1 LIMIT 1;
 
 -- name: GetRennen :many
-SELECT *
-FROM rennen
-FULL JOIN meldung
-ON rennen.uuid = meldung.rennen_uuid
-WHERE rennen.uuid = $1;
+SELECT 
+  sqlc.embed(rennen),
+  sqlc.embed(meldung),
+  sqlc.embed(athlet),
+  sqlc.embed(verein),
+  sqlc.embed(link_meldung_athlet)
+FROM
+  rennen
+FULL JOIN
+  meldung
+ON
+  rennen.uuid = meldung.rennen_uuid
+FULL JOIN
+  link_meldung_athlet 
+ON
+  meldung.uuid = link_meldung_athlet.meldung_uuid
+FULL JOIN
+  athlet
+ON
+  link_meldung_athlet.athlet_uuid = athlet.uuid
+FULL JOIN
+  verein
+ON
+  meldung.verein_uuid = verein.uuid
+WHERE
+  rennen.uuid = $1
+ORDER BY
+  meldung.abteilung, meldung.bahn, link_meldung_athlet.rolle, link_meldung_athlet.position;
 
 -- name: GetAllRennen :many
 SELECT sqlc.embed(rennen),

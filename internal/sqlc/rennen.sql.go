@@ -343,46 +343,42 @@ func (q *Queries) GetAllRennenWithMeld(ctx context.Context, dollar_1 []Wettkampf
 }
 
 const getRennen = `-- name: GetRennen :many
-SELECT rennen.uuid, sort_id, nummer, bezeichnung, bezeichnung_lang, zusatz, leichtgewicht, geschlecht, bootsklasse, bootsklasse_lang, altersklasse, altersklasse_lang, tag, wettkampf, kosten_eur, rennabstand, startzeit, meldung.uuid, drv_revision_uuid, typ, bemerkung, abgemeldet, dns, dnf, dsq, zeitnahme_bemerkung, start_nummer, abteilung, bahn, kosten, verein_uuid, rennen_uuid
-FROM rennen
-FULL JOIN meldung
-ON rennen.uuid = meldung.rennen_uuid
-WHERE rennen.uuid = $1
+SELECT 
+  rennen.uuid, rennen.sort_id, rennen.nummer, rennen.bezeichnung, rennen.bezeichnung_lang, rennen.zusatz, rennen.leichtgewicht, rennen.geschlecht, rennen.bootsklasse, rennen.bootsklasse_lang, rennen.altersklasse, rennen.altersklasse_lang, rennen.tag, rennen.wettkampf, rennen.kosten_eur, rennen.rennabstand, rennen.startzeit,
+  meldung.uuid, meldung.drv_revision_uuid, meldung.typ, meldung.bemerkung, meldung.abgemeldet, meldung.dns, meldung.dnf, meldung.dsq, meldung.zeitnahme_bemerkung, meldung.start_nummer, meldung.abteilung, meldung.bahn, meldung.kosten, meldung.verein_uuid, meldung.rennen_uuid,
+  athlet.uuid, athlet.vorname, athlet.name, athlet.geschlecht, athlet.jahrgang, athlet.gewicht, athlet.startberechtigt, athlet.verein_uuid,
+  verein.uuid, verein.name, verein.kurzform, verein.kuerzel,
+  link_meldung_athlet.id, link_meldung_athlet.rolle, link_meldung_athlet.position, link_meldung_athlet.meldung_uuid, link_meldung_athlet.athlet_uuid
+FROM
+  rennen
+FULL JOIN
+  meldung
+ON
+  rennen.uuid = meldung.rennen_uuid
+FULL JOIN
+  link_meldung_athlet 
+ON
+  meldung.uuid = link_meldung_athlet.meldung_uuid
+FULL JOIN
+  athlet
+ON
+  link_meldung_athlet.athlet_uuid = athlet.uuid
+FULL JOIN
+  verein
+ON
+  meldung.verein_uuid = verein.uuid
+WHERE
+  rennen.uuid = $1
+ORDER BY
+  meldung.abteilung, meldung.bahn, link_meldung_athlet.rolle, link_meldung_athlet.position
 `
 
 type GetRennenRow struct {
-	Uuid               uuid.UUID      `json:"uuid"`
-	SortID             pgtype.Int4    `json:"sort_id"`
-	Nummer             pgtype.Text    `json:"nummer"`
-	Bezeichnung        pgtype.Text    `json:"bezeichnung"`
-	BezeichnungLang    pgtype.Text    `json:"bezeichnung_lang"`
-	Zusatz             pgtype.Text    `json:"zusatz"`
-	Leichtgewicht      pgtype.Bool    `json:"leichtgewicht"`
-	Geschlecht         NullGeschlecht `json:"geschlecht"`
-	Bootsklasse        pgtype.Text    `json:"bootsklasse"`
-	BootsklasseLang    pgtype.Text    `json:"bootsklasse_lang"`
-	Altersklasse       pgtype.Text    `json:"altersklasse"`
-	AltersklasseLang   pgtype.Text    `json:"altersklasse_lang"`
-	Tag                NullTag        `json:"tag"`
-	Wettkampf          NullWettkampf  `json:"wettkampf"`
-	KostenEur          pgtype.Int4    `json:"kosten_eur"`
-	Rennabstand        pgtype.Int4    `json:"rennabstand"`
-	Startzeit          pgtype.Text    `json:"startzeit"`
-	Uuid_2             uuid.UUID      `json:"uuid_2"`
-	DrvRevisionUuid    uuid.UUID      `json:"drv_revision_uuid"`
-	Typ                pgtype.Text    `json:"typ"`
-	Bemerkung          pgtype.Text    `json:"bemerkung"`
-	Abgemeldet         pgtype.Bool    `json:"abgemeldet"`
-	Dns                pgtype.Bool    `json:"dns"`
-	Dnf                pgtype.Bool    `json:"dnf"`
-	Dsq                pgtype.Bool    `json:"dsq"`
-	ZeitnahmeBemerkung pgtype.Text    `json:"zeitnahme_bemerkung"`
-	StartNummer        pgtype.Int4    `json:"start_nummer"`
-	Abteilung          pgtype.Int4    `json:"abteilung"`
-	Bahn               pgtype.Int4    `json:"bahn"`
-	Kosten             pgtype.Int4    `json:"kosten"`
-	VereinUuid         uuid.UUID      `json:"verein_uuid"`
-	RennenUuid         uuid.UUID      `json:"rennen_uuid"`
+	Rennen            Rennen            `json:"rennen"`
+	Meldung           Meldung           `json:"meldung"`
+	Athlet            Athlet            `json:"athlet"`
+	Verein            Verein            `json:"verein"`
+	LinkMeldungAthlet LinkMeldungAthlet `json:"link_meldung_athlet"`
 }
 
 func (q *Queries) GetRennen(ctx context.Context, argUuid uuid.UUID) ([]GetRennenRow, error) {
@@ -395,38 +391,55 @@ func (q *Queries) GetRennen(ctx context.Context, argUuid uuid.UUID) ([]GetRennen
 	for rows.Next() {
 		var i GetRennenRow
 		if err := rows.Scan(
-			&i.Uuid,
-			&i.SortID,
-			&i.Nummer,
-			&i.Bezeichnung,
-			&i.BezeichnungLang,
-			&i.Zusatz,
-			&i.Leichtgewicht,
-			&i.Geschlecht,
-			&i.Bootsklasse,
-			&i.BootsklasseLang,
-			&i.Altersklasse,
-			&i.AltersklasseLang,
-			&i.Tag,
-			&i.Wettkampf,
-			&i.KostenEur,
-			&i.Rennabstand,
-			&i.Startzeit,
-			&i.Uuid_2,
-			&i.DrvRevisionUuid,
-			&i.Typ,
-			&i.Bemerkung,
-			&i.Abgemeldet,
-			&i.Dns,
-			&i.Dnf,
-			&i.Dsq,
-			&i.ZeitnahmeBemerkung,
-			&i.StartNummer,
-			&i.Abteilung,
-			&i.Bahn,
-			&i.Kosten,
-			&i.VereinUuid,
-			&i.RennenUuid,
+			&i.Rennen.Uuid,
+			&i.Rennen.SortID,
+			&i.Rennen.Nummer,
+			&i.Rennen.Bezeichnung,
+			&i.Rennen.BezeichnungLang,
+			&i.Rennen.Zusatz,
+			&i.Rennen.Leichtgewicht,
+			&i.Rennen.Geschlecht,
+			&i.Rennen.Bootsklasse,
+			&i.Rennen.BootsklasseLang,
+			&i.Rennen.Altersklasse,
+			&i.Rennen.AltersklasseLang,
+			&i.Rennen.Tag,
+			&i.Rennen.Wettkampf,
+			&i.Rennen.KostenEur,
+			&i.Rennen.Rennabstand,
+			&i.Rennen.Startzeit,
+			&i.Meldung.Uuid,
+			&i.Meldung.DrvRevisionUuid,
+			&i.Meldung.Typ,
+			&i.Meldung.Bemerkung,
+			&i.Meldung.Abgemeldet,
+			&i.Meldung.Dns,
+			&i.Meldung.Dnf,
+			&i.Meldung.Dsq,
+			&i.Meldung.ZeitnahmeBemerkung,
+			&i.Meldung.StartNummer,
+			&i.Meldung.Abteilung,
+			&i.Meldung.Bahn,
+			&i.Meldung.Kosten,
+			&i.Meldung.VereinUuid,
+			&i.Meldung.RennenUuid,
+			&i.Athlet.Uuid,
+			&i.Athlet.Vorname,
+			&i.Athlet.Name,
+			&i.Athlet.Geschlecht,
+			&i.Athlet.Jahrgang,
+			&i.Athlet.Gewicht,
+			&i.Athlet.Startberechtigt,
+			&i.Athlet.VereinUuid,
+			&i.Verein.Uuid,
+			&i.Verein.Name,
+			&i.Verein.Kurzform,
+			&i.Verein.Kuerzel,
+			&i.LinkMeldungAthlet.ID,
+			&i.LinkMeldungAthlet.Rolle,
+			&i.LinkMeldungAthlet.Position,
+			&i.LinkMeldungAthlet.MeldungUuid,
+			&i.LinkMeldungAthlet.AthletUuid,
 		); err != nil {
 			return nil, err
 		}

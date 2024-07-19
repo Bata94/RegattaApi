@@ -753,8 +753,9 @@ func SetZeitplan(c *fiber.Ctx) error {
 		if r.Tag == sqlc.TagSa {
 			saTimeStr := curStartTimeSa.Format("15:04")
 
+			log.Debugf("Setting RennenNr: %s to time %s", r.Nummer, saTimeStr)
 			err := crud.UpdateStartZeit(sqlc.UpdateStartZeitParams{
-				Startzeit: pgtype.Text{String: saTimeStr},
+				Startzeit: pgtype.Text{String: saTimeStr, Valid: true},
 				Uuid:      r.Uuid,
 			})
 			if err != nil {

@@ -92,14 +92,22 @@ type Rennen struct {
 }
 type RennenWithMeldungAndAthlet struct {
 	Rennen
-	Meldungen []Meldung
+	Meldungen []Meldung `json:"meldungen"`
+}
+
+type RennenWithMeldungVereinAthlet struct {
+	Rennen
+	Verein    sqlc.Verein `json:"verein"`
+	Meldungen []Meldung   `json:"meldungen"`
 }
 
 func RennenFromSqlc(rennen sqlc.Rennen, numMeld int, numAbt interface{}) Rennen {
-	numAbteilungen, err := numAbt.(int)
+	// TODO: Might throw an unusual Error
+	numAbteilungen, err := numAbt.(int32)
+	log.Debug("numAbteilungen: ", numAbt, " ", numAbteilungen, " ", numAbt.(int32))
 	if err {
-		log.Error("Error converting numAbt to int", numAbt)
-		numAbteilungen = 0
+		log.Error("Error converting numAbt to int32 ", numAbt)
+		// numAbteilungen = 0
 	}
 	return Rennen{
 		Uuid:             rennen.Uuid,
@@ -120,7 +128,7 @@ func RennenFromSqlc(rennen sqlc.Rennen, numMeld int, numAbt interface{}) Rennen 
 		Rennabstand:      int(rennen.Rennabstand.Int32),
 		Startzeit:        rennen.Startzeit.String,
 		NumMeldungen:     numMeld,
-		NumAbteilungen:   numAbteilungen,
+		NumAbteilungen:   int(numAbteilungen),
 	}
 }
 
@@ -206,70 +214,54 @@ func GetRennenMinimal(uuid uuid.UUID) (sqlc.Rennen, error) {
 	return r, nil
 }
 
-func GetRennen(uuidParam uuid.UUID) (RennenWithMeldung, error) {
+func GetRennen(uuidParam uuid.UUID) (RennenWithMeldungVereinAthlet, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	q, err := DB.Queries.GetRennen(ctx, uuidParam)
 	if err != nil {
 		if isNoRowError(err) {
-			return RennenWithMeldung{}, &api.NOT_FOUND
+			return RennenWithMeldungVereinAthlet{}, &api.NOT_FOUND
 		}
-		return RennenWithMeldung{}, err
+		return RennenWithMeldungVereinAthlet{}, err
 	}
 	if len(q) == 0 {
-		return RennenWithMeldung{}, &api.NOT_FOUND
+		return RennenWithMeldungVereinAthlet{}, &api.NOT_FOUND
 	}
 
-	r := RennenWithMeldung{
-		Rennen: Rennen{
-			Uuid:             q[0].Uuid,
-			SortID:           int(q[0].SortID.Int32),
-			Nummer:           q[0].Nummer.String,
-			Bezeichnung:      q[0].Bezeichnung.String,
-			BezeichnungLang:  q[0].BezeichnungLang.String,
-			Zusatz:           q[0].Zusatz.String,
-			Leichtgewicht:    q[0].Leichtgewicht.Bool,
-			Geschlecht:       q[0].Geschlecht.Geschlecht,
-			Bootsklasse:      q[0].Bootsklasse.String,
-			BootsklasseLang:  q[0].BootsklasseLang.String,
-			Altersklasse:     q[0].Altersklasse.String,
-			AltersklasseLang: q[0].AltersklasseLang.String,
-			Tag:              q[0].Tag.Tag,
-			Wettkampf:        q[0].Wettkampf.Wettkampf,
-			KostenEur:        int(q[0].KostenEur.Int32),
-			Rennabstand:      int(q[0].Rennabstand.Int32),
-			Startzeit:        q[0].Startzeit.String,
-			NumMeldungen:     0,
-			NumAbteilungen:   0,
-		},
-		Meldungen: []MeldungMinimal{},
+	r := RennenWithMeldungVereinAthlet{
+		Rennen:    RennenFromSqlc(q[0].Rennen, 0, int32(0)),
+		Verein:    q[0].Verein,
+		Meldungen: []Meldung{},
 	}
 
 	numAbt := 0
-	if q[0].Uuid_2 != uuid.Nil {
-		for _, row := range q {
-			if numAbt < int(row.Abteilung.Int32) {
-				numAbt = int(row.Abteilung.Int32)
+	if q[0].Meldung.Uuid != uuid.Nil {
+		for i, row := range q {
+			meld := row.Meldung
+			if numAbt < int(meld.Abteilung) {
+				numAbt = int(meld.Abteilung)
+			}
+			if i == 0 || meld.Uuid != q[i-1].Meldung.Uuid {
+				r.Meldungen = append(
+					r.Meldungen,
+					Meldung{
+						MeldungMinimal: SqlcMeldungMinmalToCrudMeldungMinimal(meld),
+						Verein:         row.Verein,
+						Athleten:       []AthletWithPos{},
+					},
+				)
 			}
 
-			r.Meldungen = append(r.Meldungen, SqlcMeldungMinmalToCrudMeldungMinimal(sqlc.Meldung{
-				Uuid:               row.Uuid_2,
-				DrvRevisionUuid:    row.DrvRevisionUuid,
-				Typ:                row.Typ.String,
-				Bemerkung:          row.Bemerkung,
-				Abgemeldet:         row.Abgemeldet.Bool,
-				Dns:                row.Dns.Bool,
-				Dnf:                row.Dnf.Bool,
-				Dsq:                row.Dsq.Bool,
-				ZeitnahmeBemerkung: row.ZeitnahmeBemerkung,
-				StartNummer:        row.StartNummer.Int32,
-				Abteilung:          row.Abteilung.Int32,
-				Bahn:               row.Bahn.Int32,
-				Kosten:             row.Kosten.Int32,
-				VereinUuid:         row.VereinUuid,
-				RennenUuid:         row.RennenUuid,
-			}))
+			athlet := row.Athlet
+			if athlet.Uuid != uuid.Nil {
+				lastMeldIndex := len(r.Meldungen) - 1
+				r.Meldungen[lastMeldIndex].Athleten = append(r.Meldungen[lastMeldIndex].Athleten, AthletWithPos{
+					Athlet:   athlet,
+					Rolle:    row.LinkMeldungAthlet.Rolle,
+					Position: int(row.LinkMeldungAthlet.Position),
+				})
+			}
 		}
 	}
 	r.NumMeldungen = len(r.Meldungen)

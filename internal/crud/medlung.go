@@ -11,27 +11,27 @@ import (
 )
 
 type MeldungMinimal struct {
-	Uuid               uuid.UUID
-	DrvRevisionUuid    uuid.UUID
-	Typ                string
-	Bemerkung          string
-	Abgemeldet         bool
-	Dns                bool
-	Dnf                bool
-	Dsq                bool
-	ZeitnahmeBemerkung string
-	StartNummer        int
-	Abteilung          int
-	Bahn               int
-	Kosten             int
-	VereinUuid         uuid.UUID
-	RennenUuid         uuid.UUID
+	Uuid               uuid.UUID `json:"uuid"`
+	DrvRevisionUuid    uuid.UUID `json:"drv_revision_uuid"`
+	Typ                string    `json:"typ"`
+	Bemerkung          string    `json:"bemerkung"`
+	Abgemeldet         bool      `json:"abgemeldet"`
+	Dns                bool      `json:"dns"`
+	Dnf                bool      `json:"dnf"`
+	Dsq                bool      `json:"dsq"`
+	ZeitnahmeBemerkung string    `json:"zeitnahme_bemerkung"`
+	StartNummer        int       `json:"start_nummer"`
+	Abteilung          int       `json:"abteilung"`
+	Bahn               int       `json:"bahn"`
+	Kosten             int       `json:"kosten"`
+	VereinUuid         uuid.UUID `json:"verein_uuid"`
+	RennenUuid         uuid.UUID `json:"rennen_uuid"`
 }
 
 type Meldung struct {
 	MeldungMinimal
-	Verein   sqlc.Verein
-	Athleten []AthletWithPos
+	Verein   sqlc.Verein     `json:"verein"`
+	Athleten []AthletWithPos `json:"athleten"`
 }
 
 func SqlcMeldungMinmalToCrudMeldungMinimal(q sqlc.Meldung) MeldungMinimal {
@@ -65,9 +65,9 @@ type CreateMeldungParams struct {
 }
 
 type MeldungAthlet struct {
-	Uuid     uuid.UUID
-	Position int32
-	Rolle    sqlc.Rolle
+	Uuid     uuid.UUID  `json:"uuid"`
+	Position int32      `json:"position"`
+	Rolle    sqlc.Rolle `json:"rolle"`
 }
 
 func GetAllMeldungen() ([]sqlc.Meldung, error) {

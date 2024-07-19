@@ -15,6 +15,7 @@ import (
 	"golang.org/x/text/language"
 )
 
+// TODO: Implement queryParams
 func GetRennen(c *fiber.Ctx) error {
 	uuid, err := api.GetUuidFromCtx(c)
 	if err != nil {
