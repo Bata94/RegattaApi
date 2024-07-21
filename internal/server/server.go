@@ -204,6 +204,9 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		vereinV1 := v1.Group("/verein")
 		vereinV1.Get("", api_v1.GetAllVerein)
 		vereinV1.Get("/:uuid", api_v1.GetVerein)
+		// TODO; Rethink if maybe better at athlet endpoint??
+		vereinV1.Get("/:uuid/waage", api_v1.GetAllAthletenForVereinWaage)
+		vereinV1.Get("/:uuid/startberechtigung", api_v1.GetAllAthletenForVereinMissStartber)
 	}
 
 	if frontendEnabled {

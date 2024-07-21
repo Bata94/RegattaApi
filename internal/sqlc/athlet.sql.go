@@ -88,6 +88,111 @@ func (q *Queries) GetAllAthlet(ctx context.Context) ([]Athlet, error) {
 	return items, nil
 }
 
+const getAllAthletenForVereinMissStartber = `-- name: GetAllAthletenForVereinMissStartber :many
+SELECT
+  athlet.uuid, athlet.vorname, athlet.name, athlet.geschlecht, athlet.jahrgang, athlet.gewicht, athlet.startberechtigt, athlet.verein_uuid
+FROM
+  athlet
+JOIN
+  link_meldung_athlet
+ON
+  athlet.uuid = link_meldung_athlet.athlet_uuid
+JOIN
+  meldung
+ON
+  link_meldung_athlet.meldung_uuid = meldung.uuid
+WHERE
+  meldung.verein_uuid = $1 AND
+  meldung.abgemeldet = false AND
+  athlet.startberechtigt = false
+ORDER BY
+  athlet.name, athlet.vorname
+`
+
+func (q *Queries) GetAllAthletenForVereinMissStartber(ctx context.Context, vereinUuid uuid.UUID) ([]Athlet, error) {
+	rows, err := q.db.Query(ctx, getAllAthletenForVereinMissStartber, vereinUuid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Athlet{}
+	for rows.Next() {
+		var i Athlet
+		if err := rows.Scan(
+			&i.Uuid,
+			&i.Vorname,
+			&i.Name,
+			&i.Geschlecht,
+			&i.Jahrgang,
+			&i.Gewicht,
+			&i.Startberechtigt,
+			&i.VereinUuid,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAllAthletenForVereinWaage = `-- name: GetAllAthletenForVereinWaage :many
+SELECT
+  athlet.uuid, athlet.vorname, athlet.name, athlet.geschlecht, athlet.jahrgang, athlet.gewicht, athlet.startberechtigt, athlet.verein_uuid
+FROM
+  athlet
+JOIN
+  link_meldung_athlet
+ON
+  athlet.uuid = link_meldung_athlet.athlet_uuid
+JOIN
+  meldung
+ON
+  link_meldung_athlet.meldung_uuid = meldung.uuid
+JOIN
+  rennen
+ON
+  meldung.rennen_uuid = rennen.uuid
+WHERE
+  meldung.verein_uuid = $1 AND
+  rennen.leichtgewicht = true AND
+  meldung.abgemeldet = false AND
+  athlet.gewicht = 0
+ORDER BY
+  athlet.name, athlet.vorname
+`
+
+func (q *Queries) GetAllAthletenForVereinWaage(ctx context.Context, vereinUuid uuid.UUID) ([]Athlet, error) {
+	rows, err := q.db.Query(ctx, getAllAthletenForVereinWaage, vereinUuid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Athlet{}
+	for rows.Next() {
+		var i Athlet
+		if err := rows.Scan(
+			&i.Uuid,
+			&i.Vorname,
+			&i.Name,
+			&i.Geschlecht,
+			&i.Jahrgang,
+			&i.Gewicht,
+			&i.Startberechtigt,
+			&i.VereinUuid,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getAllNNAthleten = `-- name: GetAllNNAthleten :many
 SELECT uuid, vorname, name, geschlecht, jahrgang, gewicht, startberechtigt, verein_uuid FROM athlet
 WHERE vorname = 'No' and name = 'Name' and jahrgang = '9999'

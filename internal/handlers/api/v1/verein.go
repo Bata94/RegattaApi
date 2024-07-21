@@ -28,3 +28,31 @@ func GetVerein(c *fiber.Ctx) error {
 
 	return c.JSON(v)
 }
+
+func GetAllAthletenForVereinMissStartber(c *fiber.Ctx) error {
+	uuid, err := api.GetUuidFromCtx(c)
+	if err != nil {
+		return err
+	}
+
+	aLs, err := crud.GetAllAthletenForVereinMissStartber(*uuid)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(aLs)
+}
+
+func GetAllAthletenForVereinWaage(c *fiber.Ctx) error {
+	uuid, err := api.GetUuidFromCtx(c)
+	if err != nil {
+		return err
+	}
+
+	aLs, err := crud.GetAllAthletenForVereinWaage(*uuid)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(aLs)
+}

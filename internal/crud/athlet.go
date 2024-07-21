@@ -60,6 +60,20 @@ func GetAllNNAthleten() ([]sqlc.Athlet, error) {
 	return aLs, err
 }
 
+func GetAllAthletenForVereinWaage(vUuid uuid.UUID) ([]sqlc.Athlet, error) {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	return DB.Queries.GetAllAthletenForVereinWaage(ctx, vUuid)
+}
+
+func GetAllAthletenForVereinMissStartber(vUuid uuid.UUID) ([]sqlc.Athlet, error) {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	return DB.Queries.GetAllAthletenForVereinMissStartber(ctx, vUuid)
+}
+
 func CreateAthlet(aParams sqlc.CreateAthletParams) (sqlc.Athlet, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
