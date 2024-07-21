@@ -48,3 +48,17 @@ func UpdateSetzungBatch(c *fiber.Ctx) error {
 
 	return c.JSON("Setzung erfolgreich aktualisiert!")
 }
+
+func GetAllMeldungForVerein(c *fiber.Ctx) error {
+	vereinUuid, err := api.GetUuidFromCtx(c)
+	if err != nil {
+		return err
+	}
+
+	meldungen, err := crud.GetAllMeldungForVerein(*vereinUuid)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(meldungen)
+}

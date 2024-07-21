@@ -6,6 +6,7 @@ import (
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type AthletWithPos struct {
@@ -70,4 +71,24 @@ func CreateAthlet(aParams sqlc.CreateAthletParams) (sqlc.Athlet, error) {
 	}
 
 	return a, nil
+}
+
+func UpdateAthletStartberechtigung(startberechtigt bool, aUuid uuid.UUID) error {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	return DB.Queries.UpdateAthletAerztlBesch(ctx, sqlc.UpdateAthletAerztlBeschParams{
+		Startberechtigt: startberechtigt,
+		Uuid:            aUuid,
+	})
+}
+
+func UpdateAthletGewicht(gewicht int32, aUuid uuid.UUID) error {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	return DB.Queries.UpdateAthletWaage(ctx, sqlc.UpdateAthletWaageParams{
+		Gewicht: pgtype.Int4{Valid: true, Int32: gewicht},
+		Uuid:    aUuid,
+	})
 }

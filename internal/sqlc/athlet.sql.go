@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createAthlet = `-- name: CreateAthlet :one
@@ -141,4 +142,42 @@ func (q *Queries) GetAthletMinimal(ctx context.Context, argUuid uuid.UUID) (Athl
 		&i.VereinUuid,
 	)
 	return i, err
+}
+
+const updateAthletAerztlBesch = `-- name: UpdateAthletAerztlBesch :exec
+UPDATE
+  athlet
+SET
+  startberechtigt = $1
+WHERE
+  uuid = $2
+`
+
+type UpdateAthletAerztlBeschParams struct {
+	Startberechtigt bool      `json:"startberechtigt"`
+	Uuid            uuid.UUID `json:"uuid"`
+}
+
+func (q *Queries) UpdateAthletAerztlBesch(ctx context.Context, arg UpdateAthletAerztlBeschParams) error {
+	_, err := q.db.Exec(ctx, updateAthletAerztlBesch, arg.Startberechtigt, arg.Uuid)
+	return err
+}
+
+const updateAthletWaage = `-- name: UpdateAthletWaage :exec
+UPDATE
+  athlet
+SET
+  gewicht = $1
+WHERE
+  uuid = $2
+`
+
+type UpdateAthletWaageParams struct {
+	Gewicht pgtype.Int4 `json:"gewicht"`
+	Uuid    uuid.UUID   `json:"uuid"`
+}
+
+func (q *Queries) UpdateAthletWaage(ctx context.Context, arg UpdateAthletWaageParams) error {
+	_, err := q.db.Exec(ctx, updateAthletWaage, arg.Gewicht, arg.Uuid)
+	return err
 }

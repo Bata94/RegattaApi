@@ -17,3 +17,19 @@ INSERT INTO athlet
 VALUES
 ($1, $2, $3, $4, $5, $6, $7)
 RETURNING *;
+
+-- name: UpdateAthletAerztlBesch :exec
+UPDATE
+  athlet
+SET
+  startberechtigt = $1
+WHERE
+  uuid = $2;
+
+-- name: UpdateAthletWaage :exec
+UPDATE
+  athlet
+SET
+  gewicht = $1
+WHERE
+  uuid = $2;

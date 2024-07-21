@@ -155,6 +155,8 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		athletV1.Get("", api_v1.GetAllAthlet)
 		athletV1.Get("/:uuid", api_v1.GetAthlet)
 		athletV1.Post("", api_v1.CreateAthlet)
+		athletV1.Put("/startberechtigung", api_v1.UpdateAthletStartberechtigung)
+		athletV1.Put("/waage", api_v1.UpdateAthletWaage)
 
 		bueroV1 := v1.Group("/buero")
 		bueroV1.Post("/abmeldung", api_v1.Abmeldung)
@@ -177,6 +179,7 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		meldungV1.Get("/", api_v1.GetAllMeldung)
 		meldungV1.Get("/:uuid", api_v1.GetMeldung)
 		meldungV1.Post("/updateSetzungBatch", api_v1.UpdateSetzungBatch)
+		meldungV1.Get("/verein/:uuid", api_v1.GetAllMeldungForVerein)
 
 		pausenV1 := v1.Group("/pause")
 		pausenV1.Get("", api_v1.GetAllPausen)

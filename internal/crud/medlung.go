@@ -28,6 +28,12 @@ type MeldungMinimal struct {
 	RennenUuid         uuid.UUID `json:"rennen_uuid"`
 }
 
+type MeldungWithoutVereinWithRennen struct {
+	MeldungMinimal
+	Rennen   Rennen          `json:"rennen"`
+	Athleten []AthletWithPos `json:"athleten"`
+}
+
 type Meldung struct {
 	MeldungMinimal
 	Verein   sqlc.Verein     `json:"verein"`
@@ -178,4 +184,43 @@ func UpdateStartNummer(p sqlc.UpdateStartNummerParams) error {
 	defer cancel()
 
 	return DB.Queries.UpdateStartNummer(ctx, p)
+}
+
+func GetAllMeldungForVerein(vereinUuid uuid.UUID) ([]MeldungWithoutVereinWithRennen, error) {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	meldungen := []MeldungWithoutVereinWithRennen{}
+
+	rows, err := DB.Queries.GetAllMeldungForVerein(ctx, vereinUuid)
+	if err != nil {
+		return meldungen, err
+	}
+
+	for i, r := range rows {
+		if i == 0 || rows[i-1].Meldung.Uuid != r.Meldung.Uuid {
+			meldungen = append(meldungen, MeldungWithoutVereinWithRennen{
+				MeldungMinimal: SqlcMeldungMinmalToCrudMeldungMinimal(r.Meldung),
+				Rennen:         RennenFromSqlc(r.Rennen, 0, int32(0)),
+				Athleten:       []AthletWithPos{},
+			})
+		}
+
+		curMeldung := &meldungen[len(meldungen)-1]
+
+		curMeldung.Athleten = append(curMeldung.Athleten, AthletWithPos{
+			Athlet:   r.Athlet,
+			Rolle:    r.Rolle,
+			Position: int(r.Position),
+		})
+	}
+
+	return meldungen, nil
+}
+
+func Abmeldung(meldUuid uuid.UUID) error {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	return DB.Queries.Abmeldung(ctx, meldUuid)
 }

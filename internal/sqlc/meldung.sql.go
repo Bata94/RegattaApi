@@ -12,6 +12,22 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const abmeldung = `-- name: Abmeldung :exec
+UPDATE
+  meldung
+SET
+  abgemeldet = true,
+  abteilung = 0,
+  bahn = 0
+WHERE
+  uuid = $1
+`
+
+func (q *Queries) Abmeldung(ctx context.Context, argUuid uuid.UUID) error {
+	_, err := q.db.Exec(ctx, abmeldung, argUuid)
+	return err
+}
+
 const checkMedlungSetzung = `-- name: CheckMedlungSetzung :one
 SELECT uuid, abteilung, bahn FROM meldung
 WHERE abteilung != 0 AND bahn != 0 LIMIT 1
@@ -119,6 +135,103 @@ func (q *Queries) GetAllMeldung(ctx context.Context) ([]Meldung, error) {
 			&i.Kosten,
 			&i.VereinUuid,
 			&i.RennenUuid,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAllMeldungForVerein = `-- name: GetAllMeldungForVerein :many
+SELECT
+  meldung.uuid, meldung.drv_revision_uuid, meldung.typ, meldung.bemerkung, meldung.abgemeldet, meldung.dns, meldung.dnf, meldung.dsq, meldung.zeitnahme_bemerkung, meldung.start_nummer, meldung.abteilung, meldung.bahn, meldung.kosten, meldung.verein_uuid, meldung.rennen_uuid,
+  rennen.uuid, rennen.sort_id, rennen.nummer, rennen.bezeichnung, rennen.bezeichnung_lang, rennen.zusatz, rennen.leichtgewicht, rennen.geschlecht, rennen.bootsklasse, rennen.bootsklasse_lang, rennen.altersklasse, rennen.altersklasse_lang, rennen.tag, rennen.wettkampf, rennen.kosten_eur, rennen.rennabstand, rennen.startzeit,
+  athlet.uuid, athlet.vorname, athlet.name, athlet.geschlecht, athlet.jahrgang, athlet.gewicht, athlet.startberechtigt, athlet.verein_uuid,
+  link_meldung_athlet.rolle, link_meldung_athlet.position
+FROM
+  meldung
+JOIN
+  rennen
+ON
+  rennen.uuid = meldung.rennen_uuid
+JOIN
+  link_meldung_athlet
+ON
+  link_meldung_athlet.meldung_uuid = meldung.uuid
+JOIN
+  athlet
+ON
+  link_meldung_athlet.athlet_uuid = athlet.uuid
+WHERE
+  meldung.verein_uuid = $1
+ORDER BY
+  rennen.sort_id, meldung.abteilung, meldung.bahn, link_meldung_athlet.rolle, link_meldung_athlet.position
+`
+
+type GetAllMeldungForVereinRow struct {
+	Meldung  Meldung `json:"meldung"`
+	Rennen   Rennen  `json:"rennen"`
+	Athlet   Athlet  `json:"athlet"`
+	Rolle    Rolle   `json:"rolle"`
+	Position int32   `json:"position"`
+}
+
+func (q *Queries) GetAllMeldungForVerein(ctx context.Context, vereinUuid uuid.UUID) ([]GetAllMeldungForVereinRow, error) {
+	rows, err := q.db.Query(ctx, getAllMeldungForVerein, vereinUuid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetAllMeldungForVereinRow{}
+	for rows.Next() {
+		var i GetAllMeldungForVereinRow
+		if err := rows.Scan(
+			&i.Meldung.Uuid,
+			&i.Meldung.DrvRevisionUuid,
+			&i.Meldung.Typ,
+			&i.Meldung.Bemerkung,
+			&i.Meldung.Abgemeldet,
+			&i.Meldung.Dns,
+			&i.Meldung.Dnf,
+			&i.Meldung.Dsq,
+			&i.Meldung.ZeitnahmeBemerkung,
+			&i.Meldung.StartNummer,
+			&i.Meldung.Abteilung,
+			&i.Meldung.Bahn,
+			&i.Meldung.Kosten,
+			&i.Meldung.VereinUuid,
+			&i.Meldung.RennenUuid,
+			&i.Rennen.Uuid,
+			&i.Rennen.SortID,
+			&i.Rennen.Nummer,
+			&i.Rennen.Bezeichnung,
+			&i.Rennen.BezeichnungLang,
+			&i.Rennen.Zusatz,
+			&i.Rennen.Leichtgewicht,
+			&i.Rennen.Geschlecht,
+			&i.Rennen.Bootsklasse,
+			&i.Rennen.BootsklasseLang,
+			&i.Rennen.Altersklasse,
+			&i.Rennen.AltersklasseLang,
+			&i.Rennen.Tag,
+			&i.Rennen.Wettkampf,
+			&i.Rennen.KostenEur,
+			&i.Rennen.Rennabstand,
+			&i.Rennen.Startzeit,
+			&i.Athlet.Uuid,
+			&i.Athlet.Vorname,
+			&i.Athlet.Name,
+			&i.Athlet.Geschlecht,
+			&i.Athlet.Jahrgang,
+			&i.Athlet.Gewicht,
+			&i.Athlet.Startberechtigt,
+			&i.Athlet.VereinUuid,
+			&i.Rolle,
+			&i.Position,
 		); err != nil {
 			return nil, err
 		}
