@@ -147,6 +147,8 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		auth := api.Group("/auth")
 		auth.Post("/login", api_v1.Login)
 		auth.Post("/logout", api_v1.Logout)
+		auth.Get("/valid", middleware.Protected(), api_v1.AuthValidate)
+		auth.Get("/me", middleware.Protected(), api_v1.AuthMe)
 
 		v1 := api.Group("/v1", middleware.Protected(), apiCompressor)
 		v1.Get("/test", api_v1.TestHandler)

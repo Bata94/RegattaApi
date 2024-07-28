@@ -19,16 +19,18 @@ func checkPasswordHash(password, hash string) bool {
 	return err == nil
 }
 
-func genJWT(u sqlc.User) (string, error) {
+func genJWT(u sqlc.User) (string, time.Time, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
+	exp := time.Now().Add(time.Hour * 72)
 
 	claims := token.Claims.(jwt.MapClaims)
 	claims["username"] = u.Username
 	claims["user_id"] = u.Ulid
-	claims["exp"] = time.Now().Add(time.Hour * 72).Unix()
+	claims["exp"] = exp.Unix()
 
 	// TODO: RM this in Prod
-	return token.SignedString([]byte("DO_NOT_USE_IN_PROD"))
+	jwtStr, err := token.SignedString([]byte("DO_NOT_USE_IN_PROD"))
+	return jwtStr, exp, err
 }
 
 func hashPassword(password string) (string, error) {
@@ -64,9 +66,14 @@ type User struct {
 	UserGroup *sqlc.UsersGroup
 }
 
+type JWT struct {
+	Token      string    `json:"token"`
+	Expiration time.Time `json:"expiration"`
+}
+
 type ReturnUserWithJWT struct {
 	Ulid      string           `json:"ulid"`
-	Jwt       string           `json:"jwt"`
+	Jwt       JWT              `json:"jwt"`
 	Username  string           `json:"username"`
 	UserGroup *sqlc.UsersGroup `json:"user_group"`
 }
@@ -182,8 +189,9 @@ func AuthLogin(l LoginParams) (*ReturnUserWithJWT, error) {
 	}
 
 	tokenStr := ""
+	tokenExp := time.Now()
 	if checkPasswordHash(l.Password, u.HashedPassword) {
-		tokenStr, err = genJWT(*u.User)
+		tokenStr, tokenExp, err = genJWT(*u.User)
 		if err != nil {
 			retErr := &api.TOKEN_GENERATION_ERROR
 			retErr.Details = err.Error()
@@ -198,8 +206,11 @@ func AuthLogin(l LoginParams) (*ReturnUserWithJWT, error) {
 	}
 
 	return &ReturnUserWithJWT{
-		Ulid:      u.User.Ulid,
-		Jwt:       tokenStr,
+		Ulid: u.User.Ulid,
+		Jwt: JWT{
+			Token:      tokenStr,
+			Expiration: tokenExp,
+		},
 		Username:  u.User.Username,
 		UserGroup: u.UserGroup,
 	}, nil
