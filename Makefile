@@ -36,6 +36,7 @@ templ-proxy:
 
 tailwind-gen:
 	@echo "Generating TailwindCSS..."
+	# ls ./internal/templates/**/*.templ
 	npx tailwindcss -i ./assets/css/input.css -o ./assets/css/global.css
 
 # Generate Swagger Docs
@@ -47,12 +48,16 @@ swagger-fmt:
 	@echo "Formatting Swagger Comments..."
 	@swag fmt
 
+mod-tidy:
+	@echo "go mod tidy ..."
+	go mod tidy
+
 # Build the application
-build: templ # tailwind-gen # swagger-gen
+build: templ tailwind-gen # swagger-gen
 	@echo "Building..."
 	@go build -o bin/main main.go
 
-full-build: sqlc build db-up # swagger-fmt build
+full-build: mod-tidy sqlc build db-up # swagger-fmt build
 	@echo "Full-Building..."
 
 # Run the application

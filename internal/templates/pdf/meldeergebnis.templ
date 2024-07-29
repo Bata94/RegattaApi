@@ -36,8 +36,17 @@ type AbteilungenMeldeergebnisPDF struct {
 }
 
 type MeldungMeldeergebnisPDF struct {
+  StartNummer int
   Bahn int
   Verein string
+  Teilnehmer string
+}
+
+templ MeldungsEntry(m MeldungMeldeergebnisPDF) {
+  <div class="mx-2 my-2">
+    <h5 class="m-0 p-0">#{strconv.Itoa(m.StartNummer)} - {m.Verein}</h5>
+    <h6>{m.Teilnehmer}</h6>
+  </div>
 }
 
 templ MeldeErgebnis(rennen []RennenMeldeergebnisPDF) {
@@ -46,20 +55,26 @@ templ MeldeErgebnis(rennen []RennenMeldeergebnisPDF) {
   <h6>Stand: {time.Now().Format("02.01.2006 - 15:04:05 Uhr")}</h6>
 
   for i, r := range rennen {
-    <h3>{curDayCheck(i, rennen)}</h3>
-    <h4>Rennen {r.RennNr} - {r.Bezeichnung}</h4>
+    <h2>{curDayCheck(i, rennen)}</h2>
+    <h3>Rennen {r.RennNr} - {r.Bezeichnung}</h3>
     if r.NumAbteilungen != 0 {
-      <h5>Startzeit: {r.Startzeit} Uhr, Rennabstand: {strconv.Itoa(r.Rennabstand)} Minute(n)</h5>
-      <table>
-      </table>
+      <h4>Startzeit: {r.Startzeit} Uhr, Rennabstand: {strconv.Itoa(r.Rennabstand)} Minute(n)</h4>
+
+      for _, a := range r.Abteilungen {
+        for _, m := range a.Meldungen {
+          @MeldungsEntry(m)
+        }
+      }
     } else {
       <p>Keine Meldungen, Rennen entfällt!</p>
     }
 
     if len(r.Abmeldungen) != 0 {
       <h5>Abmeldungen:</h5>
-      <table>
-      </table>
+
+      for _, m := range r.Abmeldungen {
+        @MeldungsEntry(m)
+      }
     }
   }
 }

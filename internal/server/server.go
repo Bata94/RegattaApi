@@ -150,7 +150,8 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		auth.Get("/valid", middleware.Protected(), api_v1.AuthValidate)
 		auth.Get("/me", middleware.Protected(), api_v1.AuthMe)
 
-		v1 := api.Group("/v1", middleware.Protected(), apiCompressor)
+		// v1 := api.Group("/v1", middleware.Protected(), apiCompressor)
+		v1 := api.Group("/v1", apiCompressor)
 		v1.Get("/test", api_v1.TestHandler)
 
 		athletV1 := v1.Group("/athlet")

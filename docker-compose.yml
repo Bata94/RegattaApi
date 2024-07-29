@@ -14,7 +14,7 @@ services:
 
   db:
     platform: linux/amd64
-    image: postgres:15
+    image: postgres:16
     ports:
       - 5432:5432
     volumes:
@@ -55,7 +55,11 @@ services:
     tty: true
     stdin_open: true
     volumes:
-      - ./:/opt/app
+      - ./assets:/opt/app/assets
+      - ./docs:/opt/app/docs
+      - ./internal:/opt/app/internal
+      - ./sqlc:/opt/app/sqlc
+      - ./main.go:/opt/app/main.go
     ports:
       - 8080:8080
     env_file: ".env"

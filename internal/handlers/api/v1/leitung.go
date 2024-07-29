@@ -54,19 +54,22 @@ func GetMeldeergebnisHtml(c *fiber.Ctx) error {
 		for _, m := range r.Meldungen {
 			if m.Abgemeldet {
 				rParsed.Abmeldungen = append(rParsed.Abmeldungen, pdf_templates.MeldungMeldeergebnisPDF{
-					Bahn:   0,
-					Verein: "Error!",
+          StartNummer: m.StartNummer,
+					Bahn:   m.Bahn,
+          Teilnehmer: "Teilnehmer String WIP...",
+					Verein: "Verein WIP...",
 				})
 				continue
 			}
 
 			abteilung := int(m.Abteilung)
-			verein := "Error!"
 			mParsed := pdf_templates.MeldungMeldeergebnisPDF{
-				Bahn:   int(m.Bahn),
-				Verein: verein,
+        StartNummer: m.StartNummer,
+        Bahn:   m.Bahn,
+        Teilnehmer: "Teilnehmer String WIP...",
+        Verein: "Verein WIP...",
 			}
-			log.Debugf("RennNr %s numAbt %d lenAbt %d curAbt %d", r.Nummer, r.NumAbteilungen, len(rParsed.Abteilungen), abteilung)
+			// log.Debugf("RennNr %s numAbt %d lenAbt %d curAbt %d", r.Nummer, r.NumAbteilungen, len(rParsed.Abteilungen), abteilung)
 			rParsed.Abteilungen[abteilung-1].Meldungen = append(rParsed.Abteilungen[abteilung-1].Meldungen, mParsed)
 		}
 
