@@ -1,16 +1,10 @@
 package api_v1
 
 import (
-	"cmp"
-	"context"
-	"slices"
-
 	"github.com/bata94/RegattaApi/internal/crud"
-	DB "github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/handlers/api"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -52,74 +46,24 @@ func GetAllRennen(c *fiber.Ctx) error {
 		return retErr
 	}
 
-	// TODO: Move into CRUD and add Wettkampf param
-	if getAthleten {
-		retLs := []crud.RennenWithMeldungAndAthlet{}
-
-		rLs, err := DB.Queries.GetAllRennen(context.Background())
-		if err != nil {
-			return err
-		}
-		qLs, err := DB.Queries.GetAllRennenWithAthlet(context.Background(), []sqlc.Wettkampf{sqlc.WettkampfLangstrecke, sqlc.WettkampfSlalom, sqlc.WettkampfKurzstrecke, sqlc.WettkampfStaffel})
-		if err != nil {
-			return err
-		}
-
-		for _, r := range rLs {
-			retLs = append(retLs, crud.RennenWithMeldungAndAthlet{
-				Rennen:    crud.RennenFromSqlc(r.Rennen, int(r.NumMeldungen), r.NumAbteilungen),
-				Meldungen: []crud.Meldung{},
-			})
-		}
-
-		i := 0
-		for _, q := range qLs {
-			for retLs[i].Uuid != q.Rennen.Uuid {
-				i++
-				continue
-			}
-
-			indexLastMeld := len(retLs[i].Meldungen) - 1
-			if indexLastMeld < 0 || retLs[i].Meldungen[indexLastMeld].Uuid != q.Meldung.Uuid {
-				retLs[i].Meldungen = append(retLs[i].Meldungen, crud.Meldung{
-					MeldungMinimal: crud.SqlcMeldungMinmalToCrudMeldungMinimal(q.Meldung),
-					Verein:         q.Verein,
-					Athleten: []crud.AthletWithPos{{
-						Athlet:   q.Athlet,
-						Rolle:    q.Rolle,
-						Position: int(q.Position),
-					}},
-				})
-			} else {
-				retLs[i].Meldungen[indexLastMeld].Athleten = append(retLs[i].Meldungen[indexLastMeld].Athleten, crud.AthletWithPos{
-					Athlet:   q.Athlet,
-					Rolle:    q.Rolle,
-					Position: int(q.Position),
-				})
-			}
-		}
-
-		log.Debug("Sorting Meldungen")
-		for _, r := range retLs {
-			// sort Meldungen
-			slices.SortFunc(r.Meldungen, func(a, b crud.Meldung) int {
-				return cmp.Or(
-					cmp.Compare(a.Abteilung, b.Abteilung),
-					cmp.Compare(a.Bahn, b.Bahn),
-				)
-			})
-		}
-
-		return c.JSON(retLs)
-	}
-
-	rLs, err := crud.GetAllRennen(crud.GetAllRennenParams{
+  searchParams := crud.GetAllRennenParams{
 		GetMeldungen:  getMeld,
 		GetAthleten:   getAthleten,
 		ShowEmpty:     showEmpty,
 		ShowStarted:   showStarted,
 		ShowWettkampf: showWettkampf,
-	})
+	}
+
+	if getAthleten {
+    retLs, err := crud.GetAllRennenWithAthlet(searchParams)
+    if err != nil {
+      return err
+    }
+
+		return c.JSON(retLs)
+	}
+
+	rLs, err := crud.GetAllRennen(searchParams)
 	if err != nil {
 		return err
 	}

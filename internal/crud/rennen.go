@@ -69,6 +69,66 @@ func GetAllRennen(p GetAllRennenParams) ([]RennenWithMeldung, error) {
 	return retLs, nil
 }
 
+func GetAllRennenWithAthlet(p GetAllRennenParams) ([]RennenWithMeldungAndAthlet, error) {
+  retLs := []RennenWithMeldungAndAthlet{}
+  ctx, cancel := getCtxWithTo()
+  defer cancel()
+
+  rLs, err := DB.Queries.GetAllRennen(ctx)
+  if err != nil {
+    return retLs, err
+  }
+  qLs, err := DB.Queries.GetAllRennenWithAthlet(ctx, []sqlc.Wettkampf{sqlc.WettkampfLangstrecke, sqlc.WettkampfSlalom, sqlc.WettkampfKurzstrecke, sqlc.WettkampfStaffel})
+  if err != nil {
+    return retLs, err
+  }
+
+  for _, r := range rLs {
+    retLs = append(retLs, RennenWithMeldungAndAthlet{
+      Rennen:    RennenFromSqlc(r.Rennen, int(r.NumMeldungen), r.NumAbteilungen),
+      Meldungen: []Meldung{},
+    })
+  }
+
+  i := 0
+  for _, q := range qLs {
+    for retLs[i].Uuid != q.Rennen.Uuid {
+      i++
+      continue
+    }
+
+    indexLastMeld := len(retLs[i].Meldungen) - 1
+    if indexLastMeld < 0 || retLs[i].Meldungen[indexLastMeld].Uuid != q.Meldung.Uuid {
+      retLs[i].Meldungen = append(retLs[i].Meldungen, Meldung{
+        MeldungMinimal: SqlcMeldungMinmalToCrudMeldungMinimal(q.Meldung),
+        Verein:         q.Verein,
+        Athleten: []AthletWithPos{{
+          Athlet:   q.Athlet,
+          Rolle:    q.Rolle,
+          Position: int(q.Position),
+        }},
+      })
+    } else {
+      retLs[i].Meldungen[indexLastMeld].Athleten = append(retLs[i].Meldungen[indexLastMeld].Athleten, AthletWithPos{
+        Athlet:   q.Athlet,
+        Rolle:    q.Rolle,
+        Position: int(q.Position),
+      })
+    }
+  }
+
+  for _, r := range retLs {
+    // Sort Meldungen
+    slices.SortFunc(r.Meldungen, func(a, b Meldung) int {
+      return cmp.Or(
+        cmp.Compare(a.Abteilung, b.Abteilung),
+        cmp.Compare(a.Bahn, b.Bahn),
+      )
+    })
+  }
+  return retLs, nil
+}
+
 type Rennen struct {
 	Uuid             uuid.UUID       `json:"uuid"`
 	SortID           int             `json:"sort_id"`
@@ -103,11 +163,11 @@ type RennenWithMeldungVereinAthlet struct {
 
 func RennenFromSqlc(rennen sqlc.Rennen, numMeld int, numAbt interface{}) Rennen {
 	// TODO: Might throw an unusual Error
-	numAbteilungen, err := numAbt.(int32)
-	log.Debug("numAbteilungen: ", numAbt, " ", numAbteilungen, " ", numAbt.(int32))
-	if err {
+	numAbteilungen, ok := numAbt.(int32)
+	if !ok {
+    log.Debug("numAbteilungen: ", numAbt, " ", numAbteilungen, " ", numAbt.(int32))
 		log.Error("Error converting numAbt to int32 ", numAbt)
-		// numAbteilungen = 0
+		numAbteilungen = 0
 	}
 	return Rennen{
 		Uuid:             rennen.Uuid,
@@ -215,6 +275,7 @@ func GetRennenMinimal(uuid uuid.UUID) (sqlc.Rennen, error) {
 }
 
 func GetRennen(uuidParam uuid.UUID) (RennenWithMeldungVereinAthlet, error) {
+  // TODO: Implement queryParams
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
