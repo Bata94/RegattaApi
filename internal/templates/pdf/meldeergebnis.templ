@@ -43,10 +43,29 @@ type MeldungMeldeergebnisPDF struct {
 }
 
 templ MeldungsEntry(m MeldungMeldeergebnisPDF) {
-	<div class="mx-2 my-2">
-		<h5 class="m-0 p-0">#{ strconv.Itoa(m.StartNummer) } - { m.Verein }</h5>
-		<h6>{ m.Teilnehmer }</h6>
-	</div>
+  <tr class="border-none">
+    <td>
+    </td>
+    <td>
+      { strconv.Itoa(m.StartNummer) }
+    </td>
+    <td>
+      { m.Verein }
+    </td>
+    <td>
+    </td>
+  </tr>
+  <tr>
+    <td>
+    </td>
+    <td>
+    </td>
+    <td>
+      { m.Teilnehmer }
+    </td>
+    <td>
+    </td>
+  </tr>
 }
 
 templ MeldeErgebnis(rennen []RennenMeldeergebnisPDF) {
@@ -54,36 +73,35 @@ templ MeldeErgebnis(rennen []RennenMeldeergebnisPDF) {
 	<h1>34. Mülheimer Jungen- und Mädchen-Regatta 2024</h1>
 	<h6>Stand: { time.Now().Format("02.01.2006 - 15:04:05 Uhr") }</h6>
 	for i, r := range rennen {
-    <div class="w-full">
-      <h2>{ curDayCheck(i, rennen) }</h2>
-      <h3>Rennen { r.RennNr } - { r.Bezeichnung }</h3>
-
-      if r.NumAbteilungen != 0 {
-        <h4>{ strconv.Itoa(r.NumMeldungen) } Meldung(en) in { strconv.Itoa(r.NumAbteilungen) } Abteilung(en)</h4>
+		<div class="w-full">
+			<h1>{ curDayCheck(i, rennen) }</h1>
+			<h2 class="underline underline-offset-2">Rennen { r.RennNr } - { r.Bezeichnung }</h2>
+			if r.NumAbteilungen != 0 {
         <h4>Startzeit: { r.Startzeit } Uhr, Rennabstand: { strconv.Itoa(r.Rennabstand) } Minute(n)</h4>
-        for _, a := range r.Abteilungen {
-          <div class="mx-2">
-            <h4>Abteilung { strconv.Itoa(a.Nummer) }:</h4>
-            for _, m := range a.Meldungen {
+				<h5>{ strconv.Itoa(r.NumMeldungen) } Meldung(en) in { strconv.Itoa(r.NumAbteilungen) } Abteilung(en)</h5>
+				for _, a := range r.Abteilungen {
+					<div class="mx-2">
+						<h4>Abteilung { strconv.Itoa(a.Nummer) }:</h4>
+            <table class="my-2">
+              for _, m := range a.Meldungen {
+                @MeldungsEntry(m)
+              }
+            </table>
+					</div>
+				}
+			} else {
+        <h5 class="mx-2">Keine Meldungen, Rennen entfällt!</h5>
+			}
+			if len(r.Abmeldungen) != 0 {
+				<div class="mx-2">
+					<h4>Abmeldungen:</h4>
+          <table class="my-2">
+            for _, m := range r.Abmeldungen {
               @MeldungsEntry(m)
             }
-          </div>
-        }
-      } else {
-        <span class="px-auto">
-          <p>Keine Meldungen, Rennen entfällt!</p>
-        </span>
-      }
-
-      if len(r.Abmeldungen) != 0 {
-        <div class="mx-2">
-          <h4>Abmeldungen:</h4>
-          for _, m := range r.Abmeldungen {
-            @MeldungsEntry(m)
-          }
-        </div>
-      }
-
-    </div>
+          </table>
+				</div>
+			}
+		</div>
 	}
 }

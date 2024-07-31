@@ -1708,10 +1708,6 @@ details.collapse summary::-webkit-details-marker {
   visibility: collapse;
 }
 
-.m-0 {
-  margin: 0px;
-}
-
 .mx-2 {
   margin-left: 0.5rem;
   margin-right: 0.5rem;
@@ -1734,12 +1730,16 @@ details.collapse summary::-webkit-details-marker {
   width: 100vw;
 }
 
+.min-w-\[1200px\] {
+  min-width: 1200px;
+}
+
 .border-collapse {
   border-collapse: collapse;
 }
 
-.p-0 {
-  padding: 0px;
+.border-none {
+  border-style: none;
 }
 
 .px-4 {
@@ -1751,11 +1751,10 @@ details.collapse summary::-webkit-details-marker {
   padding-top: 1rem;
 }
 
-.font-mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+.underline {
+  text-decoration-line: underline;
 }
 
-.text-sm {
-  font-size: 0.875rem;
-  line-height: 1.25rem;
+.underline-offset-2 {
+  text-underline-offset: 2px;
 }

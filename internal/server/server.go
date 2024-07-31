@@ -24,6 +24,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/helmet"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/monitor"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 	// "github.com/gofiber/fiber/v2/utils"
 	//  _ "github.com/bata94/RegattaApi/docs"
 	// "github.com/gofiber/swagger"
@@ -130,6 +131,8 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		Output:        os.Stdout,
 		DisableColors: false,
 	}))
+
+	app.Use(recover.New())
 
 	app.Static("/assets", "./assets", fiber.Static{
 		Compress:      true,

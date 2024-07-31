@@ -23,7 +23,7 @@ import (
 )
 
 func GetMeldeergebnisHtml(c *fiber.Ctx) error {
-	rLs, err := crud.GetAllRennen(crud.GetAllRennenParams{
+	rLs, err := crud.GetAllRennenWithAthlet(crud.GetAllRennenParams{
 		GetMeldungen:  true,
 		ShowEmpty:     true,
 		ShowStarted:   true,
@@ -47,33 +47,48 @@ func GetMeldeergebnisHtml(c *fiber.Ctx) error {
 			Abmeldungen:    []pdf_templates.MeldungMeldeergebnisPDF{},
 		}
 
-    for i := range rParsed.Abteilungen {
-      rParsed.Abteilungen[i].Nummer = i + 1
-    }
+		for i := range rParsed.Abteilungen {
+			rParsed.Abteilungen[i].Nummer = i + 1
+		}
 
 		if r.NumMeldungen == 0 {
 			rLsParsed = append(rLsParsed, rParsed)
 			continue
 		}
 		for _, m := range r.Meldungen {
+			athletenStr := ""
+			for _, a := range m.Athleten {
+				if a.Rolle == sqlc.RolleTrainer {
+					continue
+				}
+
+				if athletenStr != "" {
+					athletenStr += ", "
+				}
+
+				if a.Rolle == sqlc.RolleStm {
+					athletenStr += fmt.Sprintf("\nStm.: %s %s (%s)", a.Vorname, a.Name, a.Jahrgang)
+				} else {
+					athletenStr += fmt.Sprintf("%s %s (%s)", a.Vorname, a.Name, a.Jahrgang)
+				}
+			}
+
+			meldungEntry := pdf_templates.MeldungMeldeergebnisPDF{
+				StartNummer: m.StartNummer,
+				Bahn:        m.Bahn,
+				Teilnehmer:  athletenStr,
+				Verein:      m.Verein.Name,
+			}
+
 			if m.Abgemeldet {
-				rParsed.Abmeldungen = append(rParsed.Abmeldungen, pdf_templates.MeldungMeldeergebnisPDF{
-          StartNummer: m.StartNummer,
-					Bahn:   m.Bahn,
-          Teilnehmer: "Teilnehmer String WIP...",
-					Verein: "Verein WIP...",
-				})
+				rParsed.Abmeldungen = append(rParsed.Abmeldungen, meldungEntry)
 				continue
 			}
 
 			abteilung := int(m.Abteilung)
-			mParsed := pdf_templates.MeldungMeldeergebnisPDF{
-        StartNummer: m.StartNummer,
-        Bahn:   m.Bahn,
-        Teilnehmer: "Teilnehmer String WIP...",
-        Verein: "Verein WIP...",
-			}
+			mParsed := meldungEntry
 			// log.Debugf("RennNr %s numAbt %d lenAbt %d curAbt %d", r.Nummer, r.NumAbteilungen, len(rParsed.Abteilungen), abteilung)
+			// BUG: Throws Error if Setzung not done
 			rParsed.Abteilungen[abteilung-1].Meldungen = append(rParsed.Abteilungen[abteilung-1].Meldungen, mParsed)
 		}
 
