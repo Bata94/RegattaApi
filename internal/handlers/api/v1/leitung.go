@@ -47,6 +47,10 @@ func GetMeldeergebnisHtml(c *fiber.Ctx) error {
 			Abmeldungen:    []pdf_templates.MeldungMeldeergebnisPDF{},
 		}
 
+    for i := range rParsed.Abteilungen {
+      rParsed.Abteilungen[i].Nummer = i + 1
+    }
+
 		if r.NumMeldungen == 0 {
 			rLsParsed = append(rLsParsed, rParsed)
 			continue

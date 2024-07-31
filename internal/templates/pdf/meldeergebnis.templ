@@ -1,80 +1,89 @@
 package pdf_templates
 
 import (
-  "time"
 	"strconv"
+	"time"
 )
 
 func curDayCheck(i int, rennen []RennenMeldeergebnisPDF) string {
-  if i == 0 || rennen[i-1].Tag != rennen[i].Tag {
-    if rennen[i].Tag == "sa" {
-      return "Samstag:"
-    } else if rennen[i].Tag == "so" {
-      return "Sonntag:"
-    } else {
-      return "Error?!"
-    }
-  }
-  return ""
+	if i == 0 || rennen[i-1].Tag != rennen[i].Tag {
+		if rennen[i].Tag == "sa" {
+			return "Samstag:"
+		} else if rennen[i].Tag == "so" {
+			return "Sonntag:"
+		} else {
+			return "Error?!"
+		}
+	}
+	return ""
 }
 
 type RennenMeldeergebnisPDF struct {
-  RennNr string
-  Bezeichnung string
-  Startzeit string
-  Rennabstand int
-  Tag string
-  NumMeldungen int
-  NumAbteilungen int
-  Abteilungen []AbteilungenMeldeergebnisPDF
-  Abmeldungen []MeldungMeldeergebnisPDF
+	RennNr         string
+	Bezeichnung    string
+	Startzeit      string
+	Rennabstand    int
+	Tag            string
+	NumMeldungen   int
+	NumAbteilungen int
+	Abteilungen    []AbteilungenMeldeergebnisPDF
+	Abmeldungen    []MeldungMeldeergebnisPDF
 }
 
 type AbteilungenMeldeergebnisPDF struct {
-  Nummer int
-  Meldungen []MeldungMeldeergebnisPDF
+	Nummer    int
+	Meldungen []MeldungMeldeergebnisPDF
 }
 
 type MeldungMeldeergebnisPDF struct {
-  StartNummer int
-  Bahn int
-  Verein string
-  Teilnehmer string
+	StartNummer int
+	Bahn        int
+	Verein      string
+	Teilnehmer  string
 }
 
 templ MeldungsEntry(m MeldungMeldeergebnisPDF) {
-  <div class="mx-2 my-2">
-    <h5 class="m-0 p-0">#{strconv.Itoa(m.StartNummer)} - {m.Verein}</h5>
-    <h6>{m.Teilnehmer}</h6>
-  </div>
+	<div class="mx-2 my-2">
+		<h5 class="m-0 p-0">#{ strconv.Itoa(m.StartNummer) } - { m.Verein }</h5>
+		<h6>{ m.Teilnehmer }</h6>
+	</div>
 }
 
 templ MeldeErgebnis(rennen []RennenMeldeergebnisPDF) {
-  <h1>Meldeergebnis</h1>
-  <h1>34. Mülheimer Jungen- und Mädchen-Regatta 2024</h1>
-  <h6>Stand: {time.Now().Format("02.01.2006 - 15:04:05 Uhr")}</h6>
+	<h1>Meldeergebnis</h1>
+	<h1>34. Mülheimer Jungen- und Mädchen-Regatta 2024</h1>
+	<h6>Stand: { time.Now().Format("02.01.2006 - 15:04:05 Uhr") }</h6>
+	for i, r := range rennen {
+    <div class="w-full">
+      <h2>{ curDayCheck(i, rennen) }</h2>
+      <h3>Rennen { r.RennNr } - { r.Bezeichnung }</h3>
 
-  for i, r := range rennen {
-    <h2>{curDayCheck(i, rennen)}</h2>
-    <h3>Rennen {r.RennNr} - {r.Bezeichnung}</h3>
-    if r.NumAbteilungen != 0 {
-      <h4>Startzeit: {r.Startzeit} Uhr, Rennabstand: {strconv.Itoa(r.Rennabstand)} Minute(n)</h4>
-
-      for _, a := range r.Abteilungen {
-        for _, m := range a.Meldungen {
-          @MeldungsEntry(m)
+      if r.NumAbteilungen != 0 {
+        <h4>{ strconv.Itoa(r.NumMeldungen) } Meldung(en) in { strconv.Itoa(r.NumAbteilungen) } Abteilung(en)</h4>
+        <h4>Startzeit: { r.Startzeit } Uhr, Rennabstand: { strconv.Itoa(r.Rennabstand) } Minute(n)</h4>
+        for _, a := range r.Abteilungen {
+          <div class="mx-2">
+            <h4>Abteilung { strconv.Itoa(a.Nummer) }:</h4>
+            for _, m := range a.Meldungen {
+              @MeldungsEntry(m)
+            }
+          </div>
         }
+      } else {
+        <span class="px-auto">
+          <p>Keine Meldungen, Rennen entfällt!</p>
+        </span>
       }
-    } else {
-      <p>Keine Meldungen, Rennen entfällt!</p>
-    }
 
-    if len(r.Abmeldungen) != 0 {
-      <h5>Abmeldungen:</h5>
-
-      for _, m := range r.Abmeldungen {
-        @MeldungsEntry(m)
+      if len(r.Abmeldungen) != 0 {
+        <div class="mx-2">
+          <h4>Abmeldungen:</h4>
+          for _, m := range r.Abmeldungen {
+            @MeldungsEntry(m)
+          }
+        </div>
       }
-    }
-  }
+
+    </div>
+	}
 }

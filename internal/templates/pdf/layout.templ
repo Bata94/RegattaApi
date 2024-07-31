@@ -10,10 +10,15 @@ templ PdfLayout(title string, content templ.Component) {
   <title>{ title }</title>
   <link rel="stylesheet" href="/assets/css/global.css" />
   <style>
+    @media print {
+      div {
+        break-inside: avoid;
+      }
+    }
   </style>
 </head>
 
-<body class="prose w-full text-sm font-mono pt-4 px-4" data-theme="light">
+<body class="prose w-screen text-sm font-mono pt-4 px-4" data-theme="light">
   <main>
     @content
   </main>
