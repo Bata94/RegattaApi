@@ -14,16 +14,19 @@ services:
 
   db:
     platform: linux/amd64
-    image: postgres:16
-    ports:
-      - 5432:5432
+    build:
+      dockerfile: Dockerfile
+      context: ./
+      target: pg
+    # ports:
+    #   - 5432:5432
     volumes:
       - postgres:/var/lib/postgresql/data
     environment:
       PGUSER: postgres
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    command: ["postgres", "-c", "log_statement=all", "-c", "log_destination=stderr"] # For Dev only!
+    # command: ["postgres", "-c", "log_statement=all", "-c", "log_destination=stderr"] # For Dev only!
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready", "-d", "postgres" ]
       interval: 30s
@@ -38,7 +41,7 @@ services:
     depends_on:
       - db
     ports:
-      - "5431:53603"
+      # - "5431:53603"
       - "5430:80"
     volumes:
       - pgadmin:/var/lib/pgadmin
@@ -47,7 +50,7 @@ services:
       PGADMIN_DEFAULT_PASSWORD: admin
     restart: unless-stopped
 
-  api:
+  api-dev:
     build:
       dockerfile: Dockerfile
       context: ./
@@ -67,28 +70,14 @@ services:
       - gotenberg
       - db
 
-  # api-templ:
-  #   build:
-  #     dockerfile: Dockerfile
-  #     context: ./
-  #     target: templ-dev
-  #   tty: true
-  #   stdin_open: true
-  #   volumes:
-  #     - ./:/opt/goTest
-  #   ports:
-  #     - 7331:7331
-
-  # api-tailwind:
-  #   build:
-  #     dockerfile: Dockerfile
-  #     context: ./
-  #     target: tailwind-dev
-  #   tty: true
-  #   stdin_open: true
-  #   volumes:
-  #     - ./templates:/opt/goTest/templates
-  #     - ./static/css:/opt/goTest/static/css
-  #     - ./tailwind.config.js:/opt/goTest/tailwind.config.js
-
-
+  api:
+    build:
+      dockerfile: Dockerfile
+      context: ./
+      target: prod
+    ports:
+      - 8081:8080
+    env_file: ".env"
+    depends_on:
+      - gotenberg
+      - db

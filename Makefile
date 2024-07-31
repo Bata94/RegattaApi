@@ -6,47 +6,46 @@ sqlc:
 
 # Run like 'NEW_MIG=<MigrationName> make goose-new'
 db-new:
-	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose create $(NEW_MIG) sql
+	GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose create $(NEW_MIG) sql
 
 db-up:
-	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose up
+	GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose up
 
 db-up-by-one:
-	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose up-by-one
+	GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose up-by-one
 
 db-down:
-	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose down
+	GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose down
 
 db-reset:
-	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose reset
+	GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose reset
 
 db-redo:
-	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose redo
+	GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose redo
 
 db-status:
-	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose status 
+	GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose status 
 
 # Generate Templ
 templ:
 	@echo "Generating Templ..."
-	@templ generate
+	templ generate
 
 templ-proxy:
-	@templ generate --path="./internal/templates" --watch --proxy="http://localhost:"$(PORT) --proxybind="0.0.0.0"
+	templ generate --path="./internal/templates" --watch --proxy="http://localhost:"$(PORT) --proxybind="0.0.0.0"
 
 tailwind-gen:
 	@echo "Generating TailwindCSS..."
-	# ls ./internal/templates/**/*.templ
 	npx tailwindcss -i ./assets/css/input.css -o ./assets/css/global.css
 
 # Generate Swagger Docs
 swagger-gen:
 	@echo "Generating Swagger Docs..."
-	@swag init --parseDependency
+	swag init --parseDependency
 
 swagger-fmt:
 	@echo "Formatting Swagger Comments..."
-	@swag fmt
+	swag fmt
 
 mod-tidy:
 	@echo "go mod tidy ..."
@@ -55,28 +54,29 @@ mod-tidy:
 # Build the application
 build: templ tailwind-gen # swagger-gen
 	@echo "Building..."
-	@go build -o bin/main main.go
+	go build -o bin/main main.go
 
-full-build: mod-tidy sqlc build db-up # swagger-fmt build
+full-build: templ tailwind-gen sqlc # db-up # swagger-fmt build
 	@echo "Full-Building..."
+	CGO_ENABLED=0 go build -installsuffix 'static' -o bin/mainDocker main.go
 
 # Run the application
 run: sqlc
-	@go run main.go
+	go run main.go
 
 # Test the application
 test:
 	@echo "Testing..."
-	@go test ./... -v
+	go test ./... -v
 
 # Clean the binary
 clean:
 	@echo "Cleaning..."
-	@rm -rf bin/*
-	@rm -rf tmp/*
+	rm -rf bin/*
+	rm -rf tmp/*
 
 # Live Reload
-watch: full-build
+watch: sqlc db-up build
 	@if command -v air > /dev/null; then \
 	    air; \
 	    echo "Watching...";\
