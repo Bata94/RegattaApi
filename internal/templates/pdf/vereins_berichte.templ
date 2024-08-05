@@ -1,0 +1,60 @@
+package pdf_templates
+
+import (
+	"time"
+	"strconv"
+)
+
+templ VereinsBericht(vereinsName, berichtsTitel string, timestamp bool, comp templ.Component) {
+	<h1>34. Mülheimer Jungen- und Mädchen-Regatta 2024</h1>
+  <h1 class="underline underline-offset-2">{berichtsTitel}</h1>
+  <h3>für {vereinsName}</h3>
+  if timestamp {
+  	<h6 class="my-4 mx-2">Stand: { time.Now().Format("02.01.2006 - 15:04:05 Uhr") }</h6>
+  }
+  
+  <div class="w-full px-4">
+    @comp
+  </div>
+}
+
+type RechnungParams struct {
+  Entries []RechnungEntry
+  SumPreis int
+  RechnungsNummer string
+}
+
+type RechnungEntry struct {
+  Tag string
+  Startnummer string
+  Rennen string
+  Preis string
+}
+
+templ Rechnung(p RechnungParams) {
+  <h5>Rechnungnummer: {p.RechnungsNummer}</h5>
+  <table class="w-full table-auto">
+    <tr>
+      <th>Tag</th>
+      <th>Startnummer</th>
+      <th class="text-left">Rennen</th>
+      <th class="text-right">Preis</th>
+    </tr>
+
+    if len(p.Entries) > 0 {
+      for _, e := range p.Entries{
+        <tr>
+          <td class="capitalize text-center">{e.Tag}</td>
+          <td class="text-center">{e.Startnummer}</td>
+          <td>{e.Rennen}</td>
+          <td class="text-right">{e.Preis}</td>
+        </tr>
+      }
+    }
+  </table>
+
+  <div class="h-16 flex flex-row border-y-2 border-y-black">
+    <h2 class="ml-auto my-auto mr-4">Summe: </h2>
+    <h2 class="mr-4 my-auto">{strconv.Itoa(p.SumPreis)},00 €</h2>
+  </div>
+}

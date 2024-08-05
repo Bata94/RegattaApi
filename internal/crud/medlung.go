@@ -6,6 +6,7 @@ import (
 	"github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/handlers/api"
 	"github.com/bata94/RegattaApi/internal/sqlc"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/google/uuid"
 )
@@ -24,6 +25,7 @@ type MeldungMinimal struct {
 	Abteilung          int       `json:"abteilung"`
 	Bahn               int       `json:"bahn"`
 	Kosten             int       `json:"kosten"`
+  RechnungsNummer    string    `json:"rechnungs_nummer"`
 	VereinUuid         uuid.UUID `json:"verein_uuid"`
 	RennenUuid         uuid.UUID `json:"rennen_uuid"`
 }
@@ -55,6 +57,7 @@ func SqlcMeldungMinmalToCrudMeldungMinimal(q sqlc.Meldung) MeldungMinimal {
 		Abteilung:          int(q.Abteilung),
 		Bahn:               int(q.Bahn),
 		Kosten:             int(q.Kosten),
+    RechnungsNummer:    q.RechnungsNummer.String,
 		VereinUuid:         q.VereinUuid,
 		RennenUuid:         q.RennenUuid,
 	}
@@ -223,4 +226,17 @@ func Abmeldung(meldUuid uuid.UUID) error {
 	defer cancel()
 
 	return DB.Queries.Abmeldung(ctx, meldUuid)
+}
+
+func SetMeldungRechnungsNummer(meldUuid uuid.UUID, rechnungsNummer string) error {
+  ctx, cancel := getCtxWithTo()
+  defer cancel()
+
+  return DB.Queries.SetMeldungRechnungsNummer(ctx, sqlc.SetMeldungRechnungsNummerParams{
+    Uuid: meldUuid,
+    RechnungsNummer: pgtype.Text{
+      Valid: true,
+      String: rechnungsNummer,        
+    },
+  })
 }

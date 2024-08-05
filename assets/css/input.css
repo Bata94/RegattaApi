@@ -1,3 +1,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@media print {
+  div.no-break {
+    break-inside: avoid;
+  }
+}

@@ -59,7 +59,7 @@ INSERT INTO meldung (
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7, $8
 )
-RETURNING uuid, drv_revision_uuid, typ, bemerkung, abgemeldet, dns, dnf, dsq, zeitnahme_bemerkung, start_nummer, abteilung, bahn, kosten, verein_uuid, rennen_uuid
+RETURNING uuid, drv_revision_uuid, typ, bemerkung, abgemeldet, dns, dnf, dsq, zeitnahme_bemerkung, start_nummer, abteilung, bahn, kosten, rechnungs_nummer, verein_uuid, rennen_uuid
 `
 
 type CreateMeldungParams struct {
@@ -99,6 +99,7 @@ func (q *Queries) CreateMeldung(ctx context.Context, arg CreateMeldungParams) (M
 		&i.Abteilung,
 		&i.Bahn,
 		&i.Kosten,
+		&i.RechnungsNummer,
 		&i.VereinUuid,
 		&i.RennenUuid,
 	)
@@ -106,7 +107,7 @@ func (q *Queries) CreateMeldung(ctx context.Context, arg CreateMeldungParams) (M
 }
 
 const getAllMeldung = `-- name: GetAllMeldung :many
-SELECT uuid, drv_revision_uuid, typ, bemerkung, abgemeldet, dns, dnf, dsq, zeitnahme_bemerkung, start_nummer, abteilung, bahn, kosten, verein_uuid, rennen_uuid FROM meldung
+SELECT uuid, drv_revision_uuid, typ, bemerkung, abgemeldet, dns, dnf, dsq, zeitnahme_bemerkung, start_nummer, abteilung, bahn, kosten, rechnungs_nummer, verein_uuid, rennen_uuid FROM meldung
 ORDER BY start_nummer ASC
 `
 
@@ -133,6 +134,7 @@ func (q *Queries) GetAllMeldung(ctx context.Context) ([]Meldung, error) {
 			&i.Abteilung,
 			&i.Bahn,
 			&i.Kosten,
+			&i.RechnungsNummer,
 			&i.VereinUuid,
 			&i.RennenUuid,
 		); err != nil {
@@ -148,7 +150,7 @@ func (q *Queries) GetAllMeldung(ctx context.Context) ([]Meldung, error) {
 
 const getAllMeldungForVerein = `-- name: GetAllMeldungForVerein :many
 SELECT
-  meldung.uuid, meldung.drv_revision_uuid, meldung.typ, meldung.bemerkung, meldung.abgemeldet, meldung.dns, meldung.dnf, meldung.dsq, meldung.zeitnahme_bemerkung, meldung.start_nummer, meldung.abteilung, meldung.bahn, meldung.kosten, meldung.verein_uuid, meldung.rennen_uuid,
+  meldung.uuid, meldung.drv_revision_uuid, meldung.typ, meldung.bemerkung, meldung.abgemeldet, meldung.dns, meldung.dnf, meldung.dsq, meldung.zeitnahme_bemerkung, meldung.start_nummer, meldung.abteilung, meldung.bahn, meldung.kosten, meldung.rechnungs_nummer, meldung.verein_uuid, meldung.rennen_uuid,
   rennen.uuid, rennen.sort_id, rennen.nummer, rennen.bezeichnung, rennen.bezeichnung_lang, rennen.zusatz, rennen.leichtgewicht, rennen.geschlecht, rennen.bootsklasse, rennen.bootsklasse_lang, rennen.altersklasse, rennen.altersklasse_lang, rennen.tag, rennen.wettkampf, rennen.kosten_eur, rennen.rennabstand, rennen.startzeit,
   athlet.uuid, athlet.vorname, athlet.name, athlet.geschlecht, athlet.jahrgang, athlet.gewicht, athlet.startberechtigt, athlet.verein_uuid,
   link_meldung_athlet.rolle, link_meldung_athlet.position
@@ -203,6 +205,7 @@ func (q *Queries) GetAllMeldungForVerein(ctx context.Context, vereinUuid uuid.UU
 			&i.Meldung.Abteilung,
 			&i.Meldung.Bahn,
 			&i.Meldung.Kosten,
+			&i.Meldung.RechnungsNummer,
 			&i.Meldung.VereinUuid,
 			&i.Meldung.RennenUuid,
 			&i.Rennen.Uuid,
@@ -244,7 +247,7 @@ func (q *Queries) GetAllMeldungForVerein(ctx context.Context, vereinUuid uuid.UU
 }
 
 const getMeldungMinimal = `-- name: GetMeldungMinimal :one
-SELECT uuid, drv_revision_uuid, typ, bemerkung, abgemeldet, dns, dnf, dsq, zeitnahme_bemerkung, start_nummer, abteilung, bahn, kosten, verein_uuid, rennen_uuid FROM meldung
+SELECT uuid, drv_revision_uuid, typ, bemerkung, abgemeldet, dns, dnf, dsq, zeitnahme_bemerkung, start_nummer, abteilung, bahn, kosten, rechnungs_nummer, verein_uuid, rennen_uuid FROM meldung
 WHERE uuid = $1 LIMIT 1
 `
 
@@ -265,10 +268,27 @@ func (q *Queries) GetMeldungMinimal(ctx context.Context, argUuid uuid.UUID) (Mel
 		&i.Abteilung,
 		&i.Bahn,
 		&i.Kosten,
+		&i.RechnungsNummer,
 		&i.VereinUuid,
 		&i.RennenUuid,
 	)
 	return i, err
+}
+
+const setMeldungRechnungsNummer = `-- name: SetMeldungRechnungsNummer :exec
+UPDATE meldung
+SET rechnungs_nummer = $2
+WHERE uuid = $1
+`
+
+type SetMeldungRechnungsNummerParams struct {
+	Uuid            uuid.UUID   `json:"uuid"`
+	RechnungsNummer pgtype.Text `json:"rechnungs_nummer"`
+}
+
+func (q *Queries) SetMeldungRechnungsNummer(ctx context.Context, arg SetMeldungRechnungsNummerParams) error {
+	_, err := q.db.Exec(ctx, setMeldungRechnungsNummer, arg.Uuid, arg.RechnungsNummer)
+	return err
 }
 
 const updateMeldungSetzung = `-- name: UpdateMeldungSetzung :exec

@@ -138,6 +138,11 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		Compress:      true,
 		CacheDuration: 30 * time.Minute,
 	})
+	app.Static("/files", "./files", fiber.Static{
+		Browse:        true,
+		Compress:      true,
+		// CacheDuration: 30 * time.Minute,
+	})
 	// app.Get("/favicon.ico", defAssetCacheMid, func(c *fiber.Ctx) error {
 	// 	return c.Status(fiber.StatusOK).SendFile("./assets/favicon.ico")
 	// })
@@ -171,8 +176,11 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		bueroV1.Post("/startnummernausgabe", api_v1.StartnummernAusgabe)
 		bueroV1.Post("/startnummernwechsel", api_v1.StartnummernWechsel)
 		bueroV1.Post("/kasse/einzahlung", api_v1.KasseEinzahlung)
+		bueroV1.Get("/kasse/rechnung/:uuid", api_v1.KasseCreateRechnungHTML)
+		bueroV1.Post("/kasse/rechnung/:uuid", api_v1.KasseCreateRechnungPDF)
 
 		leitungV1 := v1.Group("/leitung")
+		leitungV1.Get("/pdfFooter", api_v1.GetPdfFooter)
 		leitungV1.Get("/meldeergebnis", api_v1.GetMeldeergebnisHtml)
 		leitungV1.Post("/meldeergebnis", api_v1.GenerateMeldeergebnis)
 		leitungV1.Post("/drv_meldung_upload", api_v1.DrvMeldungUpload)

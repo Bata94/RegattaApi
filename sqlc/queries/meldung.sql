@@ -45,6 +45,11 @@ SET
 WHERE
   uuid = $1;
 
+-- name: SetMeldungRechnungsNummer :exec
+UPDATE meldung
+SET rechnungs_nummer = $2
+WHERE uuid = $1;
+
 -- name: UpdateMeldungSetzung :exec
 UPDATE meldung
 SET abteilung = $2, bahn = $3

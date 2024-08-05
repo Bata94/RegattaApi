@@ -15,12 +15,17 @@ import (
 	"github.com/bata94/RegattaApi/internal/handlers/api"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/bata94/RegattaApi/internal/templates/pdf"
+	"github.com/bata94/RegattaApi/internal/utils"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 )
+
+func GetPdfFooter(c *fiber.Ctx) error {
+	return handlers.RenderPdf(c, "footer", pdf_templates.PdfFooter())
+}
 
 func GetMeldeergebnisHtml(c *fiber.Ctx) error {
 	rLs, err := crud.GetAllRennenWithAthlet(crud.GetAllRennenParams{
@@ -43,6 +48,7 @@ func GetMeldeergebnisHtml(c *fiber.Ctx) error {
 			Tag:            string(r.Tag),
 			NumMeldungen:   r.NumMeldungen,
 			NumAbteilungen: r.NumAbteilungen,
+			Wettkampf:      r.Wettkampf,
 			Abteilungen:    make([]pdf_templates.AbteilungenMeldeergebnisPDF, r.NumAbteilungen),
 			Abmeldungen:    []pdf_templates.MeldungMeldeergebnisPDF{},
 		}
@@ -103,7 +109,16 @@ func GetMeldeergebnisHtml(c *fiber.Ctx) error {
 }
 
 func GenerateMeldeergebnis(c *fiber.Ctx) error {
-	return &api.INTERNAL_SERVER_ERROR
+	filepath, err := utils.SavePDFfromHTML(
+		"leitung/meldeergebnis",
+		"meldeergebnis",
+		fmt.Sprintf("Meldeergebnis_%s", time.Now().Format("2006-01-02_15-04-05")),
+		true,
+	)
+	if err != nil {
+		return err
+	}
+	return c.SendFile(filepath, true)
 }
 
 func DrvMeldungUpload(c *fiber.Ctx) error {
@@ -304,14 +319,13 @@ func ImportDrvJson(filePath string) error {
 		if err != nil {
 			return err
 		}
-		startberechtigt := true
 		nnAthletParams := sqlc.CreateAthletParams{
 			Uuid:            nnUuid,
 			VereinUuid:      newVerein.Uuid,
 			Name:            "Name",
 			Vorname:         "No",
 			Jahrgang:        "9999",
-			Startberechtigt: startberechtigt,
+			Startberechtigt: false,
 			Geschlecht:      "x",
 		}
 		_, err = crud.CreateAthlet(nnAthletParams)
@@ -401,7 +415,6 @@ func ImportDrvJson(filePath string) error {
 		}
 
 		startberechtigt := true
-
 		newAthlet := sqlc.CreateAthletParams{
 			Uuid:            a.Id,
 			VereinUuid:      a.ClubId,

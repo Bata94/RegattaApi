@@ -13,7 +13,7 @@ CREATE TABLE verein (
   uuid uuid PRIMARY KEY,
   name text NOT NULL,
   kurzform text NOT NULL,
-  kuerzel text NOT NULL
+  kuerzel text unique NOT NULL
 );
 
 CREATE TABLE athlet (
@@ -89,6 +89,7 @@ CREATE TABLE meldung(
   abteilung int DEFAULT 0 NOT NULL,
   bahn int DEFAULT 0 NOT NULL,
   kosten int NOT NULL,
+  rechnungs_nummer text,
   verein_uuid uuid NOT NULL,
   CONSTRAINT fk_verein FOREIGN KEY (verein_uuid) REFERENCES verein(uuid),
   rennen_uuid uuid NOT NULL,

@@ -18,8 +18,8 @@ services:
       dockerfile: Dockerfile
       context: ./
       target: pg
-    # ports:
-    #   - 5432:5432
+    ports:
+      - 5432:5432
     volumes:
       - postgres:/var/lib/postgresql/data
     environment:
@@ -62,6 +62,7 @@ services:
       - ./docs:/opt/app/docs
       - ./internal:/opt/app/internal
       - ./sqlc:/opt/app/sqlc
+      - ./files:/opt/app/files
       - ./main.go:/opt/app/main.go
     ports:
       - 8080:8080

@@ -9,16 +9,9 @@ templ PdfLayout(title string, content templ.Component) {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{ title }</title>
   <link rel="stylesheet" href="/assets/css/global.css" />
-  <style>
-    @media print {
-      div {
-        break-inside: avoid;
-      }
-    }
-  </style>
 </head>
 
-<body class="prose w-screen min-w-[1200px] pt-4 px-4" data-theme="light">
+<body class="prose subpixel-antialiased w-screen min-w-[1000px] pt-4 px-4" data-theme="light">
   <main>
     @content
   </main>
@@ -38,9 +31,12 @@ templ PdfFooter() {
     }
 
     body {
-      padding: 0;
-      margin: 0;
-      width: 100%;
+      padding-top: 0px;
+      padding-left: 48px;
+      padding-right: 48px;
+      padding-bottom: 54px;
+      margin: 0px;
+      width: 1000px; 
     }
 
     table {
@@ -53,13 +49,16 @@ templ PdfFooter() {
     td {
       padding: 0 8px;
     }
+
+    p.centerTxt {
+      margin: auto;
+      text-align: center;
+    }
   </style>
 </head>
 
 <body>
-  <table>
-    <tr></tr>
-  </table>
+  <p class="centerTxt">Seite <span class="pageNumber"></span> von <span class="totalPages"></span></p>
 </body>
 
 </html>

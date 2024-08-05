@@ -23,6 +23,7 @@ tmp/
 internal/templates/**/*.txt
 internal/templates/**/*_templ.go
 drvFiles/
+files/*
 
 # Embedded Replicas (Turso/LibSQL)
 **/*.db

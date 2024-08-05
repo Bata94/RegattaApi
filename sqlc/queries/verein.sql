@@ -6,6 +6,18 @@ WHERE uuid = $1 LIMIT 1;
 SELECT * FROM verein
 ORDER BY name ASC;
 
+-- name: GetVereinRechnungsnummern :many
+SELECT DISTINCT
+   meldung.rechnungs_nummer
+FROM
+  meldung
+INNER JOIN
+  verein
+ON
+  meldung.verein_uuid = verein.uuid
+WHERE
+  verein.uuid = $1;
+
 -- name: CreateVerein :one
 INSERT INTO verein (
   uuid,

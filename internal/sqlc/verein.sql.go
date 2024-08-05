@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createVerein = `-- name: CreateVerein :one
@@ -94,4 +95,37 @@ func (q *Queries) GetVereinMinimal(ctx context.Context, argUuid uuid.UUID) (Vere
 		&i.Kuerzel,
 	)
 	return i, err
+}
+
+const getVereinRechnungsnummern = `-- name: GetVereinRechnungsnummern :many
+SELECT DISTINCT
+   meldung.rechnungs_nummer
+FROM
+  meldung
+INNER JOIN
+  verein
+ON
+  meldung.verein_uuid = verein.uuid
+WHERE
+  verein.uuid = $1
+`
+
+func (q *Queries) GetVereinRechnungsnummern(ctx context.Context, argUuid uuid.UUID) ([]pgtype.Text, error) {
+	rows, err := q.db.Query(ctx, getVereinRechnungsnummern, argUuid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.Text{}
+	for rows.Next() {
+		var rechnungs_nummer pgtype.Text
+		if err := rows.Scan(&rechnungs_nummer); err != nil {
+			return nil, err
+		}
+		items = append(items, rechnungs_nummer)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

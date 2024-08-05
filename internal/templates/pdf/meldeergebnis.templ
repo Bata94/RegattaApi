@@ -1,6 +1,7 @@
 package pdf_templates
 
 import (
+	"github.com/bata94/RegattaApi/internal/sqlc"
 	"strconv"
 	"time"
 )
@@ -26,6 +27,7 @@ type RennenMeldeergebnisPDF struct {
 	Tag            string
 	NumMeldungen   int
 	NumAbteilungen int
+	Wettkampf      sqlc.Wettkampf
 	Abteilungen    []AbteilungenMeldeergebnisPDF
 	Abmeldungen    []MeldungMeldeergebnisPDF
 }
@@ -43,63 +45,82 @@ type MeldungMeldeergebnisPDF struct {
 }
 
 templ MeldungsEntry(m MeldungMeldeergebnisPDF) {
-  <tr class="border-none">
-    <td>
-    </td>
-    <td>
-      { strconv.Itoa(m.StartNummer) }
-    </td>
-    <td>
-      { m.Verein }
-    </td>
-    <td>
-    </td>
-  </tr>
-  <tr>
-    <td>
-    </td>
-    <td>
-    </td>
-    <td>
-      { m.Teilnehmer }
-    </td>
-    <td>
-    </td>
-  </tr>
+	<tr class="mt-8 border-none">
+		<th class="w-1/12 font-bold text-center">
+			{ strconv.Itoa(m.StartNummer) }
+		</th>
+		<th class="w-11/12 font-bold text-left">
+			{ m.Verein }
+		</th>
+	</tr>
+	<tr>
+		<td></td>
+		<td>
+			{ m.Teilnehmer }
+		</td>
+	</tr>
 }
 
 templ MeldeErgebnis(rennen []RennenMeldeergebnisPDF) {
 	<h1>Meldeergebnis</h1>
 	<h1>34. Mülheimer Jungen- und Mädchen-Regatta 2024</h1>
-	<h6>Stand: { time.Now().Format("02.01.2006 - 15:04:05 Uhr") }</h6>
+	<h6 class="mb-8">Stand: { time.Now().Format("02.01.2006 - 15:04:05 Uhr") }</h6>
 	for i, r := range rennen {
-		<div class="w-full">
+		<div class="w-full no-break">
 			<h1>{ curDayCheck(i, rennen) }</h1>
-			<h2 class="underline underline-offset-2">Rennen { r.RennNr } - { r.Bezeichnung }</h2>
 			if r.NumAbteilungen != 0 {
-        <h4>Startzeit: { r.Startzeit } Uhr, Rennabstand: { strconv.Itoa(r.Rennabstand) } Minute(n)</h4>
-				<h5>{ strconv.Itoa(r.NumMeldungen) } Meldung(en) in { strconv.Itoa(r.NumAbteilungen) } Abteilung(en)</h5>
+				<h2 class="underline underline-offset-2">Rennen { r.RennNr } - { r.Bezeichnung }</h2>
+				<h4>
+					Startzeit: { r.Startzeit } Uhr,
+					Rennabstand: { strconv.Itoa(r.Rennabstand) }
+					if r.Rennabstand > 1 {
+						Minuten
+					} else {
+						Minute
+					}
+				</h4>
+				<h5>
+					{ strconv.Itoa(r.NumMeldungen) }
+					if r.NumMeldungen > 1 {
+						Meldungen
+					} else {
+						Meldung
+					}
+					if r.Wettkampf != sqlc.WettkampfLangstrecke {
+						, in { strconv.Itoa(r.NumAbteilungen) }
+						if r.NumAbteilungen> 1 {
+							Abteilungen
+						} else {
+							Abteilung
+						}
+					}
+				</h5>
 				for _, a := range r.Abteilungen {
-					<div class="mx-2">
-						<h4>Abteilung { strconv.Itoa(a.Nummer) }:</h4>
-            <table class="my-2">
-              for _, m := range a.Meldungen {
-                @MeldungsEntry(m)
-              }
-            </table>
+					<div class="mx-2 no-break">
+						if r.Wettkampf != sqlc.WettkampfLangstrecke {
+							<h3 class="">Abteilung { strconv.Itoa(a.Nummer) }:</h3>
+						} else {
+							<div class="h-4"></div>
+						}
+						<table class="my-2 table-fixed divide-y">
+							for _, m := range a.Meldungen {
+								@MeldungsEntry(m)
+							}
+						</table>
 					</div>
 				}
 			} else {
-        <h5 class="mx-2">Keine Meldungen, Rennen entfällt!</h5>
+				<h2 class="line-through">Rennen { r.RennNr } - { r.Bezeichnung }</h2>
+				// <!--- <h5 class="mx-auto text-center text-red-600 font-bold">Keine Meldungen, Rennen entfällt!</h5> --->
 			}
 			if len(r.Abmeldungen) != 0 {
-				<div class="mx-2">
-					<h4>Abmeldungen:</h4>
-          <table class="my-2">
-            for _, m := range r.Abmeldungen {
-              @MeldungsEntry(m)
-            }
-          </table>
+				<div class="mx-2 no-break">
+					<h4 class="">Abmeldungen:</h4>
+					<table class="my-2 table-fixed">
+						for _, m := range r.Abmeldungen {
+							@MeldungsEntry(m)
+						}
+					</table>
 				</div>
 			}
 		</div>

@@ -217,6 +217,7 @@ type Meldung struct {
 	Abteilung          int32       `json:"abteilung"`
 	Bahn               int32       `json:"bahn"`
 	Kosten             int32       `json:"kosten"`
+	RechnungsNummer    pgtype.Text `json:"rechnungs_nummer"`
 	VereinUuid         uuid.UUID   `json:"verein_uuid"`
 	RennenUuid         uuid.UUID   `json:"rennen_uuid"`
 }
