@@ -824,7 +824,7 @@ func SetZeitplan(c *fiber.Ctx) error {
 			soTimeStr := curStartTimeSo.Format("15:04")
 
 			err := crud.UpdateStartZeit(sqlc.UpdateStartZeitParams{
-				Startzeit: pgtype.Text{String: soTimeStr},
+				Startzeit: pgtype.Text{String: soTimeStr, Valid: true},
 				Uuid:      r.Uuid,
 			})
 			if err != nil {
