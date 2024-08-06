@@ -89,8 +89,9 @@ func (q *Queries) GetAllAthlet(ctx context.Context) ([]Athlet, error) {
 }
 
 const getAllAthletenForVereinMissStartber = `-- name: GetAllAthletenForVereinMissStartber :many
-SELECT
-  athlet.uuid, athlet.vorname, athlet.name, athlet.geschlecht, athlet.jahrgang, athlet.gewicht, athlet.startberechtigt, athlet.verein_uuid
+SELECT DISTINCT
+  athlet.uuid, athlet.vorname, athlet.name, athlet.geschlecht, athlet.jahrgang, athlet.gewicht, athlet.startberechtigt, athlet.verein_uuid,
+  rennen.uuid, rennen.sort_id, rennen.nummer, rennen.bezeichnung, rennen.bezeichnung_lang, rennen.zusatz, rennen.leichtgewicht, rennen.geschlecht, rennen.bootsklasse, rennen.bootsklasse_lang, rennen.altersklasse, rennen.altersklasse_lang, rennen.tag, rennen.wettkampf, rennen.kosten_eur, rennen.rennabstand, rennen.startzeit
 FROM
   athlet
 JOIN
@@ -101,6 +102,10 @@ JOIN
   meldung
 ON
   link_meldung_athlet.meldung_uuid = meldung.uuid
+JOIN
+  rennen
+ON
+  meldung.rennen_uuid = rennen.uuid
 WHERE
   meldung.verein_uuid = $1 AND
   meldung.abgemeldet = false AND
@@ -109,24 +114,46 @@ ORDER BY
   athlet.name, athlet.vorname
 `
 
-func (q *Queries) GetAllAthletenForVereinMissStartber(ctx context.Context, vereinUuid uuid.UUID) ([]Athlet, error) {
+type GetAllAthletenForVereinMissStartberRow struct {
+	Athlet Athlet `json:"athlet"`
+	Rennen Rennen `json:"rennen"`
+}
+
+func (q *Queries) GetAllAthletenForVereinMissStartber(ctx context.Context, vereinUuid uuid.UUID) ([]GetAllAthletenForVereinMissStartberRow, error) {
 	rows, err := q.db.Query(ctx, getAllAthletenForVereinMissStartber, vereinUuid)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Athlet{}
+	items := []GetAllAthletenForVereinMissStartberRow{}
 	for rows.Next() {
-		var i Athlet
+		var i GetAllAthletenForVereinMissStartberRow
 		if err := rows.Scan(
-			&i.Uuid,
-			&i.Vorname,
-			&i.Name,
-			&i.Geschlecht,
-			&i.Jahrgang,
-			&i.Gewicht,
-			&i.Startberechtigt,
-			&i.VereinUuid,
+			&i.Athlet.Uuid,
+			&i.Athlet.Vorname,
+			&i.Athlet.Name,
+			&i.Athlet.Geschlecht,
+			&i.Athlet.Jahrgang,
+			&i.Athlet.Gewicht,
+			&i.Athlet.Startberechtigt,
+			&i.Athlet.VereinUuid,
+			&i.Rennen.Uuid,
+			&i.Rennen.SortID,
+			&i.Rennen.Nummer,
+			&i.Rennen.Bezeichnung,
+			&i.Rennen.BezeichnungLang,
+			&i.Rennen.Zusatz,
+			&i.Rennen.Leichtgewicht,
+			&i.Rennen.Geschlecht,
+			&i.Rennen.Bootsklasse,
+			&i.Rennen.BootsklasseLang,
+			&i.Rennen.Altersklasse,
+			&i.Rennen.AltersklasseLang,
+			&i.Rennen.Tag,
+			&i.Rennen.Wettkampf,
+			&i.Rennen.KostenEur,
+			&i.Rennen.Rennabstand,
+			&i.Rennen.Startzeit,
 		); err != nil {
 			return nil, err
 		}
@@ -139,7 +166,7 @@ func (q *Queries) GetAllAthletenForVereinMissStartber(ctx context.Context, verei
 }
 
 const getAllAthletenForVereinWaage = `-- name: GetAllAthletenForVereinWaage :many
-SELECT
+SELECT DISTINCT
   athlet.uuid, athlet.vorname, athlet.name, athlet.geschlecht, athlet.jahrgang, athlet.gewicht, athlet.startberechtigt, athlet.verein_uuid,
   rennen.uuid, rennen.sort_id, rennen.nummer, rennen.bezeichnung, rennen.bezeichnung_lang, rennen.zusatz, rennen.leichtgewicht, rennen.geschlecht, rennen.bootsklasse, rennen.bootsklasse_lang, rennen.altersklasse, rennen.altersklasse_lang, rennen.tag, rennen.wettkampf, rennen.kosten_eur, rennen.rennabstand, rennen.startzeit
 FROM
@@ -160,6 +187,7 @@ WHERE
   meldung.verein_uuid = $1 AND
   rennen.leichtgewicht = true AND
   meldung.abgemeldet = false AND
+  link_meldung_athlet.rolle = 'Ruderer' AND
   athlet.gewicht = 0
 ORDER BY
   athlet.name, athlet.vorname, rennen.sort_id

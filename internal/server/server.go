@@ -139,8 +139,8 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		CacheDuration: 30 * time.Minute,
 	})
 	app.Static("/files", "./files", fiber.Static{
-		Browse:        true,
-		Compress:      true,
+		Browse:   true,
+		Compress: true,
 		// CacheDuration: 30 * time.Minute,
 	})
 	// app.Get("/favicon.ico", defAssetCacheMid, func(c *fiber.Ctx) error {
@@ -163,11 +163,13 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		v1.Get("/test", api_v1.TestHandler)
 
 		athletV1 := v1.Group("/athlet")
+		athletV1.Get("/startberechtigung", api_v1.GetAthletStartberechtigung)
+		athletV1.Put("/startberechtigung", api_v1.UpdateAthletStartberechtigung)
+		athletV1.Get("/waage", api_v1.GetAthletWaage)
+		athletV1.Put("/waage", api_v1.UpdateAthletWaage)
 		athletV1.Get("", api_v1.GetAllAthlet)
 		athletV1.Get("/:uuid", api_v1.GetAthlet)
 		athletV1.Post("", api_v1.CreateAthlet)
-		athletV1.Put("/startberechtigung", api_v1.UpdateAthletStartberechtigung)
-		athletV1.Put("/waage", api_v1.UpdateAthletWaage)
 
 		bueroV1 := v1.Group("/buero")
 		bueroV1.Post("/abmeldung", api_v1.Abmeldung)

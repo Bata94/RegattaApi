@@ -71,6 +71,22 @@ func UpdateAthletStartberechtigung(c *fiber.Ctx) error {
 	return c.JSON("Athlet erfolgreich angepasst!")
 }
 
+func GetAthletWaage(c *fiber.Ctx) error {
+	ls, err := crud.GetForAllVereineMissingAthlet(0)
+	if err != nil {
+		return err
+	}
+	return c.JSON(ls)
+}
+
+func GetAthletStartberechtigung(c *fiber.Ctx) error {
+	ls, err := crud.GetForAllVereineMissingAthlet(1)
+	if err != nil {
+		return err
+	}
+	return c.JSON(ls)
+}
+
 type UpdateAthletWaageParams struct {
 	Uuid    string `json:"uuid"`
 	Gewicht int    `json:"gewicht"`

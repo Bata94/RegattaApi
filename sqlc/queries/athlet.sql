@@ -12,8 +12,9 @@ WHERE vorname = 'No' and name = 'Name' and jahrgang = '9999'
 ORDER BY verein_uuid ASC;
 
 -- name: GetAllAthletenForVereinMissStartber :many
-SELECT
-  athlet.*
+SELECT DISTINCT
+  sqlc.embed(athlet),
+  sqlc.embed(rennen)
 FROM
   athlet
 JOIN
@@ -24,6 +25,10 @@ JOIN
   meldung
 ON
   link_meldung_athlet.meldung_uuid = meldung.uuid
+JOIN
+  rennen
+ON
+  meldung.rennen_uuid = rennen.uuid
 WHERE
   meldung.verein_uuid = $1 AND
   meldung.abgemeldet = false AND
