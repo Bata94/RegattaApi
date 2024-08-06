@@ -60,11 +60,32 @@ func GetAllNNAthleten() ([]sqlc.Athlet, error) {
 	return aLs, err
 }
 
-func GetAllAthletenForVereinWaage(vUuid uuid.UUID) ([]sqlc.Athlet, error) {
+type AthletenMissing struct {
+	Athlet       sqlc.Athlet `json:"athlet"`
+	ErstesRennen sqlc.Rennen `json:"erstes_rennen"`
+}
+
+func GetAllAthletenForVereinWaage(vUuid uuid.UUID) ([]AthletenMissing, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	return DB.Queries.GetAllAthletenForVereinWaage(ctx, vUuid)
+	retLs := []AthletenMissing{}
+	q, err := DB.Queries.GetAllAthletenForVereinWaage(ctx, vUuid)
+	if err != nil {
+		return retLs, err
+	}
+
+	for i, r := range q {
+		if len(retLs) == 0 || (q[i-1].Athlet.Vorname != r.Athlet.Vorname && q[i-1].Athlet.Name != r.Athlet.Name) {
+			retLs = append(retLs, AthletenMissing{
+				Athlet:       r.Athlet,
+				ErstesRennen: r.Rennen,
+			})
+			continue
+		}
+	}
+
+	return retLs, nil
 }
 
 func GetAllAthletenForVereinMissStartber(vUuid uuid.UUID) ([]sqlc.Athlet, error) {

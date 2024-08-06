@@ -32,8 +32,9 @@ ORDER BY
   athlet.name, athlet.vorname;
 
 -- name: GetAllAthletenForVereinWaage :many
-SELECT
-  athlet.*
+SELECT DISTINCT
+  sqlc.embed(athlet),
+  sqlc.embed(rennen)
 FROM
   athlet
 JOIN
@@ -52,9 +53,10 @@ WHERE
   meldung.verein_uuid = $1 AND
   rennen.leichtgewicht = true AND
   meldung.abgemeldet = false AND
+  link_meldung_athlet.rolle = 'Ruderer' AND
   athlet.gewicht = 0
 ORDER BY
-  athlet.name, athlet.vorname;
+  athlet.name, athlet.vorname, rennen.sort_id;
 
 -- name: CreateAthlet :one
 INSERT INTO athlet
