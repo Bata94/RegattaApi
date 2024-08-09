@@ -1,7 +1,10 @@
 package api_v1
 
 import (
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 
 	"github.com/bata94/RegattaApi/internal/crud"
@@ -32,8 +35,17 @@ func GetAllAthlet(c *fiber.Ctx) error {
 	return c.JSON(aLs)
 }
 
+type NewAthletParams struct {
+	VereinUUID      string `json:"verein_uuid"`
+	Name            string `json:"name"`
+	Vorname         string `json:"vorname"`
+	Jahrgang        string `json:"jahrgang"`
+	Startberechtigt bool   `json:"startberechtigt"`
+	Geschlecht      string `json:"geschlecht"`
+}
+
 func CreateAthlet(c *fiber.Ctx) error {
-	aParams := new(sqlc.CreateAthletParams)
+	aParams := new(NewAthletParams)
 	err := c.BodyParser(&aParams)
 	if err != nil {
 		retErr := api.BAD_REQUEST
@@ -41,7 +53,30 @@ func CreateAthlet(c *fiber.Ctx) error {
 		return &retErr
 	}
 
-	a, err := crud.CreateAthlet(*aParams)
+	vereinUuid, err := uuid.Parse(aParams.VereinUUID)
+	if err != nil {
+		retErr := api.BAD_REQUEST
+		retErr.Msg = err.Error()
+		return &retErr
+	}
+	var geschlecht sqlc.Geschlecht
+	aParams.Geschlecht = strings.ToLower(aParams.Geschlecht)
+	if aParams.Geschlecht == "m" {
+		geschlecht = sqlc.GeschlechtM
+	} else if aParams.Geschlecht == "f" || aParams.Geschlecht == "w" {
+		geschlecht = sqlc.GeschlechtW
+	} else if aParams.Geschlecht == "x" {
+		geschlecht = sqlc.GeschlechtX
+	}
+	a, err := crud.CreateAthlet(sqlc.CreateAthletParams{
+		Uuid:            uuid.New(),
+		VereinUuid:      vereinUuid,
+		Name:            aParams.Name,
+		Vorname:         aParams.Vorname,
+		Jahrgang:        aParams.Jahrgang,
+		Startberechtigt: aParams.Startberechtigt,
+		Geschlecht:      geschlecht,
+	})
 	if err != nil {
 		return err
 	}
