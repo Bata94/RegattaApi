@@ -2,10 +2,10 @@ FROM golang:1.22-alpine as base
 
 RUN apk add --no-cache git
 RUN apk add --no-cache ca-certificates
- 
+
 # add a user here because addgroup and adduser are not available in scratch
 RUN addgroup -S myapp && adduser -S -u 10000 -g myapp myapp
- 
+
 WORKDIR /opt/app
 
 RUN go install github.com/a-h/templ/cmd/templ@latest
@@ -33,8 +33,14 @@ FROM base as prod-builder
 WORKDIR /opt/app
 
 COPY --from=base /opt/app/node_modules /opt/app/node_modules
-COPY . .
+COPY .air.toml .
+COPY ./assets ./assets
+COPY ./docs ./docs
+COPY ./internal ./internal
+COPY ./sqlc ./sqlc
+COPY ./main.go ./main.go
 RUN rm -rf ./tmp
+RUN go mod tidy
 
 RUN make full-build
 
