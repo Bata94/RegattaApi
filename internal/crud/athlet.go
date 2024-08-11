@@ -112,6 +112,13 @@ func GetForAllVereineMissingAthlet(athletType MissingAthletType) ([]VereineWithA
 	return retLs, nil
 }
 
+func GetAllAthletenForVerein(vUuid uuid.UUID) ([]sqlc.Athlet, error) {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	return DB.Queries.GetAllAthletenForVerein(ctx, vUuid)
+}
+
 func GetAllAthletenForVereinWaage(vUuid uuid.UUID) ([]AthletenMissing, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()

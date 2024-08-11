@@ -195,6 +195,7 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		meldungV1.Get("/", api_v1.GetAllMeldung)
 		meldungV1.Get("/:uuid", api_v1.GetMeldung)
 		meldungV1.Post("/updateSetzungBatch", api_v1.UpdateSetzungBatch)
+		meldungV1.Post("/nachmeldung", api_v1.PostNachmeldung)
 		meldungV1.Get("/verein/:uuid", api_v1.GetAllMeldungForVerein)
 
 		pausenV1 := v1.Group("/pause")
@@ -221,6 +222,7 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		vereinV1.Get("", api_v1.GetAllVerein)
 		vereinV1.Get("/:uuid", api_v1.GetVerein)
 		// TODO; Rethink if maybe better at athlet endpoint??
+		vereinV1.Get("/:uuid/athlet", api_v1.GetAllAthletenForVerein)
 		vereinV1.Get("/:uuid/waage", api_v1.GetAllAthletenForVereinWaage)
 		vereinV1.Get("/:uuid/startberechtigung", api_v1.GetAllAthletenForVereinMissStartber)
 	}

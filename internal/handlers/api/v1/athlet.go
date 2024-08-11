@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 
 	"github.com/bata94/RegattaApi/internal/crud"

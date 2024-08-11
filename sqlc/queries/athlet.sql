@@ -11,6 +11,16 @@ SELECT * FROM athlet
 WHERE vorname = 'No' and name = 'Name' and jahrgang = '9999'
 ORDER BY verein_uuid ASC;
 
+-- name: GetAllAthletenForVerein :many
+SELECT DISTINCT
+  athlet.*
+FROM
+  athlet
+WHERE
+  athlet.verein_uuid = $1
+ORDER BY
+  athlet.name, athlet.vorname;
+
 -- name: GetAllAthletenForVereinMissStartber :many
 SELECT DISTINCT
   sqlc.embed(athlet),
