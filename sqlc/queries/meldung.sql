@@ -6,6 +6,18 @@ WHERE uuid = $1 LIMIT 1;
 SELECT * FROM meldung
 ORDER BY start_nummer ASC;
 
+-- name: GetLastStartnummer :one
+SELECT
+  MAX(meldung.start_nummer)
+FROM
+  meldung
+JOIN
+  rennen
+ON
+  meldung.rennen_uuid = rennen.uuid
+WHERE
+  rennen.tag = $1;
+
 -- name: GetAllMeldungForVerein :many
 SELECT
   sqlc.embed(meldung),
@@ -67,10 +79,13 @@ INSERT INTO meldung (
   rennen_uuid,
   drv_revision_uuid,
   abgemeldet,
+  start_nummer,
+  abteilung,
+  bahn,
   kosten,
   typ,
   bemerkung
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
 )
 RETURNING *;

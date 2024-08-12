@@ -532,6 +532,9 @@ func ImportDrvJson(filePath string) error {
 				RennenUuid:      m.EventId,
 				DrvRevisionUuid: m.RevisionId,
 				Abgemeldet:      abgemeldet,
+				StartNummer:     int32(0),
+				Abteilung:       int32(0),
+				Bahn:            int32(0),
 				Kosten:          kosten,
 				Typ:             typ,
 				Bemerkung:       pgtype.Text{String: bemerkung},
@@ -723,7 +726,7 @@ func SetStartnummern(c *fiber.Ctx) error {
 		return err
 	}
 
-	abgStartNummer := int32(999)
+	abgStartNummer := int32(-999)
 	curStartNummer := int32(1)
 	lastDay := sqlc.TagSa
 

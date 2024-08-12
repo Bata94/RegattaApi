@@ -1,6 +1,7 @@
 package crud
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/bata94/RegattaApi/internal/db"
@@ -25,7 +26,7 @@ type MeldungMinimal struct {
 	Abteilung          int       `json:"abteilung"`
 	Bahn               int       `json:"bahn"`
 	Kosten             int       `json:"kosten"`
-  RechnungsNummer    string    `json:"rechnungs_nummer"`
+	RechnungsNummer    string    `json:"rechnungs_nummer"`
 	VereinUuid         uuid.UUID `json:"verein_uuid"`
 	RennenUuid         uuid.UUID `json:"rennen_uuid"`
 }
@@ -57,7 +58,7 @@ func SqlcMeldungMinmalToCrudMeldungMinimal(q sqlc.Meldung) MeldungMinimal {
 		Abteilung:          int(q.Abteilung),
 		Bahn:               int(q.Bahn),
 		Kosten:             int(q.Kosten),
-    RechnungsNummer:    q.RechnungsNummer.String,
+		RechnungsNummer:    q.RechnungsNummer.String,
 		VereinUuid:         q.VereinUuid,
 		RennenUuid:         q.RennenUuid,
 	}
@@ -229,14 +230,31 @@ func Abmeldung(meldUuid uuid.UUID) error {
 }
 
 func SetMeldungRechnungsNummer(meldUuid uuid.UUID, rechnungsNummer string) error {
-  ctx, cancel := getCtxWithTo()
-  defer cancel()
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
 
-  return DB.Queries.SetMeldungRechnungsNummer(ctx, sqlc.SetMeldungRechnungsNummerParams{
-    Uuid: meldUuid,
-    RechnungsNummer: pgtype.Text{
-      Valid: true,
-      String: rechnungsNummer,        
-    },
-  })
+	return DB.Queries.SetMeldungRechnungsNummer(ctx, sqlc.SetMeldungRechnungsNummerParams{
+		Uuid: meldUuid,
+		RechnungsNummer: pgtype.Text{
+			Valid:  true,
+			String: rechnungsNummer,
+		},
+	})
+}
+
+func GetStartnummerLast(tag sqlc.Tag) (int32, error) {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	lastStartNr, err := DB.Queries.GetLastStartnummer(ctx, tag)
+	if err != nil {
+		return 0, err
+	}
+
+	retInt, ok := lastStartNr.(int32)
+	if !ok {
+		return 0, errors.New("Last Startnummer nicht umwandelbar!")
+	}
+
+	return retInt, nil
 }

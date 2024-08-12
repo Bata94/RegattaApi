@@ -66,14 +66,58 @@ func PostNachmeldung(c *fiber.Ctx) error {
 		return err
 	}
 
-	rennen, err := crud.GetRennenMinimal(rennenUuid)
+	rennen, err := crud.GetRennen(rennenUuid)
 	if err != nil {
 		return err
 	}
 
-	kosten := int32(rennen.KostenEur.Int32)
+	kosten := int32(rennen.KostenEur)
 	if !params.DoppeltesMeldentgeldBefreiung {
 		kosten = kosten * 2
+	}
+
+	lastStrtNr, err := crud.GetStartnummerLast(rennen.Tag)
+	if err != nil {
+		return err
+	}
+
+	abteilung := int32(0)
+	bahn := int32(0)
+	maxBahn := 3
+
+	if rennen.Wettkampf == sqlc.WettkampfLangstrecke {
+		abteilung = int32(1)
+		bahn = int32(rennen.NumMeldungen + 1)
+	} else {
+		if rennen.Wettkampf == sqlc.WettkampfKurzstrecke {
+			maxBahn = 4
+		} else if rennen.Wettkampf == sqlc.WettkampfStaffel {
+			maxBahn = 2
+		} else if rennen.Wettkampf == sqlc.WettkampfSlalom {
+			maxBahn = 3
+		}
+		// TODO: find better algo
+		if rennen.NumMeldungen < maxBahn {
+			abteilung = int32(1)
+			bahn = int32(rennen.NumMeldungen + 1)
+		}
+		for i, m := range rennen.Meldungen {
+			if i == 0 {
+				continue
+			}
+			if m.Bahn == 1 && rennen.Meldungen[i-1].Abteilung != m.Abteilung && rennen.Meldungen[i-1].Bahn < maxBahn {
+				bahn = int32(rennen.Meldungen[i-1].Bahn + 1)
+				abteilung = int32(rennen.Meldungen[i-1].Abteilung)
+				break
+			}
+		}
+		if rennen.Meldungen[len(rennen.Meldungen)-1].Bahn == maxBahn {
+			bahn = int32(1)
+			abteilung = int32(rennen.NumAbteilungen + 1)
+		} else {
+			abteilung = int32(rennen.Meldungen[len(rennen.Meldungen)-1].Abteilung)
+			bahn = int32(rennen.Meldungen[len(rennen.Meldungen)-1].Bahn + 1)
+		}
 	}
 
 	mAth := []crud.MeldungAthlet{}
@@ -114,6 +158,9 @@ func PostNachmeldung(c *fiber.Ctx) error {
 			VereinUuid:      vereinUuid,
 			RennenUuid:      rennen.Uuid,
 			DrvRevisionUuid: uuid.New(),
+			StartNummer:     lastStrtNr + 1,
+			Abteilung:       abteilung,
+			Bahn:            bahn,
 			Abgemeldet:      false,
 			Kosten:          kosten,
 			Typ:             "Nachmeldung",

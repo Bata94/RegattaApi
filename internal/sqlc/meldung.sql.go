@@ -53,11 +53,14 @@ INSERT INTO meldung (
   rennen_uuid,
   drv_revision_uuid,
   abgemeldet,
+  start_nummer,
+  abteilung,
+  bahn,
   kosten,
   typ,
   bemerkung
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
 )
 RETURNING uuid, drv_revision_uuid, typ, bemerkung, abgemeldet, dns, dnf, dsq, zeitnahme_bemerkung, start_nummer, abteilung, bahn, kosten, rechnungs_nummer, verein_uuid, rennen_uuid
 `
@@ -68,6 +71,9 @@ type CreateMeldungParams struct {
 	RennenUuid      uuid.UUID   `json:"rennen_uuid"`
 	DrvRevisionUuid uuid.UUID   `json:"drv_revision_uuid"`
 	Abgemeldet      bool        `json:"abgemeldet"`
+	StartNummer     int32       `json:"start_nummer"`
+	Abteilung       int32       `json:"abteilung"`
+	Bahn            int32       `json:"bahn"`
 	Kosten          int32       `json:"kosten"`
 	Typ             string      `json:"typ"`
 	Bemerkung       pgtype.Text `json:"bemerkung"`
@@ -80,6 +86,9 @@ func (q *Queries) CreateMeldung(ctx context.Context, arg CreateMeldungParams) (M
 		arg.RennenUuid,
 		arg.DrvRevisionUuid,
 		arg.Abgemeldet,
+		arg.StartNummer,
+		arg.Abteilung,
+		arg.Bahn,
 		arg.Kosten,
 		arg.Typ,
 		arg.Bemerkung,
@@ -244,6 +253,26 @@ func (q *Queries) GetAllMeldungForVerein(ctx context.Context, vereinUuid uuid.UU
 		return nil, err
 	}
 	return items, nil
+}
+
+const getLastStartnummer = `-- name: GetLastStartnummer :one
+SELECT
+  MAX(meldung.start_nummer)
+FROM
+  meldung
+JOIN
+  rennen
+ON
+  meldung.rennen_uuid = rennen.uuid
+WHERE
+  rennen.tag = $1
+`
+
+func (q *Queries) GetLastStartnummer(ctx context.Context, tag Tag) (interface{}, error) {
+	row := q.db.QueryRow(ctx, getLastStartnummer, tag)
+	var max interface{}
+	err := row.Scan(&max)
+	return max, err
 }
 
 const getMeldungMinimal = `-- name: GetMeldungMinimal :one
