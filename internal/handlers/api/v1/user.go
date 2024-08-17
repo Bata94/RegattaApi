@@ -12,7 +12,7 @@ func GetAllUsers(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(uLs)
+	return api.JSON(c, uLs)
 }
 
 func GetUser(c *fiber.Ctx) error {
@@ -26,7 +26,7 @@ func GetUser(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(u.ToReturnUser())
+	return api.JSON(c, u.ToReturnUser())
 }
 
 func GetUserByName(c *fiber.Ctx) error {
@@ -40,7 +40,7 @@ func GetUserByName(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(u.ToReturnUser())
+	return api.JSON(c, u.ToReturnUser())
 }
 
 func CreateUser(c *fiber.Ctx) error {
@@ -55,7 +55,7 @@ func CreateUser(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(u)
+	return api.JSON(c, u)
 }
 
 func GetAllUsersGroups(c *fiber.Ctx) error {
@@ -64,7 +64,7 @@ func GetAllUsersGroups(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(ugLs)
+	return api.JSON(c, ugLs)
 }
 
 func GetUsersGroup(c *fiber.Ctx) error {
@@ -78,7 +78,7 @@ func GetUsersGroup(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(ug)
+	return api.JSON(c, ug)
 }
 
 func GetUsersGroupByName(c *fiber.Ctx) error {
@@ -92,5 +92,5 @@ func GetUsersGroupByName(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(ug)
+	return api.JSON(c, ug)
 }

@@ -33,7 +33,7 @@ func Abmeldung(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON("Meldung erfolgreich abgemeldet!")
+	return api.JSON(c, "Meldung erfolgreich abgemeldet!")
 }
 
 func Ummeldung(c *fiber.Ctx) error {
@@ -67,17 +67,17 @@ func KasseCreateRechnungPDF(c *fiber.Ctx) error {
 		return err
 	}
 
-  reNr, err := crud.GetVereinNextRechnungsnummer(v)
-  if err != nil {
-    return err
-  }
+	reNr, err := v.GetNextRechnungsnummer()
+	if err != nil {
+		return err
+	}
 
 	filePath, err := utils.SavePDFfromHTML(
-    "buero/kasse/rechnung/"+v.Uuid.String(),
-    "rechnung/"+v.Kuerzel,
-    reNr,
-    true,
-  )
+		"buero/kasse/rechnung/"+v.Uuid.String(),
+		"rechnung/"+v.Kuerzel,
+		reNr,
+		true,
+	)
 	if err != nil {
 		return err
 	}
@@ -101,10 +101,10 @@ func KasseCreateRechnungHTML(c *fiber.Ctx) error {
 		return err
 	}
 
-  reNr, err := crud.GetVereinNextRechnungsnummer(v)
-  if err != nil {
-    return err
-  }
+	reNr, err := v.GetNextRechnungsnummer()
+	if err != nil {
+		return err
+	}
 
 	pdfParams := pdf_templates.RechnungParams{
 		Entries:         []pdf_templates.RechnungEntry{},
@@ -113,17 +113,17 @@ func KasseCreateRechnungHTML(c *fiber.Ctx) error {
 	}
 
 	for _, m := range meld {
-		if m.RechnungsNummer != "" {
+		if m.RechnungsNummer.String != "" {
 			continue
 		}
 
 		pdfParams.Entries = append(pdfParams.Entries, pdf_templates.RechnungEntry{
 			Tag:         string(m.Rennen.Tag),
-			Startnummer: strconv.Itoa(m.StartNummer),
+			Startnummer: strconv.Itoa(int(m.StartNummer)),
 			Rennen:      m.Rennen.Bezeichnung,
-			Preis:       strconv.Itoa(m.Kosten) + ",00 €",
+			Preis:       strconv.Itoa(int(m.Kosten)) + ",00 €",
 		})
-		pdfParams.SumPreis += m.Kosten
+		pdfParams.SumPreis += int(m.Kosten)
 		// TODO: Use a Transaction
 		err := crud.SetMeldungRechnungsNummer(m.Uuid, reNr)
 		if err != nil {

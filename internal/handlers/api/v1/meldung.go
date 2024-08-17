@@ -18,10 +18,10 @@ func GetAllMeldung(c *fiber.Ctx) error {
 		return err
 	}
 	if mLs == nil {
-		mLs = []sqlc.Meldung{}
+		mLs = []crud.Meldung{}
 	}
 
-	return c.JSON(mLs)
+	return api.JSON(c, mLs)
 }
 
 func GetMeldung(c *fiber.Ctx) error {
@@ -35,7 +35,7 @@ func GetMeldung(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(m)
+	return api.JSON(c, m)
 }
 
 type PostNachmeldungParams struct {
@@ -87,7 +87,7 @@ func PostNachmeldung(c *fiber.Ctx) error {
 
 	if rennen.Wettkampf == sqlc.WettkampfLangstrecke {
 		abteilung = int32(1)
-		bahn = int32(rennen.NumMeldungen + 1)
+		bahn = int32(*rennen.NumMeldungen + 1)
 	} else {
 		if rennen.Wettkampf == sqlc.WettkampfKurzstrecke {
 			maxBahn = 4
@@ -97,30 +97,30 @@ func PostNachmeldung(c *fiber.Ctx) error {
 			maxBahn = 3
 		}
 		// TODO: find better algo
-		if rennen.NumMeldungen < maxBahn {
+		if *rennen.NumMeldungen < maxBahn {
 			abteilung = int32(1)
-			bahn = int32(rennen.NumMeldungen + 1)
+			bahn = int32(*rennen.NumMeldungen + 1)
 		}
 		for i, m := range rennen.Meldungen {
 			if i == 0 {
 				continue
 			}
-			if m.Bahn == 1 && rennen.Meldungen[i-1].Abteilung != m.Abteilung && rennen.Meldungen[i-1].Bahn < maxBahn {
+			if m.Bahn == 1 && rennen.Meldungen[i-1].Abteilung != m.Abteilung && rennen.Meldungen[i-1].Bahn < int32(maxBahn) {
 				bahn = int32(rennen.Meldungen[i-1].Bahn + 1)
 				abteilung = int32(rennen.Meldungen[i-1].Abteilung)
 				break
 			}
 		}
-		if rennen.Meldungen[len(rennen.Meldungen)-1].Bahn == maxBahn {
+		if rennen.Meldungen[len(rennen.Meldungen)-1].Bahn == int32(maxBahn) {
 			bahn = int32(1)
-			abteilung = int32(rennen.NumAbteilungen + 1)
+			abteilung = int32(*rennen.NumAbteilungen + 1)
 		} else {
 			abteilung = int32(rennen.Meldungen[len(rennen.Meldungen)-1].Abteilung)
 			bahn = int32(rennen.Meldungen[len(rennen.Meldungen)-1].Bahn + 1)
 		}
 	}
 
-	mAth := []crud.MeldungAthlet{}
+	mAth := []crud.CreateMeldungAthletParams{}
 	for _, a := range params.Athleten {
 		athUuid, err := uuid.Parse(a.AthletUuid)
 		if err != nil {
@@ -144,7 +144,7 @@ func PostNachmeldung(c *fiber.Ctx) error {
 			athPostition = int32(athPostitionI64)
 		}
 
-		mAth = append(mAth, crud.MeldungAthlet{
+		mAth = append(mAth, crud.CreateMeldungAthletParams{
 			Uuid:     athUuid,
 			Position: athPostition,
 			Rolle:    athRolle,
@@ -173,7 +173,7 @@ func PostNachmeldung(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(m)
+	return api.JSON(c, m)
 }
 
 func UpdateSetzungBatch(c *fiber.Ctx) error {
@@ -188,7 +188,7 @@ func UpdateSetzungBatch(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON("Setzung erfolgreich aktualisiert!")
+	return api.JSON(c, "Setzung erfolgreich aktualisiert!")
 }
 
 func GetAllMeldungForVerein(c *fiber.Ctx) error {
@@ -202,5 +202,5 @@ func GetAllMeldungForVerein(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(meldungen)
+	return api.JSON(c, meldungen)
 }

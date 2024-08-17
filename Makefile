@@ -1,8 +1,8 @@
 -include .env
 
-sqlc:
+sqlc-gen:
 	@echo "Generating SQLC..."
-	@sqlc generate
+	sqlc generate
 
 # Run like 'NEW_MIG=<MigrationName> make goose-new'
 db-new:
@@ -56,12 +56,12 @@ build: templ tailwind-gen # swagger-gen
 	@echo "Building..."
 	go build -o bin/main main.go
 
-full-build: templ tailwind-gen sqlc # db-up # swagger-fmt build
+full-build: templ tailwind-gen sqlc-gen # db-up # swagger-fmt build
 	@echo "Full-Building..."
 	CGO_ENABLED=0 go build -installsuffix 'static' -o bin/mainDocker main.go
 
 # Run the application
-run: sqlc
+run: sqlc-gen
 	go run main.go
 
 # Test the application
@@ -76,7 +76,7 @@ clean:
 	rm -rf tmp/*
 
 # Live Reload
-watch: sqlc db-up build
+watch: sqlc-gen db-up build
 	@if command -v air > /dev/null; then \
 	    air; \
 	    echo "Watching...";\

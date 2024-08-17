@@ -1,8 +1,6 @@
 package crud
 
 import (
-	"errors"
-
 	"github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/handlers/api"
 	"github.com/bata94/RegattaApi/internal/sqlc"
@@ -11,119 +9,127 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type AthletWithPos struct {
+type Athlet struct {
 	sqlc.Athlet
-	Rolle    sqlc.Rolle `json:"rolle"`
-	Position int        `json:"position"`
+	Rolle        *sqlc.Rolle `json:"rolle"`
+	Position     *int        `json:"position"`
+	Verein       *Verein     `json:"verein"`
+	Meldungen    []Meldung   `json:"meldungen"`
+	ErstesRennen *Rennen     `json:"erstes_rennen"`
 }
 
-func GetAthletMinimal(uuid uuid.UUID) (sqlc.Athlet, error) {
+func (ath *Athlet) UpdateStartberechtigung(startberechtigt bool) error {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	err := DB.Queries.UpdateAthletAerztlBesch(ctx, sqlc.UpdateAthletAerztlBeschParams{
+		Startberechtigt: startberechtigt,
+		Uuid:            ath.Uuid,
+	})
+	if err != nil {
+		return err
+	}
+
+	ath.Startberechtigt = startberechtigt
+	return nil
+}
+
+func (ath *Athlet) UpdateGewicht(gewichtParam int) error {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	gewicht := int32(gewichtParam)
+
+	err := DB.Queries.UpdateAthletWaage(ctx, sqlc.UpdateAthletWaageParams{
+		Gewicht: pgtype.Int4{Valid: true, Int32: gewicht},
+		Uuid:    ath.Uuid,
+	})
+	if err != nil {
+		return err
+	}
+
+	ath.Gewicht = pgtype.Int4{Valid: true, Int32: gewicht}
+	return nil
+}
+
+func GetAthletMinimal(uuid uuid.UUID) (Athlet, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	a, err := DB.Queries.GetAthletMinimal(ctx, uuid)
 	if err != nil {
 		if isNoRowError(err) {
-			return sqlc.Athlet{}, &api.NOT_FOUND
+			return Athlet{}, &api.NOT_FOUND
 		}
-		return sqlc.Athlet{}, err
+		return Athlet{}, err
 	}
 
-	return a, nil
+	return Athlet{Athlet: a}, nil
 }
 
-func GetAllAthlet() ([]sqlc.Athlet, error) {
+func GetAllAthlet() ([]Athlet, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	aLs, err := DB.Queries.GetAllAthlet(ctx)
+	aLs := []Athlet{}
+	q, err := DB.Queries.GetAllAthlet(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if aLs == nil {
-		aLs = []sqlc.Athlet{}
+
+	for _, a := range q {
+		aLs = append(aLs, Athlet{
+			Athlet: a,
+		})
 	}
 
 	return aLs, err
 }
 
-func GetAllNNAthleten() ([]sqlc.Athlet, error) {
+func GetAllNNAthleten() ([]Athlet, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	aLs, err := DB.Queries.GetAllNNAthleten(ctx)
+	aLs := []Athlet{}
+	q, err := DB.Queries.GetAllNNAthleten(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if aLs == nil {
-		aLs = []sqlc.Athlet{}
+
+	for _, a := range q {
+		aLs = append(aLs, Athlet{
+			Athlet: a,
+		})
 	}
 
 	return aLs, err
 }
 
-type VereineWithAthletMissing struct {
-	Verein   sqlc.Verein       `json:"verein"`
-	Athleten []AthletenMissing `json:"athleten"`
-}
+func GetAllAthletenForVerein(vUuid uuid.UUID) ([]Athlet, error) {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
 
-type AthletenMissing struct {
-	Athlet       sqlc.Athlet `json:"athlet"`
-	ErstesRennen sqlc.Rennen `json:"erstes_rennen"`
-}
-
-type MissingAthletType int
-
-const (
-	Waage           MissingAthletType = 0
-	Startberechtigt MissingAthletType = 1
-)
-
-func GetForAllVereineMissingAthlet(athletType MissingAthletType) ([]VereineWithAthletMissing, error) {
-	retLs := []VereineWithAthletMissing{}
-	vLs, err := GetAllVerein()
+	q, err := DB.Queries.GetAllAthletenForVerein(ctx, vUuid)
 	if err != nil {
-		return retLs, err
+		return nil, err
 	}
 
-	var queryFunc func(uuid.UUID) ([]AthletenMissing, error)
-	if athletType == 0 {
-		queryFunc = GetAllAthletenForVereinWaage
-	} else if athletType == 1 {
-		queryFunc = GetAllAthletenForVereinMissStartber
-	} else {
-		return retLs, errors.New("Unknown athlet type")
-	}
+	retLs := []Athlet{}
 
-	for _, v := range vLs {
-		missAthlet, err := queryFunc(v.Uuid)
-		if err != nil {
-			return retLs, err
-		}
-
-		if len(missAthlet) != 0 {
-			retLs = append(retLs, VereineWithAthletMissing{
-				Verein:   v,
-				Athleten: missAthlet,
-			})
-		}
+	for _, a := range q {
+		retLs = append(retLs, Athlet{
+			Athlet: a,
+		})
 	}
 
 	return retLs, nil
 }
 
-func GetAllAthletenForVerein(vUuid uuid.UUID) ([]sqlc.Athlet, error) {
+func GetAllAthletenForVereinWaage(vUuid uuid.UUID) ([]Athlet, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	return DB.Queries.GetAllAthletenForVerein(ctx, vUuid)
-}
-
-func GetAllAthletenForVereinWaage(vUuid uuid.UUID) ([]AthletenMissing, error) {
-	ctx, cancel := getCtxWithTo()
-	defer cancel()
-
-	retLs := []AthletenMissing{}
+	retLs := []Athlet{}
 	q, err := DB.Queries.GetAllAthletenForVereinWaage(ctx, vUuid)
 	if err != nil {
 		return retLs, err
@@ -131,9 +137,10 @@ func GetAllAthletenForVereinWaage(vUuid uuid.UUID) ([]AthletenMissing, error) {
 
 	for i, r := range q {
 		if len(retLs) == 0 || (q[i-1].Athlet.Vorname != r.Athlet.Vorname && q[i-1].Athlet.Name != r.Athlet.Name) {
-			retLs = append(retLs, AthletenMissing{
+			rennen := RennenFromSqlc(r.Rennen, 0, 0)
+			retLs = append(retLs, Athlet{
 				Athlet:       r.Athlet,
-				ErstesRennen: r.Rennen,
+				ErstesRennen: &rennen,
 			})
 			continue
 		}
@@ -142,12 +149,12 @@ func GetAllAthletenForVereinWaage(vUuid uuid.UUID) ([]AthletenMissing, error) {
 	return retLs, nil
 }
 
-func GetAllAthletenForVereinMissStartber(vUuid uuid.UUID) ([]AthletenMissing, error) {
+func GetAllAthletenForVereinMissStartber(vUuid uuid.UUID) ([]Athlet, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	retLs := []AthletenMissing{}
-	// TODO: klären, brauchen Stm. auch eine Startberechtigung?
+	retLs := []Athlet{}
+	// TODO: klären, brauchen Stm. auch eine Startberechtigung? Brauchen Sie nicht need to change!
 	q, err := DB.Queries.GetAllAthletenForVereinMissStartber(ctx, vUuid)
 	if err != nil {
 		return retLs, err
@@ -155,9 +162,10 @@ func GetAllAthletenForVereinMissStartber(vUuid uuid.UUID) ([]AthletenMissing, er
 
 	for i, r := range q {
 		if len(retLs) == 0 || (q[i-1].Athlet.Vorname != r.Athlet.Vorname && q[i-1].Athlet.Name != r.Athlet.Name) {
-			retLs = append(retLs, AthletenMissing{
+			rennen := RennenFromSqlc(r.Rennen, 0, 0)
+			retLs = append(retLs, Athlet{
 				Athlet:       r.Athlet,
-				ErstesRennen: r.Rennen,
+				ErstesRennen: &rennen,
 			})
 			continue
 		}
@@ -166,35 +174,15 @@ func GetAllAthletenForVereinMissStartber(vUuid uuid.UUID) ([]AthletenMissing, er
 	return retLs, nil
 }
 
-func CreateAthlet(aParams sqlc.CreateAthletParams) (sqlc.Athlet, error) {
+func CreateAthlet(aParams sqlc.CreateAthletParams) (Athlet, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	a, err := DB.Queries.CreateAthlet(ctx, aParams)
 	if err != nil {
 		log.Error(err.Error())
-		return sqlc.Athlet{}, err
+		return Athlet{}, err
 	}
 
-	return a, nil
-}
-
-func UpdateAthletStartberechtigung(startberechtigt bool, aUuid uuid.UUID) error {
-	ctx, cancel := getCtxWithTo()
-	defer cancel()
-
-	return DB.Queries.UpdateAthletAerztlBesch(ctx, sqlc.UpdateAthletAerztlBeschParams{
-		Startberechtigt: startberechtigt,
-		Uuid:            aUuid,
-	})
-}
-
-func UpdateAthletGewicht(gewicht int32, aUuid uuid.UUID) error {
-	ctx, cancel := getCtxWithTo()
-	defer cancel()
-
-	return DB.Queries.UpdateAthletWaage(ctx, sqlc.UpdateAthletWaageParams{
-		Gewicht: pgtype.Int4{Valid: true, Int32: gewicht},
-		Uuid:    aUuid,
-	})
+	return Athlet{Athlet: a}, nil
 }

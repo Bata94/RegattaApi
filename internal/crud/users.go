@@ -14,6 +14,45 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type User struct {
+	sqlc.User
+	UserGroup *sqlc.UsersGroup
+}
+
+type JWT struct {
+	Token      string    `json:"token"`
+	Expiration time.Time `json:"expiration"`
+}
+
+type ReturnUserWithJWT struct {
+	Ulid      string           `json:"ulid"`
+	Jwt       JWT              `json:"jwt"`
+	Username  string           `json:"username"`
+	UserGroup *sqlc.UsersGroup `json:"user_group"`
+}
+
+type ReturnUserMinimal struct {
+	Ulid     string `json:"ulid"`
+	Username string `json:"username"`
+}
+
+type ReturnUser struct {
+	Ulid      string           `json:"ulid"`
+	Username  string           `json:"username"`
+	UserGroup *sqlc.UsersGroup `json:"user_group"`
+}
+
+type LoginParams struct {
+	Username string
+	Password string
+}
+
+type CreateUserParams struct {
+	GroupUlid ulid.ULID `json:"group_ulid"`
+	Username  string    `json:"username"`
+	Password  string    `json:"password"`
+}
+
 func checkPasswordHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
@@ -61,45 +100,12 @@ func validUser(ulid ulid.ULID, p string) bool {
 	return true
 }
 
-type User struct {
-	*sqlc.User
-	UserGroup *sqlc.UsersGroup
-}
-
-type JWT struct {
-	Token      string    `json:"token"`
-	Expiration time.Time `json:"expiration"`
-}
-
-type ReturnUserWithJWT struct {
-	Ulid      string           `json:"ulid"`
-	Jwt       JWT              `json:"jwt"`
-	Username  string           `json:"username"`
-	UserGroup *sqlc.UsersGroup `json:"user_group"`
-}
-
-type ReturnUserMinimal struct {
-	Ulid     string `json:"ulid"`
-	Username string `json:"username"`
-}
-
-type ReturnUser struct {
-	Ulid      string           `json:"ulid"`
-	Username  string           `json:"username"`
-	UserGroup *sqlc.UsersGroup `json:"user_group"`
-}
-
 func (u *User) ToReturnUser() ReturnUser {
 	return ReturnUser{
 		Ulid:      u.Ulid,
 		Username:  u.Username,
 		UserGroup: u.UserGroup,
 	}
-}
-
-type LoginParams struct {
-	Username string
-	Password string
 }
 
 func GetAllUsers() ([]sqlc.User, error) {
@@ -131,7 +137,7 @@ func GetUser(ulid ulid.ULID) (*User, error) {
 	}
 
 	return &User{
-		User:      &u.User,
+		User:      u.User,
 		UserGroup: &u.UsersGroup,
 	}, err
 }
@@ -153,19 +159,13 @@ func GetUserByUsername(name string) (*User, error) {
 	return GetUser(ulid)
 }
 
-type CreateUserParams struct {
-	GroupUlid ulid.ULID `json:"group_ulid"`
-	Username  string    `json:"username"`
-	Password  string    `json:"password"`
-}
-
-func CreateUser(uInp CreateUserParams) (sqlc.User, error) {
+func CreateUser(uInp CreateUserParams) (User, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	hashedPW, err := hashPassword(uInp.Password)
 	if err != nil {
-		return sqlc.User{}, err
+		return User{}, err
 	}
 
 	uParams := sqlc.CreateUserParams{
@@ -176,10 +176,10 @@ func CreateUser(uInp CreateUserParams) (sqlc.User, error) {
 
 	u, err := DB.Queries.CreateUser(ctx, uParams)
 	if err != nil {
-		return sqlc.User{}, err
+		return User{}, err
 	}
 
-	return u, nil
+	return User{User: u}, nil
 }
 
 func AuthLogin(l LoginParams) (*ReturnUserWithJWT, error) {
@@ -191,7 +191,7 @@ func AuthLogin(l LoginParams) (*ReturnUserWithJWT, error) {
 	tokenStr := ""
 	tokenExp := time.Now()
 	if checkPasswordHash(l.Password, u.HashedPassword) {
-		tokenStr, tokenExp, err = genJWT(*u.User)
+		tokenStr, tokenExp, err = genJWT(u.User)
 		if err != nil {
 			retErr := &api.TOKEN_GENERATION_ERROR
 			retErr.Details = err.Error()

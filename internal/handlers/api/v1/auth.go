@@ -27,16 +27,16 @@ func Login(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(u)
+	return api.JSON(c, u)
 }
 
 // TODO: Implement
 func Logout(c *fiber.Ctx) error {
-	return c.JSON("Logout successful!")
+	return api.JSON(c, "Logout successful!")
 }
 
 func AuthValidate(c *fiber.Ctx) error {
-	return c.JSON("Auth successful!")
+	return api.JSON(c, "Auth successful!")
 }
 
 func AuthMe(c *fiber.Ctx) error {
@@ -57,5 +57,5 @@ func AuthMe(c *fiber.Ctx) error {
 		UserGroup: userRaw.UserGroup,
 	}
 
-	return c.JSON(u)
+	return api.JSON(c, u)
 }

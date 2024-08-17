@@ -11,6 +11,15 @@ import (
 	"github.com/bata94/RegattaApi/internal/sqlc"
 )
 
+type NewAthletParams struct {
+	VereinUUID      string `json:"verein_uuid"`
+	Name            string `json:"name"`
+	Vorname         string `json:"vorname"`
+	Jahrgang        string `json:"jahrgang"`
+	Startberechtigt bool   `json:"startberechtigt"`
+	Geschlecht      string `json:"geschlecht"`
+}
+
 func GetAthlet(c *fiber.Ctx) error {
 	id, err := api.GetUuidFromCtx(c)
 	if err != nil {
@@ -22,7 +31,7 @@ func GetAthlet(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(a)
+	return api.JSON(c, a)
 }
 
 func GetAllAthlet(c *fiber.Ctx) error {
@@ -31,16 +40,7 @@ func GetAllAthlet(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(aLs)
-}
-
-type NewAthletParams struct {
-	VereinUUID      string `json:"verein_uuid"`
-	Name            string `json:"name"`
-	Vorname         string `json:"vorname"`
-	Jahrgang        string `json:"jahrgang"`
-	Startberechtigt bool   `json:"startberechtigt"`
-	Geschlecht      string `json:"geschlecht"`
+	return api.JSON(c, aLs)
 }
 
 func CreateAthlet(c *fiber.Ctx) error {
@@ -80,7 +80,7 @@ func CreateAthlet(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(a)
+	return api.JSON(c, a)
 }
 
 type UpdateAthletStartberechtigungParams struct {
@@ -100,9 +100,14 @@ func UpdateAthletStartberechtigung(c *fiber.Ctx) error {
 		return err
 	}
 
-	err = crud.UpdateAthletStartberechtigung(p.Startberechtigt, uuid)
+	ath, err := crud.GetAthletMinimal(uuid)
+	if err != nil {
+		return err
+	}
 
-	return c.JSON("Athlet erfolgreich angepasst!")
+	err = ath.UpdateStartberechtigung(p.Startberechtigt)
+
+	return api.JSON(c, "Athlet erfolgreich angepasst!")
 }
 
 func GetAthletWaage(c *fiber.Ctx) error {
@@ -110,7 +115,7 @@ func GetAthletWaage(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(ls)
+	return api.JSON(c, ls)
 }
 
 func GetAthletStartberechtigung(c *fiber.Ctx) error {
@@ -118,7 +123,7 @@ func GetAthletStartberechtigung(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(ls)
+	return api.JSON(c, ls)
 }
 
 type UpdateAthletWaageParams struct {
@@ -138,7 +143,12 @@ func UpdateAthletWaage(c *fiber.Ctx) error {
 		return err
 	}
 
-	err = crud.UpdateAthletGewicht(int32(p.Gewicht), uuid)
+	ath, err := crud.GetAthletMinimal(uuid)
+	if err != nil {
+		return err
+	}
 
-	return c.JSON("Athlet erfolgreich angepasst!")
+	err = ath.UpdateGewicht(p.Gewicht)
+
+	return api.JSON(c, "Athlet erfolgreich angepasst!")
 }

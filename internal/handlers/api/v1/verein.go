@@ -12,7 +12,7 @@ func GetAllVerein(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(vLs)
+	return api.JSON(c, vLs)
 }
 
 func GetVerein(c *fiber.Ctx) error {
@@ -26,7 +26,7 @@ func GetVerein(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(v)
+	return api.JSON(c, v)
 }
 
 func GetAllAthletenForVerein(c *fiber.Ctx) error {
@@ -40,7 +40,7 @@ func GetAllAthletenForVerein(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(aLs)
+	return api.JSON(c, aLs)
 }
 
 func GetAllAthletenForVereinMissStartber(c *fiber.Ctx) error {
@@ -54,7 +54,7 @@ func GetAllAthletenForVereinMissStartber(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(aLs)
+	return api.JSON(c, aLs)
 }
 
 func GetAllAthletenForVereinWaage(c *fiber.Ctx) error {
@@ -68,5 +68,5 @@ func GetAllAthletenForVereinWaage(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(aLs)
+	return api.JSON(c, aLs)
 }

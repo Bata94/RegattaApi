@@ -6,34 +6,42 @@ import (
 	"github.com/bata94/RegattaApi/internal/sqlc"
 )
 
-func GetAllPausen() ([]sqlc.Pause, error) {
+type Pause struct {
+	sqlc.Pause
+}
+
+func GetAllPausen() ([]Pause, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	pLs, err := DB.Queries.GetAllPause(ctx)
+	pLs := []Pause{}
+	q, err := DB.Queries.GetAllPause(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if pLs == nil {
-		pLs = []sqlc.Pause{}
+
+	for _, p := range q {
+		pLs = append(pLs, Pause{
+			Pause: p,
+		})
 	}
 
 	return pLs, err
 }
 
-func GetPause(id int) (sqlc.Pause, error) {
+func GetPause(id int) (Pause, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	p, err := DB.Queries.GetPause(ctx, int32(id))
 	if err != nil {
 		if isNoRowError(err) {
-			return sqlc.Pause{}, &api.NOT_FOUND
+			return Pause{}, &api.NOT_FOUND
 		}
-		return sqlc.Pause{}, err
+		return Pause{}, err
 	}
 
-	return p, err
+	return Pause{Pause: p}, nil
 }
 
 func DeletePause(id int32) error {
@@ -48,26 +56,26 @@ func DeletePause(id int32) error {
 	return nil
 }
 
-func CreatePause(params sqlc.CreatePauseParams) (sqlc.Pause, error) {
+func CreatePause(params sqlc.CreatePauseParams) (Pause, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	p, err := DB.Queries.CreatePause(ctx, params)
 	if err != nil {
-		return sqlc.Pause{}, err
+		return Pause{}, err
 	}
 
-	return p, nil
+	return Pause{Pause: p}, nil
 }
 
-func UpdatePause(params sqlc.UpdatePauseParams) (sqlc.Pause, error) {
+func UpdatePause(params sqlc.UpdatePauseParams) (Pause, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	p, err := DB.Queries.UpdatePause(ctx, params)
 	if err != nil {
-		return sqlc.Pause{}, err
+		return Pause{}, err
 	}
 
-	return p, err
+	return Pause{Pause: p}, nil
 }

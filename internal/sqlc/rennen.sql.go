@@ -97,11 +97,14 @@ func (q *Queries) CreateRennen(ctx context.Context, arg CreateRennenParams) (Ren
 }
 
 const getAllRennen = `-- name: GetAllRennen :many
-SELECT rennen.uuid, rennen.sort_id, rennen.nummer, rennen.bezeichnung, rennen.bezeichnung_lang, rennen.zusatz, rennen.leichtgewicht, rennen.geschlecht, rennen.bootsklasse, rennen.bootsklasse_lang, rennen.altersklasse, rennen.altersklasse_lang, rennen.tag, rennen.wettkampf, rennen.kosten_eur, rennen.rennabstand, rennen.startzeit,
-(SELECT COUNT(meldung.uuid) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid AND meldung.abgemeldet = false) as num_meldungen,
-(SELECT COALESCE(MAX(meldung.abteilung),0) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid) as num_abteilungen
-FROM rennen
-ORDER BY sort_id ASC
+SELECT
+  rennen.uuid, rennen.sort_id, rennen.nummer, rennen.bezeichnung, rennen.bezeichnung_lang, rennen.zusatz, rennen.leichtgewicht, rennen.geschlecht, rennen.bootsklasse, rennen.bootsklasse_lang, rennen.altersklasse, rennen.altersklasse_lang, rennen.tag, rennen.wettkampf, rennen.kosten_eur, rennen.rennabstand, rennen.startzeit,
+  (SELECT COUNT(meldung.uuid) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid AND meldung.abgemeldet = false) as num_meldungen,
+  (SELECT COALESCE(MAX(meldung.abteilung),0) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid) as num_abteilungen
+FROM
+  rennen
+ORDER BY
+  sort_id ASC
 `
 
 type GetAllRennenRow struct {
@@ -151,20 +154,36 @@ func (q *Queries) GetAllRennen(ctx context.Context) ([]GetAllRennenRow, error) {
 }
 
 const getAllRennenWithAthlet = `-- name: GetAllRennenWithAthlet :many
-SELECT rennen.uuid, rennen.sort_id, rennen.nummer, rennen.bezeichnung, rennen.bezeichnung_lang, rennen.zusatz, rennen.leichtgewicht, rennen.geschlecht, rennen.bootsklasse, rennen.bootsklasse_lang, rennen.altersklasse, rennen.altersklasse_lang, rennen.tag, rennen.wettkampf, rennen.kosten_eur, rennen.rennabstand, rennen.startzeit, meldung.uuid, meldung.drv_revision_uuid, meldung.typ, meldung.bemerkung, meldung.abgemeldet, meldung.dns, meldung.dnf, meldung.dsq, meldung.zeitnahme_bemerkung, meldung.start_nummer, meldung.abteilung, meldung.bahn, meldung.kosten, meldung.rechnungs_nummer, meldung.verein_uuid, meldung.rennen_uuid, athlet.uuid, athlet.vorname, athlet.name, athlet.geschlecht, athlet.jahrgang, athlet.gewicht, athlet.startberechtigt, athlet.verein_uuid, verein.uuid, verein.name, verein.kurzform, verein.kuerzel, link_meldung_athlet.position, link_meldung_athlet.rolle,
-(SELECT COUNT(meldung.uuid) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid AND meldung.abgemeldet = false) as num_meldungen,
-(SELECT COALESCE(MAX(meldung.abteilung),0) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid) as num_abteilungen
-FROM rennen
-JOIN meldung
-ON rennen.uuid = meldung.rennen_uuid
-JOIN verein
-ON meldung.verein_uuid = verein.uuid
-JOIN link_meldung_athlet
-ON meldung.uuid = link_meldung_athlet.meldung_uuid
-JOIN athlet
-ON link_meldung_athlet.athlet_uuid = athlet.uuid
-WHERE wettkampf = ANY($1::wettkampf[])
-ORDER BY rennen.sort_id, meldung.uuid, link_meldung_athlet.rolle, link_meldung_athlet.position
+SELECT 
+  rennen.uuid, rennen.sort_id, rennen.nummer, rennen.bezeichnung, rennen.bezeichnung_lang, rennen.zusatz, rennen.leichtgewicht, rennen.geschlecht, rennen.bootsklasse, rennen.bootsklasse_lang, rennen.altersklasse, rennen.altersklasse_lang, rennen.tag, rennen.wettkampf, rennen.kosten_eur, rennen.rennabstand, rennen.startzeit,
+  meldung.uuid, meldung.drv_revision_uuid, meldung.typ, meldung.bemerkung, meldung.abgemeldet, meldung.dns, meldung.dnf, meldung.dsq, meldung.zeitnahme_bemerkung, meldung.start_nummer, meldung.abteilung, meldung.bahn, meldung.kosten, meldung.rechnungs_nummer, meldung.verein_uuid, meldung.rennen_uuid,
+  athlet.uuid, athlet.vorname, athlet.name, athlet.geschlecht, athlet.jahrgang, athlet.gewicht, athlet.startberechtigt, athlet.verein_uuid,
+  verein.uuid, verein.name, verein.kurzform, verein.kuerzel,
+  link_meldung_athlet.position, link_meldung_athlet.rolle,
+  (SELECT COUNT(meldung.uuid) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid AND meldung.abgemeldet = false) as num_meldungen,
+  (SELECT COALESCE(MAX(meldung.abteilung),0) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid) as num_abteilungen
+FROM 
+  rennen
+JOIN 
+  meldung
+ON 
+  rennen.uuid = meldung.rennen_uuid
+JOIN 
+  verein
+ON 
+  meldung.verein_uuid = verein.uuid
+JOIN 
+  link_meldung_athlet
+ON 
+  meldung.uuid = link_meldung_athlet.meldung_uuid
+JOIN 
+  athlet
+ON 
+  link_meldung_athlet.athlet_uuid = athlet.uuid
+WHERE 
+  wettkampf = ANY($1::wettkampf[])
+ORDER BY 
+  rennen.sort_id, meldung.uuid, link_meldung_athlet.rolle, link_meldung_athlet.position
 `
 
 type GetAllRennenWithAthletRow struct {
@@ -249,16 +268,26 @@ func (q *Queries) GetAllRennenWithAthlet(ctx context.Context, dollar_1 []Wettkam
 }
 
 const getAllRennenWithMeld = `-- name: GetAllRennenWithMeld :many
-SELECT rennen.uuid, rennen.sort_id, rennen.nummer, rennen.bezeichnung, rennen.bezeichnung_lang, rennen.zusatz, rennen.leichtgewicht, rennen.geschlecht, rennen.bootsklasse, rennen.bootsklasse_lang, rennen.altersklasse, rennen.altersklasse_lang, rennen.tag, rennen.wettkampf, rennen.kosten_eur, rennen.rennabstand, rennen.startzeit, meldung.uuid, meldung.drv_revision_uuid, meldung.typ, meldung.bemerkung, meldung.abgemeldet, meldung.dns, meldung.dnf, meldung.dsq, meldung.zeitnahme_bemerkung, meldung.start_nummer, meldung.abteilung, meldung.bahn, meldung.kosten, meldung.rechnungs_nummer, meldung.verein_uuid, meldung.rennen_uuid, verein.name, verein.kuerzel, verein.kurzform,
-(SELECT COUNT(meldung.uuid) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid AND meldung.abgemeldet = false) as num_meldungen,
-(SELECT COALESCE(MAX(meldung.abteilung),0) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid) as num_abteilungen
-FROM rennen
-FULL JOIN meldung
-ON rennen.uuid = meldung.rennen_uuid
-FULL JOIN verein
-ON meldung.verein_uuid = verein.uuid
-WHERE wettkampf = ANY($1::wettkampf[])
-ORDER BY rennen.sort_id
+SELECT
+  rennen.uuid, rennen.sort_id, rennen.nummer, rennen.bezeichnung, rennen.bezeichnung_lang, rennen.zusatz, rennen.leichtgewicht, rennen.geschlecht, rennen.bootsklasse, rennen.bootsklasse_lang, rennen.altersklasse, rennen.altersklasse_lang, rennen.tag, rennen.wettkampf, rennen.kosten_eur, rennen.rennabstand, rennen.startzeit,
+  meldung.uuid, meldung.drv_revision_uuid, meldung.typ, meldung.bemerkung, meldung.abgemeldet, meldung.dns, meldung.dnf, meldung.dsq, meldung.zeitnahme_bemerkung, meldung.start_nummer, meldung.abteilung, meldung.bahn, meldung.kosten, meldung.rechnungs_nummer, meldung.verein_uuid, meldung.rennen_uuid,
+  verein.name, verein.kuerzel, verein.kurzform,
+  (SELECT COUNT(meldung.uuid) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid AND meldung.abgemeldet = false) as num_meldungen,
+  (SELECT COALESCE(MAX(meldung.abteilung),0) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid) as num_abteilungen
+FROM
+  rennen
+FULL
+  JOIN meldung
+ON
+  rennen.uuid = meldung.rennen_uuid
+FULL JOIN
+  verein
+ON
+  meldung.verein_uuid = verein.uuid
+WHERE
+  wettkampf = ANY($1::wettkampf[])
+ORDER BY
+  rennen.sort_id
 `
 
 type GetAllRennenWithMeldRow struct {

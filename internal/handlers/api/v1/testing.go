@@ -3,6 +3,7 @@ package api_v1
 import (
 	"time"
 
+	"github.com/bata94/RegattaApi/internal/handlers/api"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
@@ -19,5 +20,5 @@ func TestHandler(c *fiber.Ctx) error {
 
 	time.Sleep(time.Second * 60)
 
-	return c.JSON("success")
+	return api.JSON(c, "success")
 }

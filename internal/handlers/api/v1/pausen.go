@@ -14,9 +14,9 @@ func GetAllPausen(c *fiber.Ctx) error {
 		return err
 	}
 	if pLs == nil {
-		pLs = []sqlc.Pause{}
+		pLs = []crud.Pause{}
 	}
-	return c.JSON(pLs)
+	return api.JSON(c, pLs)
 }
 
 func GetPause(c *fiber.Ctx) error {
@@ -29,7 +29,7 @@ func GetPause(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(p)
+	return api.JSON(c, p)
 }
 
 func DeletePause(c *fiber.Ctx) error {
@@ -42,7 +42,7 @@ func DeletePause(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON("Pause erfolgreich gelöscht!")
+	return api.JSON(c, "Pause erfolgreich gelöscht!")
 }
 
 func CreatePause(c *fiber.Ctx) error {
@@ -57,7 +57,7 @@ func CreatePause(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(p)
+	return api.JSON(c, p)
 }
 
 func UpdatePause(c *fiber.Ctx) error {
@@ -72,5 +72,5 @@ func UpdatePause(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(p)
+	return api.JSON(c, p)
 }

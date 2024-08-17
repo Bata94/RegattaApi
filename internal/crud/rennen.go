@@ -19,7 +19,30 @@ type GetAllRennenParams struct {
 	ShowWettkampf sqlc.NullWettkampf
 }
 
-func GetAllRennen(p GetAllRennenParams) ([]RennenWithMeldung, error) {
+type Rennen struct {
+	Uuid             uuid.UUID       `json:"uuid"`
+	SortID           int             `json:"sort_id"`
+	Nummer           string          `json:"nummer"`
+	Bezeichnung      string          `json:"bezeichnung"`
+	BezeichnungLang  string          `json:"bezeichnung_lang"`
+	Zusatz           string          `json:"zusatz"`
+	Leichtgewicht    bool            `json:"leichtgewicht"`
+	Geschlecht       sqlc.Geschlecht `json:"geschlecht"`
+	Bootsklasse      string          `json:"bootsklasse"`
+	BootsklasseLang  string          `json:"bootsklasse_lang"`
+	Altersklasse     string          `json:"altersklasse"`
+	AltersklasseLang string          `json:"altersklasse_lang"`
+	Tag              sqlc.Tag        `json:"tag"`
+	Wettkampf        sqlc.Wettkampf  `json:"wettkampf"`
+	KostenEur        int             `json:"kosten_eur"`
+	Rennabstand      int             `json:"rennabstand"`
+	Startzeit        string          `json:"startzeit"`
+	NumMeldungen     *int            `json:"num_meldungen"`
+	NumAbteilungen   *int            `json:"num_abteilungen"`
+	Meldungen        []Meldung       `json:"meldungen"`
+}
+
+func GetAllRennen(p GetAllRennenParams) ([]Rennen, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
@@ -43,132 +66,107 @@ func GetAllRennen(p GetAllRennenParams) ([]RennenWithMeldung, error) {
 
 	q, err = DB.Queries.GetAllRennenWithMeld(ctx, wettkampfFilterLs)
 	if err != nil {
+		log.Debug("Query error: ", err)
 		return nil, err
 	}
 
 	rLs := sqlcRennenToCrudRennen(q, true)
-	retLs := []RennenWithMeldung{}
+	retLs := []Rennen{}
 
 	for _, r := range rLs {
-		meldungen := []MeldungMinimal{}
+		meldungen := []Meldung{}
 		if p.GetMeldungen {
 			meldungen = r.Meldungen
 		}
 		if p.ShowStarted == false {
 			// TODO: Implement!
 		}
-		if p.ShowEmpty == false && r.NumMeldungen == 0 {
+		if p.ShowEmpty == false && *r.NumMeldungen == 0 {
 			continue
 		}
 
-		retLs = append(retLs, RennenWithMeldung{
-			Rennen:    r.Rennen,
-			Meldungen: meldungen,
+		rennen := r
+		rennen.Meldungen = meldungen
+		retLs = append(retLs, rennen)
+	}
+	return retLs, nil
+}
+
+func GetAllRennenWithAthlet(p GetAllRennenParams) ([]Rennen, error) {
+	retLs := []Rennen{}
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	rLs, err := DB.Queries.GetAllRennen(ctx)
+	if err != nil {
+		return retLs, err
+	}
+	qLs, err := DB.Queries.GetAllRennenWithAthlet(
+		ctx,
+		[]sqlc.Wettkampf{
+			sqlc.WettkampfLangstrecke,
+			sqlc.WettkampfSlalom,
+			sqlc.WettkampfKurzstrecke,
+			sqlc.WettkampfStaffel,
+		},
+	)
+	if err != nil {
+		return retLs, err
+	}
+
+	for _, r := range rLs {
+		rennen := RennenFromSqlc(r.Rennen, int(r.NumMeldungen), r.NumAbteilungen)
+		retLs = append(retLs, rennen)
+	}
+
+	i := 0
+	for _, q := range qLs {
+		for retLs[i].Uuid != q.Rennen.Uuid {
+			i++
+			continue
+		}
+
+		indexLastMeld := len(retLs[i].Meldungen) - 1
+		if indexLastMeld < 0 || retLs[i].Meldungen[indexLastMeld].Uuid != q.Meldung.Uuid {
+			position := int(q.Position)
+			retLs[i].Meldungen = append(retLs[i].Meldungen, Meldung{
+				Meldung: q.Meldung,
+				Verein:  &Verein{Verein: q.Verein},
+				Athleten: []Athlet{{
+					Athlet:   q.Athlet,
+					Rolle:    &q.Rolle,
+					Position: &position,
+				}},
+			})
+		} else {
+			position := int(q.Position)
+			retLs[i].Meldungen[indexLastMeld].Athleten = append(retLs[i].Meldungen[indexLastMeld].Athleten, Athlet{
+				Athlet:   q.Athlet,
+				Rolle:    &q.Rolle,
+				Position: &position,
+			})
+		}
+	}
+
+	for _, r := range retLs {
+		// Sort Meldungen
+		slices.SortFunc(r.Meldungen, func(a, b Meldung) int {
+			return cmp.Or(
+				cmp.Compare(a.Abteilung, b.Abteilung),
+				cmp.Compare(a.Bahn, b.Bahn),
+			)
 		})
 	}
 	return retLs, nil
 }
 
-func GetAllRennenWithAthlet(p GetAllRennenParams) ([]RennenWithMeldungAndAthlet, error) {
-  retLs := []RennenWithMeldungAndAthlet{}
-  ctx, cancel := getCtxWithTo()
-  defer cancel()
-
-  rLs, err := DB.Queries.GetAllRennen(ctx)
-  if err != nil {
-    return retLs, err
-  }
-  qLs, err := DB.Queries.GetAllRennenWithAthlet(ctx, []sqlc.Wettkampf{sqlc.WettkampfLangstrecke, sqlc.WettkampfSlalom, sqlc.WettkampfKurzstrecke, sqlc.WettkampfStaffel})
-  if err != nil {
-    return retLs, err
-  }
-
-  for _, r := range rLs {
-    retLs = append(retLs, RennenWithMeldungAndAthlet{
-      Rennen:    RennenFromSqlc(r.Rennen, int(r.NumMeldungen), r.NumAbteilungen),
-      Meldungen: []Meldung{},
-    })
-  }
-
-  i := 0
-  for _, q := range qLs {
-    for retLs[i].Uuid != q.Rennen.Uuid {
-      i++
-      continue
-    }
-
-    indexLastMeld := len(retLs[i].Meldungen) - 1
-    if indexLastMeld < 0 || retLs[i].Meldungen[indexLastMeld].Uuid != q.Meldung.Uuid {
-      retLs[i].Meldungen = append(retLs[i].Meldungen, Meldung{
-        MeldungMinimal: SqlcMeldungMinmalToCrudMeldungMinimal(q.Meldung),
-        Verein:         q.Verein,
-        Athleten: []AthletWithPos{{
-          Athlet:   q.Athlet,
-          Rolle:    q.Rolle,
-          Position: int(q.Position),
-        }},
-      })
-    } else {
-      retLs[i].Meldungen[indexLastMeld].Athleten = append(retLs[i].Meldungen[indexLastMeld].Athleten, AthletWithPos{
-        Athlet:   q.Athlet,
-        Rolle:    q.Rolle,
-        Position: int(q.Position),
-      })
-    }
-  }
-
-  for _, r := range retLs {
-    // Sort Meldungen
-    slices.SortFunc(r.Meldungen, func(a, b Meldung) int {
-      return cmp.Or(
-        cmp.Compare(a.Abteilung, b.Abteilung),
-        cmp.Compare(a.Bahn, b.Bahn),
-      )
-    })
-  }
-  return retLs, nil
-}
-
-type Rennen struct {
-	Uuid             uuid.UUID       `json:"uuid"`
-	SortID           int             `json:"sort_id"`
-	Nummer           string          `json:"nummer"`
-	Bezeichnung      string          `json:"bezeichnung"`
-	BezeichnungLang  string          `json:"bezeichnung_lang"`
-	Zusatz           string          `json:"zusatz"`
-	Leichtgewicht    bool            `json:"leichtgewicht"`
-	Geschlecht       sqlc.Geschlecht `json:"geschlecht"`
-	Bootsklasse      string          `json:"bootsklasse"`
-	BootsklasseLang  string          `json:"bootsklasse_lang"`
-	Altersklasse     string          `json:"altersklasse"`
-	AltersklasseLang string          `json:"altersklasse_lang"`
-	Tag              sqlc.Tag        `json:"tag"`
-	Wettkampf        sqlc.Wettkampf  `json:"wettkampf"`
-	KostenEur        int             `json:"kosten_eur"`
-	Rennabstand      int             `json:"rennabstand"`
-	Startzeit        string          `json:"startzeit"`
-	NumMeldungen     int             `json:"num_meldungen"`
-	NumAbteilungen   int             `json:"num_abteilungen"`
-}
-type RennenWithMeldungAndAthlet struct {
-	Rennen
-	Meldungen []Meldung `json:"meldungen"`
-}
-
-type RennenWithMeldungVereinAthlet struct {
-	Rennen
-	Verein    sqlc.Verein `json:"verein"`
-	Meldungen []Meldung   `json:"meldungen"`
-}
-
 func RennenFromSqlc(rennen sqlc.Rennen, numMeld int, numAbt interface{}) Rennen {
-	// TODO: Might throw an unusual Error
-	numAbteilungen, ok := numAbt.(int32)
+	numAbteilungenI32, ok := numAbt.(int32)
 	if !ok {
-    log.Debug("numAbteilungen: ", numAbt, " ", numAbteilungen, " ", numAbt.(int32))
 		log.Error("Error converting numAbt to int32 ", numAbt)
-		numAbteilungen = 0
+		numAbteilungenI32 = 0
 	}
+	numAbteilungen := int(numAbteilungenI32)
 	return Rennen{
 		Uuid:             rennen.Uuid,
 		SortID:           int(rennen.SortID),
@@ -187,68 +185,57 @@ func RennenFromSqlc(rennen sqlc.Rennen, numMeld int, numAbt interface{}) Rennen 
 		KostenEur:        int(rennen.KostenEur.Int32),
 		Rennabstand:      int(rennen.Rennabstand.Int32),
 		Startzeit:        rennen.Startzeit.String,
-		NumMeldungen:     numMeld,
-		NumAbteilungen:   int(numAbteilungen),
+		NumMeldungen:     &numMeld,
+		NumAbteilungen:   &numAbteilungen,
 	}
 }
 
-type RennenWithMeldung struct {
-	Rennen
-	Meldungen []MeldungMinimal `json:"meldungen"`
-}
-
-func sqlcRennenToCrudRennen(q []sqlc.GetAllRennenWithMeldRow, getEmptyRennen bool) []RennenWithMeldung {
-	var curRennen RennenWithMeldung
-	rLs := []RennenWithMeldung{}
+func sqlcRennenToCrudRennen(q []sqlc.GetAllRennenWithMeldRow, getEmptyRennen bool) []Rennen {
+	var curRennen Rennen
+	rLs := []Rennen{}
 
 	for i, row := range q {
 		if i == 0 {
-			curRennen = RennenWithMeldung{
-				Rennen:    RennenFromSqlc(row.Rennen, int(row.NumMeldungen), row.NumAbteilungen),
-				Meldungen: []MeldungMinimal{},
-			}
+			curRennen = RennenFromSqlc(row.Rennen, int(row.NumMeldungen), row.NumAbteilungen)
 		}
 
 		if row.Rennen.Uuid != curRennen.Uuid {
 			if getEmptyRennen || len(curRennen.Meldungen) != 0 {
 				rLs = append(rLs, curRennen)
-				curRennen = RennenWithMeldung{
-					Rennen:    RennenFromSqlc(row.Rennen, int(row.NumMeldungen), row.NumAbteilungen),
-					Meldungen: []MeldungMinimal{},
-				}
+				curRennen = RennenFromSqlc(row.Rennen, int(row.NumMeldungen), row.NumAbteilungen)
 			}
 		}
 
 		if row.Uuid != uuid.Nil {
-			curRennen.Meldungen = append(curRennen.Meldungen, SqlcMeldungMinmalToCrudMeldungMinimal(sqlc.Meldung{
-				Uuid:               row.Uuid,
-				DrvRevisionUuid:    row.DrvRevisionUuid,
-				Typ:                row.Typ.String,
-				Bemerkung:          row.Bemerkung,
-				Abgemeldet:         row.Abgemeldet.Bool,
-				Dns:                row.Dns.Bool,
-				Dnf:                row.Dnf.Bool,
-				Dsq:                row.Dsq.Bool,
-				ZeitnahmeBemerkung: row.ZeitnahmeBemerkung,
-				StartNummer:        row.StartNummer.Int32,
-				Abteilung:          row.Abteilung.Int32,
-				Bahn:               row.Bahn.Int32,
-				Kosten:             row.Kosten.Int32,
-				VereinUuid:         row.VereinUuid,
-				RennenUuid:         row.RennenUuid,
-			}))
-		}
-	}
-	// Make sure last rennen is added
-	if len(q) > 0 && rLs[len(rLs)-1].Rennen.Uuid != curRennen.Uuid {
-		if getEmptyRennen || len(curRennen.Meldungen) != 0 {
-			rLs = append(rLs, curRennen)
+			curRennen.Meldungen = append(curRennen.Meldungen, Meldung{
+				Meldung: sqlc.Meldung{
+					Uuid:               row.Uuid,
+					DrvRevisionUuid:    row.DrvRevisionUuid,
+					Typ:                row.Typ.String,
+					Bemerkung:          row.Bemerkung,
+					Abgemeldet:         row.Abgemeldet.Bool,
+					Dns:                row.Dns.Bool,
+					Dnf:                row.Dnf.Bool,
+					Dsq:                row.Dsq.Bool,
+					ZeitnahmeBemerkung: row.ZeitnahmeBemerkung,
+					StartNummer:        row.StartNummer.Int32,
+					Abteilung:          row.Abteilung.Int32,
+					Bahn:               row.Bahn.Int32,
+					Kosten:             row.Kosten.Int32,
+					RechnungsNummer:    row.RechnungsNummer,
+					VereinUuid:         row.VereinUuid,
+					RennenUuid:         row.RennenUuid,
+				},
+				Rennen:   &Rennen{},
+				Verein:   &Verein{},
+				Athleten: []Athlet{},
+			})
 		}
 	}
 
 	// sort Meldungen
 	for _, r := range rLs {
-		slices.SortFunc(r.Meldungen, func(a, b MeldungMinimal) int {
+		slices.SortFunc(r.Meldungen, func(a, b Meldung) int {
 			return cmp.Or(
 				cmp.Compare(a.Abteilung, b.Abteilung),
 				cmp.Compare(a.Bahn, b.Bahn),
@@ -259,42 +246,39 @@ func sqlcRennenToCrudRennen(q []sqlc.GetAllRennenWithMeldRow, getEmptyRennen boo
 	return rLs
 }
 
-func GetRennenMinimal(uuid uuid.UUID) (sqlc.Rennen, error) {
+func GetRennenMinimal(uuid uuid.UUID) (Rennen, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	r, err := DB.Queries.GetRennenMinimal(ctx, uuid)
 	if err != nil {
 		if isNoRowError(err) {
-			return sqlc.Rennen{}, &api.NOT_FOUND
+			return Rennen{}, &api.NOT_FOUND
 		}
-		return sqlc.Rennen{}, err
+		return Rennen{}, err
 	}
 
-	return r, nil
+	return RennenFromSqlc(r, 0, 0), nil
 }
 
-func GetRennen(uuidParam uuid.UUID) (RennenWithMeldungVereinAthlet, error) {
-  // TODO: Implement queryParams
+func GetRennen(uuidParam uuid.UUID) (Rennen, error) {
+	// TODO: Implement queryParams
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	q, err := DB.Queries.GetRennen(ctx, uuidParam)
 	if err != nil {
 		if isNoRowError(err) {
-			return RennenWithMeldungVereinAthlet{}, &api.NOT_FOUND
+			return Rennen{}, &api.NOT_FOUND
 		}
-		return RennenWithMeldungVereinAthlet{}, err
+		return Rennen{}, err
 	}
 	if len(q) == 0 {
-		return RennenWithMeldungVereinAthlet{}, &api.NOT_FOUND
+		return Rennen{}, &api.NOT_FOUND
 	}
 
-	r := RennenWithMeldungVereinAthlet{
-		Rennen:    RennenFromSqlc(q[0].Rennen, 0, int32(0)),
-		Verein:    q[0].Verein,
-		Meldungen: []Meldung{},
-	}
+	r := RennenFromSqlc(q[0].Rennen, 0, int32(0))
+	r.Meldungen = []Meldung{}
 
 	numAbt := 0
 	if q[0].Meldung.Uuid != uuid.Nil {
@@ -307,9 +291,9 @@ func GetRennen(uuidParam uuid.UUID) (RennenWithMeldungVereinAthlet, error) {
 				r.Meldungen = append(
 					r.Meldungen,
 					Meldung{
-						MeldungMinimal: SqlcMeldungMinmalToCrudMeldungMinimal(meld),
-						Verein:         row.Verein,
-						Athleten:       []AthletWithPos{},
+						Meldung:  meld,
+						Verein:   &Verein{Verein: row.Verein},
+						Athleten: []Athlet{},
 					},
 				)
 			}
@@ -317,16 +301,19 @@ func GetRennen(uuidParam uuid.UUID) (RennenWithMeldungVereinAthlet, error) {
 			athlet := row.Athlet
 			if athlet.Uuid != uuid.Nil {
 				lastMeldIndex := len(r.Meldungen) - 1
-				r.Meldungen[lastMeldIndex].Athleten = append(r.Meldungen[lastMeldIndex].Athleten, AthletWithPos{
+				position := int(row.LinkMeldungAthlet.Position)
+				r.Meldungen[lastMeldIndex].Athleten = append(r.Meldungen[lastMeldIndex].Athleten, Athlet{
 					Athlet:   athlet,
-					Rolle:    row.LinkMeldungAthlet.Rolle,
-					Position: int(row.LinkMeldungAthlet.Position),
+					Rolle:    &row.LinkMeldungAthlet.Rolle,
+					Position: &position,
 				})
 			}
 		}
 	}
-	r.NumMeldungen = len(r.Meldungen)
-	r.NumAbteilungen = int(numAbt)
+	numMeldungen := len(r.Meldungen)
+	r.NumMeldungen = &numMeldungen
+	numAbteilungen := int(numAbt)
+	r.NumAbteilungen = &numAbteilungen
 
 	return r, nil
 }
@@ -338,14 +325,14 @@ func UpdateStartZeit(params sqlc.UpdateStartZeitParams) error {
 	return DB.Queries.UpdateStartZeit(ctx, params)
 }
 
-func CreateRennen(rParams sqlc.CreateRennenParams) (sqlc.Rennen, error) {
+func CreateRennen(rParams sqlc.CreateRennenParams) (Rennen, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	v, err := DB.Queries.CreateRennen(ctx, rParams)
+	r, err := DB.Queries.CreateRennen(ctx, rParams)
 	if err != nil {
-		return sqlc.Rennen{}, err
+		return Rennen{}, err
 	}
 
-	return v, nil
+	return RennenFromSqlc(r, 0, 0), nil
 }

@@ -12,56 +12,11 @@ import (
 	"github.com/google/uuid"
 )
 
-type MeldungMinimal struct {
-	Uuid               uuid.UUID `json:"uuid"`
-	DrvRevisionUuid    uuid.UUID `json:"drv_revision_uuid"`
-	Typ                string    `json:"typ"`
-	Bemerkung          string    `json:"bemerkung"`
-	Abgemeldet         bool      `json:"abgemeldet"`
-	Dns                bool      `json:"dns"`
-	Dnf                bool      `json:"dnf"`
-	Dsq                bool      `json:"dsq"`
-	ZeitnahmeBemerkung string    `json:"zeitnahme_bemerkung"`
-	StartNummer        int       `json:"start_nummer"`
-	Abteilung          int       `json:"abteilung"`
-	Bahn               int       `json:"bahn"`
-	Kosten             int       `json:"kosten"`
-	RechnungsNummer    string    `json:"rechnungs_nummer"`
-	VereinUuid         uuid.UUID `json:"verein_uuid"`
-	RennenUuid         uuid.UUID `json:"rennen_uuid"`
-}
-
-type MeldungWithoutVereinWithRennen struct {
-	MeldungMinimal
-	Rennen   Rennen          `json:"rennen"`
-	Athleten []AthletWithPos `json:"athleten"`
-}
-
 type Meldung struct {
-	MeldungMinimal
-	Verein   sqlc.Verein     `json:"verein"`
-	Athleten []AthletWithPos `json:"athleten"`
-}
-
-func SqlcMeldungMinmalToCrudMeldungMinimal(q sqlc.Meldung) MeldungMinimal {
-	return MeldungMinimal{
-		Uuid:               q.Uuid,
-		DrvRevisionUuid:    q.DrvRevisionUuid,
-		Typ:                q.Typ,
-		Bemerkung:          q.Bemerkung.String,
-		Abgemeldet:         q.Abgemeldet,
-		Dns:                q.Dns,
-		Dnf:                q.Dnf,
-		Dsq:                q.Dsq,
-		ZeitnahmeBemerkung: q.ZeitnahmeBemerkung.String,
-		StartNummer:        int(q.StartNummer),
-		Abteilung:          int(q.Abteilung),
-		Bahn:               int(q.Bahn),
-		Kosten:             int(q.Kosten),
-		RechnungsNummer:    q.RechnungsNummer.String,
-		VereinUuid:         q.VereinUuid,
-		RennenUuid:         q.RennenUuid,
-	}
+	sqlc.Meldung
+	Rennen   *Rennen  `json:"rennen"`
+	Verein   *Verein  `json:"verein"`
+	Athleten []Athlet `json:"athleten"`
 }
 
 type UpdateSetzungBatchParams struct {
@@ -71,43 +26,47 @@ type UpdateSetzungBatchParams struct {
 
 type CreateMeldungParams struct {
 	sqlc.CreateMeldungParams
-	Athleten []MeldungAthlet
+	Athleten []CreateMeldungAthletParams
 }
 
-type MeldungAthlet struct {
+type CreateMeldungAthletParams struct {
 	Uuid     uuid.UUID  `json:"uuid"`
 	Position int32      `json:"position"`
 	Rolle    sqlc.Rolle `json:"rolle"`
 }
 
-func GetAllMeldungen() ([]sqlc.Meldung, error) {
+func GetAllMeldungen() ([]Meldung, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	mLs, err := DB.Queries.GetAllMeldung(ctx)
+	mLs := []Meldung{}
+	q, err := DB.Queries.GetAllMeldung(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if mLs == nil {
-		mLs = []sqlc.Meldung{}
+
+	for _, m := range q {
+		mLs = append(mLs, Meldung{
+			Meldung: m,
+		})
 	}
 
 	return mLs, nil
 }
 
-func GetMeldungMinimal(uuid uuid.UUID) (sqlc.Meldung, error) {
+func GetMeldungMinimal(uuid uuid.UUID) (Meldung, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	m, err := DB.Queries.GetMeldungMinimal(ctx, uuid)
 	if err != nil {
 		if isNoRowError(err) {
-			return sqlc.Meldung{}, &api.NOT_FOUND
+			return Meldung{}, &api.NOT_FOUND
 		}
-		return sqlc.Meldung{}, err
+		return Meldung{}, err
 	}
 
-	return m, nil
+	return Meldung{Meldung: m}, nil
 }
 
 func CheckMeldungSetzung() (bool, error) {
@@ -125,14 +84,14 @@ func CheckMeldungSetzung() (bool, error) {
 	return true, nil
 }
 
-func CreateMeldung(mParams CreateMeldungParams) (sqlc.Meldung, error) {
+func CreateMeldung(mParams CreateMeldungParams) (Meldung, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	// TODO: Implement as Transaction!
 	m, err := DB.Queries.CreateMeldung(ctx, mParams.CreateMeldungParams)
 	if err != nil {
-		return sqlc.Meldung{}, err
+		return Meldung{}, err
 	}
 
 	for _, a := range mParams.Athleten {
@@ -150,11 +109,11 @@ func CreateMeldung(mParams CreateMeldungParams) (sqlc.Meldung, error) {
 				m.Uuid.String(),
 				a.Uuid.String(),
 			)
-			return sqlc.Meldung{}, &retErr
+			return Meldung{}, &retErr
 		}
 	}
 
-	return m, nil
+	return Meldung{Meldung: m}, nil
 }
 
 func UpdateMeldungSetzung(p sqlc.UpdateMeldungSetzungParams) error {
@@ -190,11 +149,11 @@ func UpdateStartNummer(p sqlc.UpdateStartNummerParams) error {
 	return DB.Queries.UpdateStartNummer(ctx, p)
 }
 
-func GetAllMeldungForVerein(vereinUuid uuid.UUID) ([]MeldungWithoutVereinWithRennen, error) {
+func GetAllMeldungForVerein(vereinUuid uuid.UUID) ([]Meldung, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	meldungen := []MeldungWithoutVereinWithRennen{}
+	meldungen := []Meldung{}
 
 	rows, err := DB.Queries.GetAllMeldungForVerein(ctx, vereinUuid)
 	if err != nil {
@@ -203,19 +162,21 @@ func GetAllMeldungForVerein(vereinUuid uuid.UUID) ([]MeldungWithoutVereinWithRen
 
 	for i, r := range rows {
 		if i == 0 || rows[i-1].Meldung.Uuid != r.Meldung.Uuid {
-			meldungen = append(meldungen, MeldungWithoutVereinWithRennen{
-				MeldungMinimal: SqlcMeldungMinmalToCrudMeldungMinimal(r.Meldung),
-				Rennen:         RennenFromSqlc(r.Rennen, 0, int32(0)),
-				Athleten:       []AthletWithPos{},
+			rennen := RennenFromSqlc(r.Rennen, 0, int32(0))
+			meldungen = append(meldungen, Meldung{
+				Meldung:  r.Meldung,
+				Rennen:   &rennen,
+				Athleten: []Athlet{},
 			})
 		}
 
 		curMeldung := &meldungen[len(meldungen)-1]
 
-		curMeldung.Athleten = append(curMeldung.Athleten, AthletWithPos{
+		position := int(r.Position)
+		curMeldung.Athleten = append(curMeldung.Athleten, Athlet{
 			Athlet:   r.Athlet,
-			Rolle:    r.Rolle,
-			Position: int(r.Position),
+			Rolle:    &r.Rolle,
+			Position: &position,
 		})
 	}
 

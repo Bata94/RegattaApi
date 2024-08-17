@@ -46,10 +46,10 @@ func GetMeldeergebnisHtml(c *fiber.Ctx) error {
 			Startzeit:      r.Startzeit,
 			Rennabstand:    r.Rennabstand,
 			Tag:            string(r.Tag),
-			NumMeldungen:   r.NumMeldungen,
-			NumAbteilungen: r.NumAbteilungen,
+			NumMeldungen:   *r.NumMeldungen,
+			NumAbteilungen: *r.NumAbteilungen,
 			Wettkampf:      r.Wettkampf,
-			Abteilungen:    make([]pdf_templates.AbteilungenMeldeergebnisPDF, r.NumAbteilungen),
+			Abteilungen:    make([]pdf_templates.AbteilungenMeldeergebnisPDF, *r.NumAbteilungen),
 			Abmeldungen:    []pdf_templates.MeldungMeldeergebnisPDF{},
 		}
 
@@ -57,14 +57,14 @@ func GetMeldeergebnisHtml(c *fiber.Ctx) error {
 			rParsed.Abteilungen[i].Nummer = i + 1
 		}
 
-		if r.NumMeldungen == 0 {
+		if *r.NumMeldungen == 0 {
 			rLsParsed = append(rLsParsed, rParsed)
 			continue
 		}
 		for _, m := range r.Meldungen {
 			athletenStr := ""
 			for _, a := range m.Athleten {
-				if a.Rolle == sqlc.RolleTrainer {
+				if *a.Rolle == sqlc.RolleTrainer {
 					continue
 				}
 
@@ -72,7 +72,7 @@ func GetMeldeergebnisHtml(c *fiber.Ctx) error {
 					athletenStr += ", "
 				}
 
-				if a.Rolle == sqlc.RolleStm {
+				if *a.Rolle == sqlc.RolleStm {
 					athletenStr += fmt.Sprintf("\nStm.: %s %s (%s)", a.Vorname, a.Name, a.Jahrgang)
 				} else {
 					athletenStr += fmt.Sprintf("%s %s (%s)", a.Vorname, a.Name, a.Jahrgang)
@@ -80,8 +80,8 @@ func GetMeldeergebnisHtml(c *fiber.Ctx) error {
 			}
 
 			meldungEntry := pdf_templates.MeldungMeldeergebnisPDF{
-				StartNummer: m.StartNummer,
-				Bahn:        m.Bahn,
+				StartNummer: int(m.StartNummer),
+				Bahn:        int(m.Bahn),
 				Teilnehmer:  athletenStr,
 				Verein:      m.Verein.Name,
 			}
@@ -155,7 +155,7 @@ func DrvMeldungUpload(c *fiber.Ctx) error {
 		}
 	}
 
-	return c.JSON("File uploaded successfully!")
+	return api.JSON(c, "File uploaded successfully!")
 }
 
 type DrvMeldungJson struct {
@@ -471,7 +471,7 @@ func ImportDrvJson(filePath string) error {
 			return err
 		}
 		abgemeldet := false
-		athleten := []crud.MeldungAthlet{}
+		athleten := []crud.CreateMeldungAthletParams{}
 
 		// Account for Alt Meldung
 		// TODO: Add Col to save cor MeldUUID
@@ -484,7 +484,6 @@ func ImportDrvJson(filePath string) error {
 
 		for _, a := range m.Members {
 			role := strings.ToLower(a.Role)
-			position := int32(a.Position)
 			aUuid := a.ClubMemberId
 			if aUuid == uuid.Nil {
 				log.Warn("uuid is nil", aUuid)
@@ -499,29 +498,23 @@ func ImportDrvJson(filePath string) error {
 					return &api.INTERNAL_SERVER_ERROR
 				}
 			}
+			var rolle sqlc.Rolle
 			if role == "cox" {
-				athleten = append(athleten, crud.MeldungAthlet{
-					Uuid:     aUuid,
-					Position: position,
-					Rolle:    sqlc.RolleStm,
-				})
+				rolle = sqlc.RolleStm
 			} else if role == "coach" {
-				athleten = append(athleten, crud.MeldungAthlet{
-					Uuid:     aUuid,
-					Position: position,
-					Rolle:    sqlc.RolleTrainer,
-				})
+				rolle = sqlc.RolleTrainer
 				continue
 			} else if role == "rower" {
-				athleten = append(athleten, crud.MeldungAthlet{
-					Uuid:     aUuid,
-					Position: position,
-					Rolle:    sqlc.RolleRuderer,
-				})
+				rolle = sqlc.RolleRuderer
 			} else {
 				log.Error("Unkown Role: ", a.Role)
 				continue
 			}
+			athleten = append(athleten, crud.CreateMeldungAthletParams{
+				Uuid:     aUuid,
+				Position: int32(a.Position),
+				Rolle:    rolle,
+			})
 		}
 
 		log.Debug("Members done... Creating Meldung")
@@ -553,7 +546,7 @@ func ImportDrvJson(filePath string) error {
 	return nil
 }
 
-func getKostenForMeld(rennen []crud.RennenWithMeldung, m DrvEntries) (int32, error) {
+func getKostenForMeld(rennen []crud.Rennen, m DrvEntries) (int32, error) {
 	kosten := int32(0)
 
 	for _, r := range rennen {
@@ -617,7 +610,7 @@ func getRennInfo(regattaDays []string, event DrvEvents) (*sqlc.Wettkampf, *sqlc.
 }
 
 // TODO: Move Func
-func shuffle(array []crud.MeldungMinimal) []crud.MeldungMinimal {
+func shuffle(array []crud.Meldung) []crud.Meldung {
 	for i := range array {
 		j := rand.IntN(i + 1)
 		array[i], array[j] = array[j], array[i]
@@ -663,8 +656,8 @@ func SetzungsLosung(c *fiber.Ctx) error {
 		}
 
 		// TODO: WIP: Algo wont work correctly
-		letzteVolleAbteilung := numMeld / maxBahnen
-		if numMeld%maxBahnen == 1 && (r.Wettkampf != sqlc.WettkampfLangstrecke || r.Wettkampf != sqlc.WettkampfStaffel) {
+		letzteVolleAbteilung := *numMeld / maxBahnen
+		if *numMeld%maxBahnen == 1 && (r.Wettkampf != sqlc.WettkampfLangstrecke || r.Wettkampf != sqlc.WettkampfStaffel) {
 			letzteVolleAbteilung--
 		}
 
@@ -689,7 +682,7 @@ func SetzungsLosung(c *fiber.Ctx) error {
 			}
 		}
 	}
-	return c.JSON("Setzung erfolgreich erstellt!")
+	return api.JSON(c, "Setzung erfolgreich erstellt!")
 }
 
 func ResetSetzung(c *fiber.Ctx) error {
@@ -712,7 +705,7 @@ func ResetSetzung(c *fiber.Ctx) error {
 		}
 	}
 
-	return c.JSON("Setzung erfolgreich zurückgesetzt!")
+	return api.JSON(c, "Setzung erfolgreich zurückgesetzt!")
 }
 
 func SetStartnummern(c *fiber.Ctx) error {
@@ -754,7 +747,7 @@ func SetStartnummern(c *fiber.Ctx) error {
 		}
 	}
 
-	return c.JSON("Startnummern erfolgreich vergeben!")
+	return api.JSON(c, "Startnummern erfolgreich vergeben!")
 }
 
 type SetZeitplanParams struct {
@@ -800,9 +793,9 @@ func SetZeitplan(c *fiber.Ctx) error {
 				return err
 			}
 
-			rennenDur := time.Duration(r.NumAbteilungen*int(r.Rennabstand)) * time.Minute
+			rennenDur := time.Duration(*r.NumAbteilungen*int(r.Rennabstand)) * time.Minute
 			if r.Wettkampf == sqlc.WettkampfLangstrecke {
-				rennenDur = time.Duration(r.NumMeldungen*int(r.Rennabstand)) * time.Minute
+				rennenDur = time.Duration(*r.NumMeldungen*int(r.Rennabstand)) * time.Minute
 			}
 			curStartTimeSa = curStartTimeSa.Add(rennenDur)
 
@@ -834,7 +827,7 @@ func SetZeitplan(c *fiber.Ctx) error {
 				return err
 			}
 
-			rennenDur := time.Duration(r.NumAbteilungen*int(r.Rennabstand)) * time.Minute
+			rennenDur := time.Duration(*r.NumAbteilungen*int(r.Rennabstand)) * time.Minute
 			curStartTimeSo = curStartTimeSo.Add(rennenDur)
 
 			for _, p := range pLs {
@@ -859,5 +852,5 @@ func SetZeitplan(c *fiber.Ctx) error {
 		}
 	}
 
-	return c.JSON("Zeitplan erfolgreich erstellt!")
+	return api.JSON(c, "Zeitplan erfolgreich erstellt!")
 }

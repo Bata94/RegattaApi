@@ -21,7 +21,7 @@ func GetRennen(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(r)
+	return api.JSON(c, r)
 }
 
 func GetAllRennen(c *fiber.Ctx) error {
@@ -46,7 +46,7 @@ func GetAllRennen(c *fiber.Ctx) error {
 		return retErr
 	}
 
-  searchParams := crud.GetAllRennenParams{
+	searchParams := crud.GetAllRennenParams{
 		GetMeldungen:  getMeld,
 		GetAthleten:   getAthleten,
 		ShowEmpty:     showEmpty,
@@ -55,12 +55,12 @@ func GetAllRennen(c *fiber.Ctx) error {
 	}
 
 	if getAthleten {
-    retLs, err := crud.GetAllRennenWithAthlet(searchParams)
-    if err != nil {
-      return err
-    }
+		retLs, err := crud.GetAllRennenWithAthlet(searchParams)
+		if err != nil {
+			return err
+		}
 
-		return c.JSON(retLs)
+		return api.JSON(c, retLs)
 	}
 
 	rLs, err := crud.GetAllRennen(searchParams)
@@ -68,5 +68,5 @@ func GetAllRennen(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(rLs)
+	return api.JSON(c, rLs)
 }

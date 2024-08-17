@@ -7,6 +7,11 @@ import (
 	"github.com/oklog/ulid/v2"
 )
 
+type UsersGroupWithUsers struct {
+	sqlc.UsersGroup
+	Users []ReturnUserMinimal
+}
+
 func GetAllUsersGroups() ([]sqlc.UsersGroup, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
@@ -36,11 +41,6 @@ func GetUsersGroupsMinimal(ulid ulid.ULID) (sqlc.UsersGroup, error) {
 	}
 
 	return ug, nil
-}
-
-type UsersGroupWithUsers struct {
-	sqlc.UsersGroup
-	Users []ReturnUserMinimal
 }
 
 func UGwUsersFromSQLC(q []sqlc.GetUserGroupRow, ulid ulid.ULID) (UsersGroupWithUsers, error) {

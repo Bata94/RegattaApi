@@ -11,61 +11,36 @@ import (
 	"github.com/google/uuid"
 )
 
-func GetAllVerein() ([]sqlc.Verein, error) {
-	ctx, cancel := getCtxWithTo()
-	defer cancel()
-
-	vLs, err := DB.Queries.GetAllVerein(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if vLs == nil {
-		vLs = []sqlc.Verein{}
-	}
-
-	return vLs, err
+type Verein struct {
+	sqlc.Verein
+	Athleten []Athlet `json:"athleten"`
 }
 
-func GetVereinMinimal(uuid uuid.UUID) (sqlc.Verein, error) {
+func (verein *Verein) GetRechnungsnummern() ([]string, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	v, err := DB.Queries.GetVereinMinimal(ctx, uuid)
-	if err != nil {
-		if isNoRowError(err) {
-			return sqlc.Verein{}, &api.NOT_FOUND
+	retLs := []string{}
+
+	q, err := DB.Queries.GetVereinRechnungsnummern(ctx, verein.Uuid)
+	if err != nil || len(q) == 0 {
+		return retLs, err
+	}
+
+	for _, r := range q {
+		if r.Valid {
+			retLs = append(retLs, r.String)
 		}
-		return sqlc.Verein{}, err
 	}
 
-	return v, nil
+	return retLs, nil
 }
 
-func GetVereinRechnungsnummern(vereinUuid uuid.UUID) ([]string, error) {
-  ctx, cancel := getCtxWithTo()
-  defer cancel()
-
-  retLs := []string{}
-
-  q, err := DB.Queries.GetVereinRechnungsnummern(ctx, vereinUuid)
-  if err != nil || len(q) == 0 { 
-    return retLs, err
-  }
-
-  for _, r := range q {
-    if r.Valid {
-      retLs = append(retLs, r.String)
-    }
-  }
-
-  return retLs, nil
-}
-
-func GetVereinNextRechnungsnummer(v sqlc.Verein) (string, error) {
-	rechnungsNummern, err := GetVereinRechnungsnummern(v.Uuid)
-  if err != nil {
-    return "", err
-  }
+func (verein *Verein) GetNextRechnungsnummer() (string, error) {
+	rechnungsNummern, err := verein.GetRechnungsnummern()
+	if err != nil {
+		return "", err
+	}
 	fwdNr := 0
 
 	log.Debug(len(rechnungsNummern))
@@ -100,18 +75,93 @@ func GetVereinNextRechnungsnummer(v sqlc.Verein) (string, error) {
 		fwdNrStr = "0" + fwdNrStr
 	}
 
-	reNr := "2024-" + v.Kuerzel + "-" + fwdNrStr
-  return reNr, nil
+	reNr := "2024-" + verein.Kuerzel + "-" + fwdNrStr
+	return reNr, nil
 }
 
-func CreateVerein(vParams sqlc.CreateVereinParams) (sqlc.Verein, error) {
+func GetAllVerein() ([]Verein, error) {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	q, err := DB.Queries.GetAllVerein(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if q == nil {
+		return []Verein{}, nil
+	}
+
+	vLs := []Verein{}
+	for _, i := range q {
+		vLs = append(vLs, Verein{
+			Verein: i,
+		})
+	}
+
+	return vLs, err
+}
+
+func GetVereinMinimal(uuid uuid.UUID) (Verein, error) {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	v, err := DB.Queries.GetVereinMinimal(ctx, uuid)
+	if err != nil {
+		if isNoRowError(err) {
+			return Verein{}, &api.NOT_FOUND
+		}
+		return Verein{}, err
+	}
+
+	return Verein{Verein: v}, nil
+}
+
+type MissingAthletType int
+
+const (
+	Waage           MissingAthletType = 0
+	Startberechtigt MissingAthletType = 1
+)
+
+func GetForAllVereineMissingAthlet(athletType MissingAthletType) ([]Verein, error) {
+	vLs, err := GetAllVerein()
+	if err != nil {
+		return vLs, err
+	}
+	retLs := []Verein{}
+
+	var queryFunc func(uuid.UUID) ([]Athlet, error)
+	if athletType == 0 {
+		queryFunc = GetAllAthletenForVereinWaage
+	} else if athletType == 1 {
+		queryFunc = GetAllAthletenForVereinMissStartber
+	} else {
+		return vLs, errors.New("Unknown athlet type")
+	}
+
+	for _, v := range vLs {
+		missAthlet, err := queryFunc(v.Uuid)
+		if err != nil {
+			return vLs, err
+		}
+
+		if missAthlet != nil && len(missAthlet) != 0 {
+			v.Athleten = missAthlet
+			retLs = append(retLs, v)
+		}
+	}
+
+	return retLs, nil
+}
+
+func CreateVerein(vParams sqlc.CreateVereinParams) (Verein, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	v, err := DB.Queries.CreateVerein(ctx, vParams)
 	if err != nil {
-		return sqlc.Verein{}, err
+		return Verein{}, err
 	}
 
-	return v, nil
+	return Verein{Verein: v}, nil
 }
