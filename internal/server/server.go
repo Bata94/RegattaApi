@@ -172,9 +172,9 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		athletV1.Post("", api_v1.CreateAthlet)
 
 		bueroV1 := v1.Group("/buero")
-		bueroV1.Post("/abmeldung", api_v1.Abmeldung)
-		bueroV1.Post("/ummeldung", api_v1.Ummeldung)
-		bueroV1.Post("/nachmeldung", api_v1.Nachmeldung)
+		bueroV1.Post("/abmeldung", api_v1.PostAbmeldung)
+		bueroV1.Post("/ummeldung", api_v1.PostUmmeldung)
+		bueroV1.Post("/nachmeldung", api_v1.PostNachmeldung)
 		bueroV1.Post("/startnummernausgabe", api_v1.StartnummernAusgabe)
 		bueroV1.Post("/startnummernwechsel", api_v1.StartnummernWechsel)
 		bueroV1.Post("/kasse/einzahlung", api_v1.KasseEinzahlung)
@@ -195,6 +195,8 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		meldungV1.Get("/", api_v1.GetAllMeldung)
 		meldungV1.Get("/:uuid", api_v1.GetMeldung)
 		meldungV1.Post("/updateSetzungBatch", api_v1.UpdateSetzungBatch)
+		meldungV1.Post("/abmeldung", api_v1.PostAbmeldung)
+		meldungV1.Post("/ummeldung", api_v1.PostUmmeldung)
 		meldungV1.Post("/nachmeldung", api_v1.PostNachmeldung)
 		meldungV1.Get("/verein/:uuid", api_v1.GetAllMeldungForVerein)
 

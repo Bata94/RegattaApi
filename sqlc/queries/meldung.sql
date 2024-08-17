@@ -2,6 +2,36 @@
 SELECT * FROM meldung
 WHERE uuid = $1 LIMIT 1;
 
+-- name: GetMeldung :many
+SELECT
+  sqlc.embed(meldung),
+  sqlc.embed(rennen),
+  sqlc.embed(athlet),
+  link_meldung_athlet.rolle, link_meldung_athlet.position,
+  sqlc.embed(verein)
+FROM
+  meldung
+JOIN
+  rennen
+ON
+  rennen.uuid = meldung.rennen_uuid
+JOIN
+  link_meldung_athlet
+ON
+  link_meldung_athlet.meldung_uuid = meldung.uuid
+JOIN
+  athlet
+ON
+  link_meldung_athlet.athlet_uuid = athlet.uuid
+JOIN
+  verein
+ON
+  meldung.verein_uuid = verein.uuid
+WHERE
+  meldung.uuid = $1
+ORDER BY
+  rennen.sort_id, meldung.abteilung, meldung.bahn, link_meldung_athlet.rolle, link_meldung_athlet.position;
+
 -- name: GetAllMeldung :many
 SELECT * FROM meldung
 ORDER BY start_nummer ASC;
@@ -46,6 +76,16 @@ ORDER BY
 -- name: CheckMedlungSetzung :one
 SELECT uuid, abteilung, bahn FROM meldung
 WHERE abteilung != 0 AND bahn != 0 LIMIT 1;
+
+-- name: Ummeldung :exec
+UPDATE 
+  link_meldung_athlet
+SET
+  athlet_uuid = $4
+WHERE
+  meldung_uuid = $1 AND
+  rolle = $2 AND
+  position = $3;
 
 -- name: Abmeldung :exec
 UPDATE

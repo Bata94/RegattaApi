@@ -275,6 +275,114 @@ func (q *Queries) GetLastStartnummer(ctx context.Context, tag Tag) (interface{},
 	return max, err
 }
 
+const getMeldung = `-- name: GetMeldung :many
+SELECT
+  meldung.uuid, meldung.drv_revision_uuid, meldung.typ, meldung.bemerkung, meldung.abgemeldet, meldung.dns, meldung.dnf, meldung.dsq, meldung.zeitnahme_bemerkung, meldung.start_nummer, meldung.abteilung, meldung.bahn, meldung.kosten, meldung.rechnungs_nummer, meldung.verein_uuid, meldung.rennen_uuid,
+  rennen.uuid, rennen.sort_id, rennen.nummer, rennen.bezeichnung, rennen.bezeichnung_lang, rennen.zusatz, rennen.leichtgewicht, rennen.geschlecht, rennen.bootsklasse, rennen.bootsklasse_lang, rennen.altersklasse, rennen.altersklasse_lang, rennen.tag, rennen.wettkampf, rennen.kosten_eur, rennen.rennabstand, rennen.startzeit,
+  athlet.uuid, athlet.vorname, athlet.name, athlet.geschlecht, athlet.jahrgang, athlet.gewicht, athlet.startberechtigt, athlet.verein_uuid,
+  link_meldung_athlet.rolle, link_meldung_athlet.position,
+  verein.uuid, verein.name, verein.kurzform, verein.kuerzel
+FROM
+  meldung
+JOIN
+  rennen
+ON
+  rennen.uuid = meldung.rennen_uuid
+JOIN
+  link_meldung_athlet
+ON
+  link_meldung_athlet.meldung_uuid = meldung.uuid
+JOIN
+  athlet
+ON
+  link_meldung_athlet.athlet_uuid = athlet.uuid
+JOIN
+  verein
+ON
+  meldung.verein_uuid = verein.uuid
+WHERE
+  meldung.uuid = $1
+ORDER BY
+  rennen.sort_id, meldung.abteilung, meldung.bahn, link_meldung_athlet.rolle, link_meldung_athlet.position
+`
+
+type GetMeldungRow struct {
+	Meldung  Meldung `json:"meldung"`
+	Rennen   Rennen  `json:"rennen"`
+	Athlet   Athlet  `json:"athlet"`
+	Rolle    Rolle   `json:"rolle"`
+	Position int32   `json:"position"`
+	Verein   Verein  `json:"verein"`
+}
+
+func (q *Queries) GetMeldung(ctx context.Context, argUuid uuid.UUID) ([]GetMeldungRow, error) {
+	rows, err := q.db.Query(ctx, getMeldung, argUuid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetMeldungRow{}
+	for rows.Next() {
+		var i GetMeldungRow
+		if err := rows.Scan(
+			&i.Meldung.Uuid,
+			&i.Meldung.DrvRevisionUuid,
+			&i.Meldung.Typ,
+			&i.Meldung.Bemerkung,
+			&i.Meldung.Abgemeldet,
+			&i.Meldung.Dns,
+			&i.Meldung.Dnf,
+			&i.Meldung.Dsq,
+			&i.Meldung.ZeitnahmeBemerkung,
+			&i.Meldung.StartNummer,
+			&i.Meldung.Abteilung,
+			&i.Meldung.Bahn,
+			&i.Meldung.Kosten,
+			&i.Meldung.RechnungsNummer,
+			&i.Meldung.VereinUuid,
+			&i.Meldung.RennenUuid,
+			&i.Rennen.Uuid,
+			&i.Rennen.SortID,
+			&i.Rennen.Nummer,
+			&i.Rennen.Bezeichnung,
+			&i.Rennen.BezeichnungLang,
+			&i.Rennen.Zusatz,
+			&i.Rennen.Leichtgewicht,
+			&i.Rennen.Geschlecht,
+			&i.Rennen.Bootsklasse,
+			&i.Rennen.BootsklasseLang,
+			&i.Rennen.Altersklasse,
+			&i.Rennen.AltersklasseLang,
+			&i.Rennen.Tag,
+			&i.Rennen.Wettkampf,
+			&i.Rennen.KostenEur,
+			&i.Rennen.Rennabstand,
+			&i.Rennen.Startzeit,
+			&i.Athlet.Uuid,
+			&i.Athlet.Vorname,
+			&i.Athlet.Name,
+			&i.Athlet.Geschlecht,
+			&i.Athlet.Jahrgang,
+			&i.Athlet.Gewicht,
+			&i.Athlet.Startberechtigt,
+			&i.Athlet.VereinUuid,
+			&i.Rolle,
+			&i.Position,
+			&i.Verein.Uuid,
+			&i.Verein.Name,
+			&i.Verein.Kurzform,
+			&i.Verein.Kuerzel,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getMeldungMinimal = `-- name: GetMeldungMinimal :one
 SELECT uuid, drv_revision_uuid, typ, bemerkung, abgemeldet, dns, dnf, dsq, zeitnahme_bemerkung, start_nummer, abteilung, bahn, kosten, rechnungs_nummer, verein_uuid, rennen_uuid FROM meldung
 WHERE uuid = $1 LIMIT 1
@@ -317,6 +425,34 @@ type SetMeldungRechnungsNummerParams struct {
 
 func (q *Queries) SetMeldungRechnungsNummer(ctx context.Context, arg SetMeldungRechnungsNummerParams) error {
 	_, err := q.db.Exec(ctx, setMeldungRechnungsNummer, arg.Uuid, arg.RechnungsNummer)
+	return err
+}
+
+const ummeldung = `-- name: Ummeldung :exec
+UPDATE 
+  link_meldung_athlet
+SET
+  athlet_uuid = $4
+WHERE
+  meldung_uuid = $1 AND
+  rolle = $2 AND
+  position = $3
+`
+
+type UmmeldungParams struct {
+	MeldungUuid uuid.UUID `json:"meldung_uuid"`
+	Rolle       Rolle     `json:"rolle"`
+	Position    int32     `json:"position"`
+	AthletUuid  uuid.UUID `json:"athlet_uuid"`
+}
+
+func (q *Queries) Ummeldung(ctx context.Context, arg UmmeldungParams) error {
+	_, err := q.db.Exec(ctx, ummeldung,
+		arg.MeldungUuid,
+		arg.Rolle,
+		arg.Position,
+		arg.AthletUuid,
+	)
 	return err
 }
 

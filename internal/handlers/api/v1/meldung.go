@@ -30,7 +30,79 @@ func GetMeldung(c *fiber.Ctx) error {
 		return err
 	}
 
-	m, err := crud.GetMeldungMinimal(*uuid)
+	m, err := crud.GetMeldung(*uuid)
+	if err != nil {
+		return err
+	}
+
+	return api.JSON(c, m)
+}
+
+func PostAbmeldung(c *fiber.Ctx) error {
+	params := new(AbmeldungsParams)
+	c.BodyParser(params)
+
+	uuid, err := uuid.Parse(params.Uuid)
+	if err != nil {
+		return err
+	}
+
+	err = crud.Abmeldung(uuid)
+	if err != nil {
+		return err
+	}
+
+	return api.JSON(c, "Meldung erfolgreich abgemeldet!")
+}
+
+type PostUmmeldungsParams struct {
+	MeldungUuid string                        `json:"meldung_uuid"`
+	Athleten    []PostNachmeldungAthletParams `json:"athleten"`
+}
+
+func PostUmmeldung(c *fiber.Ctx) error {
+	params := new(PostUmmeldungsParams)
+	c.BodyParser(params)
+	meldungUuid, err := uuid.Parse(params.MeldungUuid)
+	if err != nil {
+		return err
+	}
+
+	for _, a := range params.Athleten {
+		athUuid, err := uuid.Parse(a.AthletUuid)
+		if err != nil {
+			return err
+		}
+
+		var (
+			rolle    sqlc.Rolle
+			position int32
+		)
+
+		if a.Position == "stm" {
+			rolle = sqlc.RolleStm
+			position = 1
+		} else {
+			rolle = sqlc.RolleRuderer
+			positionI64, err := strconv.ParseInt(a.Position, 10, 32)
+			if err != nil {
+				return err
+			}
+			position = int32(positionI64)
+		}
+
+		err = crud.Ummeldung(sqlc.UmmeldungParams{
+			MeldungUuid: meldungUuid,
+			Rolle:       rolle,
+			Position:    position,
+			AthletUuid:  athUuid,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	m, err := crud.GetMeldung(meldungUuid)
 	if err != nil {
 		return err
 	}

@@ -69,6 +69,38 @@ func GetMeldungMinimal(uuid uuid.UUID) (Meldung, error) {
 	return Meldung{Meldung: m}, nil
 }
 
+func GetMeldung(uuid uuid.UUID) (Meldung, error) {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	q, err := DB.Queries.GetMeldung(ctx, uuid)
+	if err != nil {
+		if isNoRowError(err) {
+			return Meldung{}, &api.NOT_FOUND
+		}
+		return Meldung{}, err
+	}
+
+	athleten := []Athlet{}
+	rennen := RennenFromSqlc(q[0].Rennen, 0, 0)
+
+	for _, a := range q {
+		pos := int(a.Position)
+		athleten = append(athleten, Athlet{
+			Athlet:   a.Athlet,
+			Rolle:    &a.Rolle,
+			Position: &pos,
+		})
+	}
+
+	return Meldung{
+		Meldung:  q[0].Meldung,
+		Verein:   &Verein{Verein: q[0].Verein},
+		Rennen:   &rennen,
+		Athleten: athleten,
+	}, nil
+}
+
 func CheckMeldungSetzung() (bool, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
@@ -181,6 +213,13 @@ func GetAllMeldungForVerein(vereinUuid uuid.UUID) ([]Meldung, error) {
 	}
 
 	return meldungen, nil
+}
+
+func Ummeldung(p sqlc.UmmeldungParams) error {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	return DB.Queries.Ummeldung(ctx, p)
 }
 
 func Abmeldung(meldUuid uuid.UUID) error {
