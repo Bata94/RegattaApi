@@ -184,6 +184,8 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		leitungV1 := v1.Group("/leitung")
 		leitungV1.Get("/pdfFooter", api_v1.GetPdfFooter)
 		leitungV1.Get("/meldeergebnis", api_v1.GetMeldeergebnisHtml)
+		leitungV1.Get("/meldeergebnis/list", api_v1.GetMeldeergebnisList)
+		leitungV1.Get("/meldeergebnis/:filename", api_v1.GetMeldeergebnisFilename)
 		leitungV1.Post("/meldeergebnis", api_v1.GenerateMeldeergebnis)
 		leitungV1.Post("/drv_meldung_upload", api_v1.DrvMeldungUpload)
 		leitungV1.Post("/SetzungsLosung", api_v1.SetzungsLosung)

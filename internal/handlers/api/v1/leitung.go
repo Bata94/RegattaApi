@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -25,6 +26,19 @@ import (
 
 func GetPdfFooter(c *fiber.Ctx) error {
 	return handlers.RenderPdf(c, "footer", pdf_templates.PdfFooter())
+}
+
+func GetMeldeergebnisList(c *fiber.Ctx) error {
+	files, err := utils.GetFilenames("meldeergebnis")
+	if err != nil {
+		return err
+	}
+	return api.JSON(c, files)
+}
+
+func GetMeldeergebnisFilename(c *fiber.Ctx) error {
+	filename := c.Params("filename")
+	return c.SendFile(filepath.Join("./files", "meldeergebnis", filename), true)
 }
 
 func GetMeldeergebnisHtml(c *fiber.Ctx) error {
