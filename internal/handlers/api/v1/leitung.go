@@ -107,7 +107,7 @@ func GetMeldeergebnisHtml(c *fiber.Ctx) error {
 
 			abteilung := int(m.Abteilung)
 			mParsed := meldungEntry
-			// log.Debugf("RennNr %s numAbt %d lenAbt %d curAbt %d", r.Nummer, r.NumAbteilungen, len(rParsed.Abteilungen), abteilung)
+			log.Debugf("RennNr %s numAbt %d lenAbt %d curAbt %d", r.Nummer, r.NumAbteilungen, len(rParsed.Abteilungen), abteilung)
 			// BUG: Throws Error if Setzung not done
 			rParsed.Abteilungen[abteilung-1].Meldungen = append(rParsed.Abteilungen[abteilung-1].Meldungen, mParsed)
 		}

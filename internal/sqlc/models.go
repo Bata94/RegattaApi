@@ -236,6 +236,14 @@ type Pause struct {
 	NachRennenUuid uuid.UUID `json:"nach_rennen_uuid"`
 }
 
+type Rechnung struct {
+	Ulid       string      `json:"ulid"`
+	Nummer     string      `json:"nummer"`
+	Date       pgtype.Date `json:"date"`
+	VereinUuid uuid.UUID   `json:"verein_uuid"`
+	CostSum    int32       `json:"cost_sum"`
+}
+
 type Rennen struct {
 	Uuid             uuid.UUID   `json:"uuid"`
 	SortID           int32       `json:"sort_id"`
@@ -254,6 +262,16 @@ type Rennen struct {
 	KostenEur        pgtype.Int4 `json:"kosten_eur"`
 	Rennabstand      pgtype.Int4 `json:"rennabstand"`
 	Startzeit        pgtype.Text `json:"startzeit"`
+}
+
+type StartnummerAusgabe struct {
+	Ulid                      string      `json:"ulid"`
+	VereinUuid                uuid.UUID   `json:"verein_uuid"`
+	Date                      pgtype.Date `json:"date"`
+	Pfand                     int32       `json:"pfand"`
+	Kosten                    int32       `json:"kosten"`
+	StartnummerAusgegeben     string      `json:"startnummer_ausgegeben"`
+	StartnummerZurueckgegeben string      `json:"startnummer_zurueckgegeben"`
 }
 
 type User struct {
@@ -278,6 +296,14 @@ type Verein struct {
 	Name     string    `json:"name"`
 	Kurzform string    `json:"kurzform"`
 	Kuerzel  string    `json:"kuerzel"`
+}
+
+type Zahlung struct {
+	Ulid       string      `json:"ulid"`
+	Nummer     string      `json:"nummer"`
+	Date       pgtype.Date `json:"date"`
+	VereinUuid uuid.UUID   `json:"verein_uuid"`
+	Amount     int32       `json:"amount"`
 }
 
 type ZeitnahmeErgebni struct {

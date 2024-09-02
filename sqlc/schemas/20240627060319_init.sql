@@ -115,6 +115,35 @@ CREATE TABLE obmann (
   CONSTRAINT fk_verein FOREIGN KEY (verein_uuid) REFERENCES verein(uuid)
 );
 
+CREATE TABLE rechnung (
+  ulid ulid PRIMARY KEY DEFAULT gen_ulid(),
+  nummer text UNIQUE NOT NULL,
+  date date DEFAULT NOW() NOT NULL,
+  verein_uuid uuid NOT NULL,
+
+  cost_sum int NOT NULL
+);
+
+CREATE TABLE zahlung (
+  ulid ulid PRIMARY KEY DEFAULT gen_ulid(),
+  nummer text UNIQUE NOT NULL,
+  date date DEFAULT NOW() NOT NULL,
+  verein_uuid uuid NOT NULL,
+
+  amount int NOT NULL
+);
+
+CREATE TABLE startnummer_ausgabe (
+  ulid ulid PRIMARY KEY DEFAULT gen_ulid(),
+  verein_uuid uuid NOT NULL,
+  date date DEFAULT NOW() NOT NULL,
+
+  pfand int DEFAULT 20 NOT NULL,
+  kosten int DEFAULT 0 NOT NULL,
+  startnummer_ausgegeben text NOT NULL,
+  startnummer_zurueckgegeben text DEFAULT '' NOT NULL
+);
+
 CREATE TABLE zeitnahme_ergebnis (
   id SERIAL PRIMARY KEY,
   endzeit float NOT NULL,
