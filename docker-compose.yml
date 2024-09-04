@@ -62,7 +62,7 @@ services:
       - ./docs:/opt/app/docs
       - ./internal:/opt/app/internal
       - ./sqlc:/opt/app/sqlc
-      - ./files:/opt/app/files
+      # - ./files:/opt/app/files
       - ./main.go:/opt/app/main.go
     ports:
       - 8080:8080
@@ -71,14 +71,14 @@ services:
       - gotenberg
       - db
 
-  api:
-    build:
-      dockerfile: Dockerfile
-      context: ./
-      target: prod
-    ports:
-      - 8081:8080
-    env_file: ".env"
-    depends_on:
-      - gotenberg
-      - db
+  # api:
+  #   build:
+  #     dockerfile: Dockerfile
+  #     context: ./
+  #     target: prod
+  #   ports:
+  #     - 8081:8080
+  #   env_file: ".env"
+  #   depends_on:
+  #     - gotenberg
+  #     - db

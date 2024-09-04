@@ -9,13 +9,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bata94/RegattaApi/internal/handlers"
 	api "github.com/bata94/RegattaApi/internal/handlers/api"
 	api_v1 "github.com/bata94/RegattaApi/internal/handlers/api/v1"
 	"github.com/bata94/RegattaApi/internal/middleware"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
+
 	// "github.com/gofiber/fiber/v2/middleware/cache"
+	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 
@@ -148,6 +151,12 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 	// })
 	app.Get("/metrics", monitor.New(monitor.Config{Title: appName + " Metrics Page", Refresh: time.Duration(1) * time.Second}))
 	app.Get("/metricsApi", monitor.New(monitor.Config{APIOnly: true}))
+
+	app.Use("/ws", handlers.WsUpgrade)
+
+	go handlers.RunHub()
+
+	app.Get("/ws", websocket.New(api_v1.WsTestHandler))
 
 	if backendEnabled {
 		api := app.Group("/api")
