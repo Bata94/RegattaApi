@@ -141,7 +141,7 @@ CREATE TABLE startnummer_ausgabe (
   pfand int DEFAULT 20 NOT NULL,
   kosten int DEFAULT 0 NOT NULL,
   startnummer_ausgegeben text NOT NULL,
-  startnummer_zurueckgegeben text DEFAULT '' NOT NULL
+  startnummer_zurueckgegeben text
 );
 
 CREATE TABLE zeitnahme_ergebnis (

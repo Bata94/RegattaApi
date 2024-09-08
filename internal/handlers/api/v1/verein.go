@@ -21,7 +21,7 @@ func GetVerein(c *fiber.Ctx) error {
 		return err
 	}
 
-	v, err := crud.GetVereinMinimal(*uuid)
+	v, err := crud.GetVerein(*uuid)
 	if err != nil {
 		return err
 	}

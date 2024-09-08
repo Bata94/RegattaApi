@@ -13,7 +13,10 @@ import (
 
 type Verein struct {
 	sqlc.Verein
-	Athleten []Athlet `json:"athleten"`
+	Athleten     []Athlet `json:"athleten"`
+	GesKosten    *int     `json:"ges_kosten"`
+	GesZahlungen *int     `json:"ges_zahlungen"`
+	Saldo        *int     `json:"saldo"`
 }
 
 func (verein *Verein) GetRechnungsnummern() ([]string, error) {
@@ -99,6 +102,38 @@ func GetAllVerein() ([]Verein, error) {
 	}
 
 	return vLs, err
+}
+
+func GetVerein(uuid uuid.UUID) (Verein, error) {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	q, err := DB.Queries.GetVerein(ctx, uuid)
+	if err != nil {
+		if isNoRowError(err) {
+			return Verein{}, &api.NOT_FOUND
+		}
+		return Verein{}, err
+	}
+
+	gesKostenI64, ok := q.GesKosten.(int64)
+	if !ok {
+		return Verein{}, errors.New("Error while converting Gesamt Kosten to int")
+	}
+	gesZahlungenI64, ok := q.GesZahlungen.(int64)
+	if !ok {
+		return Verein{}, errors.New("Error while converting Gesamt Zahlung to int")
+	}
+	gesKosten := int(gesKostenI64)
+	gesZahlungen := int(gesZahlungenI64)
+	saldo := gesZahlungen - gesKosten
+
+	return Verein{
+		Verein:       q.Verein,
+		GesKosten:    &gesKosten,
+		GesZahlungen: &gesZahlungen,
+		Saldo:        &saldo,
+	}, nil
 }
 
 func GetVereinMinimal(uuid uuid.UUID) (Verein, error) {

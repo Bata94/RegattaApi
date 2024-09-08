@@ -80,6 +80,74 @@ func (q *Queries) GetAllVerein(ctx context.Context) ([]Verein, error) {
 	return items, nil
 }
 
+const getRechnungungenByVerein = `-- name: GetRechnungungenByVerein :many
+SELECT
+  ulid, nummer, date, verein_uuid, cost_sum
+FROM
+  rechnung
+WHERE
+  verein_uuid = $1
+ORDER BY
+  ulid ASC
+`
+
+func (q *Queries) GetRechnungungenByVerein(ctx context.Context, vereinUuid uuid.UUID) ([]Rechnung, error) {
+	rows, err := q.db.Query(ctx, getRechnungungenByVerein, vereinUuid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Rechnung{}
+	for rows.Next() {
+		var i Rechnung
+		if err := rows.Scan(
+			&i.Ulid,
+			&i.Nummer,
+			&i.Date,
+			&i.VereinUuid,
+			&i.CostSum,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getVerein = `-- name: GetVerein :one
+SELECT
+  verein.uuid, verein.name, verein.kurzform, verein.kuerzel,
+  (SELECT COALESCE(SUM(meldung.kosten), 0) FROM meldung WHERE verein.uuid = meldung.verein_uuid) as ges_kosten,
+  (SELECT COALESCE(SUM(zahlung.amount), 0) FROM zahlung WHERE verein.uuid = zahlung.verein_uuid) as ges_zahlungen
+FROM
+  verein
+WHERE
+  verein.uuid = $1
+`
+
+type GetVereinRow struct {
+	Verein       Verein      `json:"verein"`
+	GesKosten    interface{} `json:"ges_kosten"`
+	GesZahlungen interface{} `json:"ges_zahlungen"`
+}
+
+func (q *Queries) GetVerein(ctx context.Context, argUuid uuid.UUID) (GetVereinRow, error) {
+	row := q.db.QueryRow(ctx, getVerein, argUuid)
+	var i GetVereinRow
+	err := row.Scan(
+		&i.Verein.Uuid,
+		&i.Verein.Name,
+		&i.Verein.Kurzform,
+		&i.Verein.Kuerzel,
+		&i.GesKosten,
+		&i.GesZahlungen,
+	)
+	return i, err
+}
+
 const getVereinMinimal = `-- name: GetVereinMinimal :one
 SELECT uuid, name, kurzform, kuerzel FROM verein
 WHERE uuid = $1 LIMIT 1

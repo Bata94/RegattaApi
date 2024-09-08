@@ -15,6 +15,7 @@ func FormatListOfStructs(vL ...interface{}) string {
 	return retStr
 }
 
+// TODO: catch nil Pointer on value
 func FormatStruct(v interface{}) string {
 	val := reflect.ValueOf(v)
 	typ := val.Type()
