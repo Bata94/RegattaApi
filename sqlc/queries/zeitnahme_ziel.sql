@@ -6,6 +6,11 @@ WHERE id = $1 LIMIT 1;
 SELECT * FROM zeitnahme_ziel
 ORDER BY id ASC;
 
+-- name: GetAllOpenZeitnahmeZiel :many
+SELECT * FROM zeitnahme_ziel
+WHERE verarbeitet = false
+ORDER BY id DESC;
+
 -- name: CreateZeitnahmeZiel :one
 INSERT INTO zeitnahme_ziel (
   rennen_nummer,
@@ -20,3 +25,19 @@ INSERT INTO zeitnahme_ziel (
   $4,
   $5
 ) RETURNING *;
+
+-- name: UpdateZeitnahmeZiel :one
+UPDATE
+  zeitnahme_ziel
+SET
+  rennen_nummer = $2,
+  start_nummer = $3
+WHERE 
+  id = $1
+RETURNING 
+  *;
+
+-- name: DeleteZeitnahmeZiel :one
+DELETE FROM zeitnahme_ziel
+WHERE id = $1
+RETURNING *;

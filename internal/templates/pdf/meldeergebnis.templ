@@ -1,6 +1,7 @@
 package pdf_templates
 
 import (
+  "fmt"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	"strconv"
 	"time"
@@ -19,17 +20,35 @@ func curDayCheck(i int, rennen []RennenMeldeergebnisPDF) string {
 	return ""
 }
 
+func curWettkampfCheck(i int, rennen []RennenMeldeergebnisPDF) string {
+	if i == 0 || rennen[i-1].Wettkampf != rennen[i].Wettkampf {
+    return fmt.Sprint(rennen[i].Wettkampf) + ":"
+	}
+	return ""
+}
+
+func pauseCheck(i int, rennen []RennenMeldeergebnisPDF, pausen []PausenMeldeergebnisPDF) string {
+  for _, p := range pausen {
+    if p.NachRennenUuid == rennen[i].Uuid {
+      return fmt.Sprint(">>> Pause für ", p.Laenge, " Minuten <<<")
+    }
+  }
+  return ""
+}
+
 type RennenMeldeergebnisPDF struct {
-	RennNr         string
-	Bezeichnung    string
-	Startzeit      string
-	Rennabstand    int
-	Tag            string
-	NumMeldungen   int
-	NumAbteilungen int
-	Wettkampf      sqlc.Wettkampf
-	Abteilungen    []AbteilungenMeldeergebnisPDF
-	Abmeldungen    []MeldungMeldeergebnisPDF
+  Uuid string
+	RennNr            string
+	Bezeichnung       string
+	BezeichnungZusatz string
+	Startzeit         string
+	Rennabstand       int
+	Tag               string
+	NumMeldungen      int
+	NumAbteilungen    int
+	Wettkampf         sqlc.Wettkampf
+	Abteilungen       []AbteilungenMeldeergebnisPDF
+	Abmeldungen       []MeldungMeldeergebnisPDF
 }
 
 type AbteilungenMeldeergebnisPDF struct {
@@ -42,6 +61,12 @@ type MeldungMeldeergebnisPDF struct {
 	Bahn        int
 	Verein      string
 	Teilnehmer  string
+}
+
+type PausenMeldeergebnisPDF struct {
+  Id int
+  Laenge int
+  NachRennenUuid string
 }
 
 templ MeldungsEntry(m MeldungMeldeergebnisPDF) {
@@ -61,13 +86,14 @@ templ MeldungsEntry(m MeldungMeldeergebnisPDF) {
 	</tr>
 }
 
-templ MeldeErgebnis(rennen []RennenMeldeergebnisPDF) {
+templ MeldeErgebnis(rennen []RennenMeldeergebnisPDF, pausen []PausenMeldeergebnisPDF) {
 	<h1>Meldeergebnis</h1>
 	<h1>34. Mülheimer Jungen- und Mädchen-Regatta 2024</h1>
 	<h6 class="mb-8">Stand: { time.Now().Format("02.01.2006 - 15:04:05 Uhr") }</h6>
 	for i, r := range rennen {
 		<div class="w-full no-break">
-			<h1>{ curDayCheck(i, rennen) }</h1>
+			<h1 class="underline underline-offset-2">{ curDayCheck(i, rennen) }</h1>
+			<h1>{ curWettkampfCheck(i, rennen) }</h1>
 			if r.NumAbteilungen != 0 {
 				<h2 class="underline underline-offset-2">Rennen { r.RennNr } - { r.Bezeichnung }</h2>
 				<h4>
@@ -87,7 +113,7 @@ templ MeldeErgebnis(rennen []RennenMeldeergebnisPDF) {
 						Meldung
 					}
 					if r.Wettkampf != sqlc.WettkampfLangstrecke {
-						, in { strconv.Itoa(r.NumAbteilungen) }
+						in { strconv.Itoa(r.NumAbteilungen) }
 						if r.NumAbteilungen> 1 {
 							Abteilungen
 						} else {
@@ -110,7 +136,7 @@ templ MeldeErgebnis(rennen []RennenMeldeergebnisPDF) {
 					</div>
 				}
 			} else {
-				<h2 class="line-through">Rennen { r.RennNr } - { r.Bezeichnung }</h2>
+				<h2 class="line-through">Rennen { r.RennNr } - { r.Bezeichnung } { r.BezeichnungZusatz }</h2>
 				// <!--- <h5 class="mx-auto text-center text-red-600 font-bold">Keine Meldungen, Rennen entfällt!</h5> --->
 			}
 			if len(r.Abmeldungen) != 0 {
@@ -123,6 +149,7 @@ templ MeldeErgebnis(rennen []RennenMeldeergebnisPDF) {
 					</table>
 				</div>
 			}
+      <h2 class="text-center">{ pauseCheck(i, rennen, pausen) }</h2>
 		</div>
 	}
 }

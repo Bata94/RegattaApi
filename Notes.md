@@ -55,6 +55,9 @@
     - [ ] User erstellen
     - [ ] User Gruppen zuweisen
     - [ ] UserGruppen erstellen
+- [ ] API Refactor:
+    - [ ] Env -> Config Object
+    - [ ] Enable/Disable Features/Microservices via Env
 - [ ] Zugriff für Obleute auf Büro/Vereinsverwaltung
 
 ## Offene Fragen:

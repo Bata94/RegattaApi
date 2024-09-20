@@ -6,6 +6,11 @@ WHERE id = $1 LIMIT 1;
 SELECT * FROM zeitnahme_start
 ORDER BY id ASC;
 
+-- name: GetOpenStarts :many
+SELECT * FROM zeitnahme_start
+WHERE verarbeitet = false
+ORDER BY id ASC;
+
 -- name: CreateZeitnahmeStart :one
 INSERT INTO zeitnahme_start (
   rennen_nummer,
@@ -20,3 +25,7 @@ INSERT INTO zeitnahme_start (
   $4,
   $5
 ) RETURNING *;
+
+-- name: DeleteZeitnahmeStart :exec
+DELETE FROM zeitnahme_start
+WHERE id = $1;

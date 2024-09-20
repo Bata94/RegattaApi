@@ -29,7 +29,7 @@ INSERT INTO zeitnahme_start (
 
 type CreateZeitnahmeStartParams struct {
 	RennenNummer    pgtype.Text      `json:"rennen_nummer"`
-	StartNummer     string           `json:"start_nummer"`
+	StartNummer     pgtype.Text      `json:"start_nummer"`
 	TimeClient      pgtype.Timestamp `json:"time_client"`
 	TimeServer      pgtype.Timestamp `json:"time_server"`
 	MeasuredLatency pgtype.Int4      `json:"measured_latency"`
@@ -56,6 +56,16 @@ func (q *Queries) CreateZeitnahmeStart(ctx context.Context, arg CreateZeitnahmeS
 	return i, err
 }
 
+const deleteZeitnahmeStart = `-- name: DeleteZeitnahmeStart :exec
+DELETE FROM zeitnahme_start
+WHERE id = $1
+`
+
+func (q *Queries) DeleteZeitnahmeStart(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, deleteZeitnahmeStart, id)
+	return err
+}
+
 const getAllZeitnahmeStart = `-- name: GetAllZeitnahmeStart :many
 SELECT id, rennen_nummer, start_nummer, time_client, time_server, measured_latency, verarbeitet FROM zeitnahme_start
 ORDER BY id ASC
@@ -63,6 +73,40 @@ ORDER BY id ASC
 
 func (q *Queries) GetAllZeitnahmeStart(ctx context.Context) ([]ZeitnahmeStart, error) {
 	rows, err := q.db.Query(ctx, getAllZeitnahmeStart)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ZeitnahmeStart{}
+	for rows.Next() {
+		var i ZeitnahmeStart
+		if err := rows.Scan(
+			&i.ID,
+			&i.RennenNummer,
+			&i.StartNummer,
+			&i.TimeClient,
+			&i.TimeServer,
+			&i.MeasuredLatency,
+			&i.Verarbeitet,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getOpenStarts = `-- name: GetOpenStarts :many
+SELECT id, rennen_nummer, start_nummer, time_client, time_server, measured_latency, verarbeitet FROM zeitnahme_start
+WHERE verarbeitet = false
+ORDER BY id ASC
+`
+
+func (q *Queries) GetOpenStarts(ctx context.Context) ([]ZeitnahmeStart, error) {
+	rows, err := q.db.Query(ctx, getOpenStarts)
 	if err != nil {
 		return nil, err
 	}

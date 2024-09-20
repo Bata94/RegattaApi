@@ -152,11 +152,7 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 	app.Get("/metrics", monitor.New(monitor.Config{Title: appName + " Metrics Page", Refresh: time.Duration(1) * time.Second}))
 	app.Get("/metricsApi", monitor.New(monitor.Config{APIOnly: true}))
 
-	app.Use("/ws", handlers.WsUpgrade)
-
 	go handlers.RunHub()
-
-	app.Get("/ws", websocket.New(api_v1.WsTestHandler))
 
 	if backendEnabled {
 		api := app.Group("/api")
@@ -238,6 +234,12 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		vereinV1.Get("/:uuid/athlet", api_v1.GetAllAthletenForVerein)
 		vereinV1.Get("/:uuid/waage", api_v1.GetAllAthletenForVereinWaage)
 		vereinV1.Get("/:uuid/startberechtigung", api_v1.GetAllAthletenForVereinMissStartber)
+
+		zeitnahmeV1 := v1.Group("/zeitnahme")
+		zeitnahmeV1.Use("/ziel", handlers.WsUpgrade) // Need this?!?
+		zeitnahmeV1.Get("/ziel", websocket.New(api_v1.WsZeitnahmeZiel))
+		zeitnahmeV1.Post("/start", api_v1.PostZeitnahmeStart)
+		zeitnahmeV1.Get("/openStarts", api_v1.GetOpenStarts)
 	}
 
 	if frontendEnabled {

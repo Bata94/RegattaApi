@@ -271,7 +271,7 @@ type StartnummerAusgabe struct {
 	Pfand                     int32       `json:"pfand"`
 	Kosten                    int32       `json:"kosten"`
 	StartnummerAusgegeben     string      `json:"startnummer_ausgegeben"`
-	StartnummerZurueckgegeben string      `json:"startnummer_zurueckgegeben"`
+	StartnummerZurueckgegeben pgtype.Text `json:"startnummer_zurueckgegeben"`
 }
 
 type User struct {
@@ -317,7 +317,7 @@ type ZeitnahmeErgebni struct {
 type ZeitnahmeStart struct {
 	ID              int32            `json:"id"`
 	RennenNummer    pgtype.Text      `json:"rennen_nummer"`
-	StartNummer     string           `json:"start_nummer"`
+	StartNummer     pgtype.Text      `json:"start_nummer"`
 	TimeClient      pgtype.Timestamp `json:"time_client"`
 	TimeServer      pgtype.Timestamp `json:"time_server"`
 	MeasuredLatency pgtype.Int4      `json:"measured_latency"`
@@ -327,7 +327,7 @@ type ZeitnahmeStart struct {
 type ZeitnahmeZiel struct {
 	ID              int32            `json:"id"`
 	RennenNummer    pgtype.Text      `json:"rennen_nummer"`
-	StartNummer     string           `json:"start_nummer"`
+	StartNummer     pgtype.Text      `json:"start_nummer"`
 	TimeClient      pgtype.Timestamp `json:"time_client"`
 	TimeServer      pgtype.Timestamp `json:"time_server"`
 	MeasuredLatency pgtype.Int4      `json:"measured_latency"`

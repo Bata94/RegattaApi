@@ -42,6 +42,10 @@ func GetMeldeergebnisFilename(c *fiber.Ctx) error {
 }
 
 func GetMeldeergebnisHtml(c *fiber.Ctx) error {
+	pLs, err := crud.GetAllPausen()
+	if err != nil {
+		return err
+	}
 	rLs, err := crud.GetAllRennenWithAthlet(crud.GetAllRennenParams{
 		GetMeldungen:  true,
 		ShowEmpty:     true,
@@ -52,26 +56,37 @@ func GetMeldeergebnisHtml(c *fiber.Ctx) error {
 		return err
 	}
 
+	pLsParsed := []pdf_templates.PausenMeldeergebnisPDF{}
+	for _, p := range pLs {
+		pLsParsed = append(pLsParsed, pdf_templates.PausenMeldeergebnisPDF{
+			Id:             int(p.ID),
+			Laenge:         int(p.Laenge),
+			NachRennenUuid: p.NachRennenUuid.String(),
+		})
+	}
+
 	rLsParsed := []pdf_templates.RennenMeldeergebnisPDF{}
 	for _, r := range rLs {
 		rParsed := pdf_templates.RennenMeldeergebnisPDF{
-			RennNr:         r.Nummer,
-			Bezeichnung:    r.Bezeichnung,
-			Startzeit:      r.Startzeit,
-			Rennabstand:    r.Rennabstand,
-			Tag:            string(r.Tag),
-			NumMeldungen:   *r.NumMeldungen,
-			NumAbteilungen: *r.NumAbteilungen,
-			Wettkampf:      r.Wettkampf,
-			Abteilungen:    make([]pdf_templates.AbteilungenMeldeergebnisPDF, *r.NumAbteilungen),
-			Abmeldungen:    []pdf_templates.MeldungMeldeergebnisPDF{},
+			Uuid:              r.Uuid.String(),
+			RennNr:            r.Nummer,
+			Bezeichnung:       r.Bezeichnung,
+			BezeichnungZusatz: r.Zusatz,
+			Startzeit:         r.Startzeit,
+			Rennabstand:       r.Rennabstand,
+			Tag:               string(r.Tag),
+			NumMeldungen:      *r.NumMeldungen,
+			NumAbteilungen:    *r.NumAbteilungen,
+			Wettkampf:         r.Wettkampf,
+			Abteilungen:       make([]pdf_templates.AbteilungenMeldeergebnisPDF, *r.NumAbteilungen),
+			Abmeldungen:       []pdf_templates.MeldungMeldeergebnisPDF{},
 		}
 
 		for i := range rParsed.Abteilungen {
 			rParsed.Abteilungen[i].Nummer = i + 1
 		}
 
-		if *r.NumMeldungen == 0 {
+		if len(r.Meldungen) == 0 {
 			rLsParsed = append(rLsParsed, rParsed)
 			continue
 		}
@@ -118,7 +133,7 @@ func GetMeldeergebnisHtml(c *fiber.Ctx) error {
 	return handlers.RenderPdf(
 		c,
 		fmt.Sprintf("Meldeergebnis_%s", time.Now().Format("2006-01-02_15-04-05")),
-		pdf_templates.MeldeErgebnis(rLsParsed),
+		pdf_templates.MeldeErgebnis(rLsParsed, pLsParsed),
 	)
 }
 
@@ -204,6 +219,7 @@ type DrvEntries struct {
 	Name       string    `json:"name"`
 	ShortName  string    `json:"shortname"`
 	Sequence   int       `json:"sequence"`
+	Status     int       `json:"status"` // 1 default Meldung, 8 Abmeldung, 256 Alternativ Meldung
 	// combination, alternative, status, alternative_event_id ???
 	AltEventID uuid.UUID           `json:"alternative_event_id"`
 	Members    []DrvEntriesMembers `json:"members"`
@@ -377,9 +393,17 @@ func ImportDrvJson(filePath string) error {
 			sex = strings.ToLower(r.Sex)
 		}
 
+		// TODO: Quickfix pre import!
+		sortOrder := int32(r.Days[0].SortOrder)
+
+		if r.Days[0].Date == "2024-09-29" {
+			log.Debug("SortOrder Sonntag!")
+			sortOrder += 500
+		}
+
 		newRennen := sqlc.CreateRennenParams{
 			Uuid:             r.Id,
-			SortID:           int32(r.Days[0].SortOrder),
+			SortID:           sortOrder,
 			Nummer:           r.Number,
 			Bezeichnung:      r.Code,
 			BezeichnungLang:  r.Name,
@@ -459,22 +483,26 @@ func ImportDrvJson(filePath string) error {
 		}
 		if meldung.Uuid != uuid.Nil {
 			if meldung.DrvRevisionUuid.ClockSequence() == m.RevisionId.ClockSequence() {
+				log.Debug("Meldung exists in DB, skipping...")
 				continue
 			}
 
+			log.Debug("MeldUuid: ", meldung.Uuid)
 			log.Debug("Meld in DB Rev: ", meldung.DrvRevisionUuid.ClockSequence())
 			log.Debug("Meld in JSON Rev: ", m.RevisionId.ClockSequence())
 
 			if meldung.DrvRevisionUuid.ClockSequence() > m.RevisionId.ClockSequence() {
 				retErr := api.INTERNAL_SERVER_ERROR
 				retErr.Msg = fmt.Sprintf("Meldung in DB is newer than in JSON! Das sollte nicht passieren! MeldungID: %s", m.Id)
-				return &retErr
+				log.Error(retErr)
+				continue
 			}
 
 			// TODO: Update Meldung
 			retErr := api.INTERNAL_SERVER_ERROR
 			retErr.Msg = fmt.Sprintf("Min. eine Meldung in JSON is newer than in DB! Dies ist noch nicht implementiert. Bitte an Admin wenden! MeldungID: %s", m.Id)
-			return &retErr
+			log.Error(retErr)
+			continue
 		}
 
 		// "Default Values"
@@ -490,7 +518,7 @@ func ImportDrvJson(filePath string) error {
 		// Account for Alt Meldung
 		// TODO: Add Col to save cor MeldUUID
 		if m.AltEventID != uuid.Nil {
-			log.Debug("Alternativ Meldung gefunden!")
+			log.Debug("Alternativ Meldung gefunden! Status: ", m.Status)
 			typ += fmt.Sprintf(" - Alternative zu RennenUUID: %s", m.AltEventID.String())
 			abgemeldet = true
 			kosten = int32(0)

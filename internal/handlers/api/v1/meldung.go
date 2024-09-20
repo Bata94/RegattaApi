@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
@@ -126,15 +127,18 @@ func PostNachmeldung(c *fiber.Ctx) error {
 	params := new(PostNachmeldungParams)
 	err := c.BodyParser(params)
 	if err != nil {
+		log.Error("Parm parse Error: ", params)
 		return err
 	}
 
 	vereinUuid, err := uuid.Parse(params.VereinUuid)
 	if err != nil {
+		log.Error("Verein Error: ", vereinUuid)
 		return err
 	}
 	rennenUuid, err := uuid.Parse(params.RennenUuid)
 	if err != nil {
+		log.Error("Rennen Error: ", rennenUuid)
 		return err
 	}
 

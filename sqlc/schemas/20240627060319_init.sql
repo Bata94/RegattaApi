@@ -31,7 +31,7 @@ CREATE TABLE athlet (
 CREATE TABLE zeitnahme_start (
   id SERIAL PRIMARY KEY,
   rennen_nummer text,
-  start_nummer text NOT NULL,
+  start_nummer text,
   time_client timestamp NOT NULL,
   time_server timestamp NOT NULL,
   measured_latency int,
@@ -41,7 +41,7 @@ CREATE TABLE zeitnahme_start (
 CREATE TABLE zeitnahme_ziel (
   id SERIAL PRIMARY KEY,
   rennen_nummer text,
-  start_nummer text NOT NULL,
+  start_nummer text,
   time_client timestamp NOT NULL,
   time_server timestamp NOT NULL,
   measured_latency int,

@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
@@ -23,12 +26,37 @@ func WsUpgrade(c *fiber.Ctx) error {
 	return fiber.ErrUpgradeRequired
 }
 
+func sendPing(conn *websocket.Conn, interval int) {
+	pingPeriod := time.Duration(interval) * time.Second
+	pingTicker := time.NewTicker(pingPeriod)
+	defer pingTicker.Stop()
+	time.Sleep(pingPeriod) // wait a while before start ping,
+	for {
+		select {
+		case <-pingTicker.C:
+			pingMsg := fmt.Sprint("ping ", time.Now().Format("2006-01-02_15-04-05.999"), " UTC")
+			log.Debug(pingMsg)
+			err := conn.WriteControl(websocket.PingMessage, []byte(pingMsg), time.Now().Add(time.Second*5))
+			if err != nil {
+				log.Error(err)
+			}
+			err = conn.WriteMessage(websocket.TextMessage, []byte(pingMsg))
+			if err != nil {
+				log.Error(err)
+			}
+		}
+	}
+}
+
 func RunHub() {
 	for {
 		select {
 		case connection := <-Register:
+			// go sendPing(connection, 2)
+
 			Clients[connection] = Client{}
 			log.Debug("connection registered")
+			// Broadcast <- "New Client"
 
 		case message := <-Broadcast:
 			log.Debug("message received:", message)

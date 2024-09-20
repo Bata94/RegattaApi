@@ -1,4 +1,5 @@
 volumes:
+  api-dev-files:
   postgres:
   pgadmin:
 
@@ -62,7 +63,7 @@ services:
       - ./docs:/opt/app/docs
       - ./internal:/opt/app/internal
       - ./sqlc:/opt/app/sqlc
-      # - ./files:/opt/app/files
+      - api-dev-files:/opt/app/files
       - ./main.go:/opt/app/main.go
     ports:
       - 8080:8080
