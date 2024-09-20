@@ -84,6 +84,29 @@ func WsZeitnahmeZiel(c *websocket.Conn) {
 					retMsg = string(qJson)
 				}
 			} else if msg.Method == "put" {
+				if msg.Data == nil {
+					retMsg = "Bad Request: TimeClient or MeasuredLatency is nil or unparsable"
+					goto ReturnMessage
+				}
+
+				zeitnahme, err := crud.GetZeitnahmeZiel(int(msg.Data.ID))
+				if err != nil {
+					retMsg = "Error: " + err.Error()
+					goto ReturnMessage
+				}
+
+				log.Debug(zeitnahme, msg.Data)
+				q, err := crud.UpdateZeitnahmeZiel(zeitnahme, msg.Data.StartNummer, msg.Data.RennenNummer)
+				if err != nil {
+					retMsg = "Error: " + err.Error()
+					goto ReturnMessage
+				}
+
+				qJson, err := json.Marshal(fiber.Map{
+					"update": q,
+				})
+
+				c.WriteMessage(1, qJson)
 			} else if msg.Method == "delete" {
 				if msg.Data == nil {
 					retMsg = "Bad Request: ID is nil or unparsable"

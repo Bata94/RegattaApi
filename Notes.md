@@ -1,11 +1,9 @@
 ## TODOs:
 - [ ] Zeitnahme
     - [ ] Websocket:
-        - [ ] Start
         - [ ] Ziel
-    - [ ] HTTP as Fallback:
+    - [ ] HTTP:
         - [ ] Start
-        - [ ] Ziel
     - [ ] Import von Offline SQLite Tables
     - [ ] Microservice für Ergebnis Berechnung
 - [ ] Büro:
