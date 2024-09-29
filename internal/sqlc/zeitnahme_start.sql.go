@@ -152,3 +152,14 @@ func (q *Queries) GetZeitnahmeStart(ctx context.Context, id int32) (ZeitnahmeSta
 	)
 	return i, err
 }
+
+const setZeitnahmeStartVerarbeitet = `-- name: SetZeitnahmeStartVerarbeitet :exec
+UPDATE zeitnahme_start
+SET verarbeitet = true
+WHERE id = $1
+`
+
+func (q *Queries) SetZeitnahmeStartVerarbeitet(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, setZeitnahmeStartVerarbeitet, id)
+	return err
+}

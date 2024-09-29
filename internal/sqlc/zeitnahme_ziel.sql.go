@@ -164,6 +164,17 @@ func (q *Queries) GetZeitnahmeZiel(ctx context.Context, id int32) (ZeitnahmeZiel
 	return i, err
 }
 
+const setZeitnahmeZielVerarbeitet = `-- name: SetZeitnahmeZielVerarbeitet :exec
+UPDATE zeitnahme_ziel
+SET verarbeitet = true
+WHERE id = $1
+`
+
+func (q *Queries) SetZeitnahmeZielVerarbeitet(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, setZeitnahmeZielVerarbeitet, id)
+	return err
+}
+
 const updateZeitnahmeZiel = `-- name: UpdateZeitnahmeZiel :one
 UPDATE
   zeitnahme_ziel

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -83,10 +84,16 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 	// webCompressor := compress.New()
 	apiCompressor := compress.New()
 
+	prefork := false
+	preforkStr := cmp.Or(os.Getenv("PREFORK"), "false")
+	if strings.ToLower(preforkStr) == "true" {
+		prefork = true
+	}
+
 	app := fiber.New(fiber.Config{
 		ServerHeader:      appName,
 		AppName:           appName,
-		Prefork:           false,
+		Prefork:           prefork,
 		ErrorHandler:      ErrorHandler,
 		EnablePrintRoutes: false,
 		JSONEncoder:       json.Marshal,
@@ -183,6 +190,7 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		bueroV1.Post("/startnummernausgabe", api_v1.StartnummernAusgabe)
 		bueroV1.Post("/startnummernwechsel", api_v1.StartnummernWechsel)
 		bueroV1.Post("/kasse/einzahlung", api_v1.KasseEinzahlung)
+		bueroV1.Post("/kasse/rechnung/all", api_v1.KasseCreateRechnungAllVereine)
 		bueroV1.Get("/kasse/rechnung/:uuid", api_v1.KasseCreateRechnungHTML)
 		bueroV1.Post("/kasse/rechnung/:uuid", api_v1.KasseCreateRechnungPDF)
 
@@ -192,6 +200,8 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		leitungV1.Get("/meldeergebnis/list", api_v1.GetMeldeergebnisList)
 		leitungV1.Get("/meldeergebnis/:filename", api_v1.GetMeldeergebnisFilename)
 		leitungV1.Post("/meldeergebnis", api_v1.GenerateMeldeergebnis)
+		leitungV1.Get("/ergebnis", api_v1.GenerateErgebnisHtml)
+		leitungV1.Post("/ergebnis", api_v1.GenerateErgebnis)
 		leitungV1.Post("/drv_meldung_upload", api_v1.DrvMeldungUpload)
 		leitungV1.Post("/SetzungsLosung", api_v1.SetzungsLosung)
 		leitungV1.Post("/SetzungsLosung/reset", api_v1.ResetSetzung)
@@ -240,6 +250,7 @@ func Init(frontendEnabled, backendEnabled bool, port int) {
 		zeitnahmeV1.Get("/ziel", websocket.New(api_v1.WsZeitnahmeZiel))
 		zeitnahmeV1.Post("/start", api_v1.PostZeitnahmeStart)
 		zeitnahmeV1.Get("/openStarts", api_v1.GetOpenStarts)
+		zeitnahmeV1.Post("/genErgebnis", api_v1.GenerateEndZeit)
 	}
 
 	if frontendEnabled {

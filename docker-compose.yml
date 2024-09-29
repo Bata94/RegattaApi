@@ -2,8 +2,24 @@ volumes:
   api-dev-files:
   postgres:
   pgadmin:
+  tailscale-state:
 
 services:
+  tailscale:
+    image: tailscale/tailscale:latest
+    hostname: docker-xps
+    environment:
+      - TS_AUTHKEY=tskey-auth-kwVs44FFW311CNTRL-RB2LaBrke2VFgtdCRGZR2V4jwf4ayPFUV
+      - TS_STATE_DIR=/var/lib/tailscale
+    volumes:
+      - tailscale-state:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - net_admin
+      - sys_module
+    restart: unless-stopped
+
+
   gotenberg:
     image: gotenberg/gotenberg:8
     ports:
@@ -66,20 +82,29 @@ services:
       - api-dev-files:/opt/app/files
       - ./main.go:/opt/app/main.go
     ports:
-      - 8080:8080
-    env_file: ".env"
+      - 8081:8080
+    env_file: "dev.env"
     depends_on:
       - gotenberg
       - db
 
-  # api:
-  #   build:
-  #     dockerfile: Dockerfile
-  #     context: ./
-  #     target: prod
-  #   ports:
-  #     - 8081:8080
-  #   env_file: ".env"
-  #   depends_on:
-  #     - gotenberg
-  #     - db
+  api:
+    build:
+      dockerfile: Dockerfile
+      context: ./
+      target: prod
+    # ports:
+    #   - 8080:8080
+    env_file: "prod.env"
+    network_mode: service:tailscale
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 2048M
+    volumes:
+      - api-dev-files:/opt/app/files
+    depends_on:
+      - tailscale
+      - gotenberg
+      - db

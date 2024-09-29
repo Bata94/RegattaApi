@@ -8,60 +8,21 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
-	"github.com/wneessen/go-mail"
 )
 
 func TestHandler(c *fiber.Ctx) error {
-	// Sender data.
-	from := ""
-	password := ""
+	err := utils.SendMail(utils.SendMailParams{
+		To: []string{
+			"bastian.sievers@gmail.com",
+			"bastian.sievers+test@gmail.com",
+		},
+		CC:      []string{},
+		Subject: "Test Mail",
+		Body:    "Dies ist eine TestMail",
+		Files:   []string{},
+	})
 
-	// Receiver email address.
-	to := ""
-
-	// smtp server configuration.
-	smtpHost := ""
-	smtpPort := 0
-
-	// Message.
-	subject := "Test Mail Meldeergebnis"
-	message := "This is a test email message. Sending Meldeergebnis"
-
-	m := mail.NewMsg()
-	if err := m.From(from); err != nil {
-		log.Fatalf("failed to set From address: %s", err)
-		return err
-	}
-	if err := m.To(to); err != nil {
-		log.Fatalf("failed to set To address: %s", err)
-		return err
-	}
-
-	files, err := utils.GetFilenames("meldeergebnis")
 	if err != nil {
-		return err
-	}
-	log.Debug(files)
-
-	if len(files) != 0 {
-		log.Warn("Files found attaching ", files[len(files)-1])
-		m.AttachFile("/opt/app/files/meldeergebnis/" + files[len(files)-1])
-	}
-
-	m.Subject(subject)
-	m.SetBodyString(mail.TypeTextPlain, message)
-	client, err := mail.NewClient(
-		smtpHost,
-		mail.WithPort(smtpPort),
-		mail.WithSMTPAuth(mail.SMTPAuthPlain),
-		mail.WithUsername(from),
-		mail.WithPassword(password))
-	if err != nil {
-		log.Fatalf("failed to create mail client: %s", err)
-		return err
-	}
-	if err := client.DialAndSend(m); err != nil {
-		log.Fatalf("failed to send mail: %s", err)
 		return err
 	}
 

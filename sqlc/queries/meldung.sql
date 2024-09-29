@@ -32,6 +32,14 @@ WHERE
 ORDER BY
   rennen.sort_id, meldung.abteilung, meldung.bahn, link_meldung_athlet.rolle, link_meldung_athlet.position;
 
+-- name: GetMeldungByStartNrUndTag :many
+SELECT meldung.* FROM meldung
+JOIN
+  rennen
+ON
+  meldung.rennen_uuid = rennen.uuid
+WHERE start_nummer = $1 AND rennen.tag = $2;
+
 -- name: GetAllMeldung :many
 SELECT * FROM meldung
 ORDER BY start_nummer ASC;

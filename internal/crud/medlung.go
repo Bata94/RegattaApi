@@ -69,6 +69,25 @@ func GetMeldungMinimal(uuid uuid.UUID) (Meldung, error) {
 	return Meldung{Meldung: m}, nil
 }
 
+func GetMeldungByStartNrUndTag(startNummer int, tag sqlc.Tag) (Meldung, error) {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	q, err := DB.Queries.GetMeldungByStartNrUndTag(ctx, sqlc.GetMeldungByStartNrUndTagParams{
+		StartNummer: int32(startNummer),
+		Tag:         tag,
+	})
+	if err != nil {
+		return Meldung{}, err
+	}
+
+	if len(q) > 1 {
+		return Meldung{}, errors.New("Multiple Startnummern")
+	}
+
+	return Meldung{Meldung: q[0]}, nil
+}
+
 func GetMeldung(uuid uuid.UUID) (Meldung, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()

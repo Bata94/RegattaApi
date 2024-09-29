@@ -26,6 +26,11 @@ INSERT INTO zeitnahme_start (
   $5
 ) RETURNING *;
 
+-- name: SetZeitnahmeStartVerarbeitet :exec
+UPDATE zeitnahme_start
+SET verarbeitet = true
+WHERE id = $1;
+
 -- name: DeleteZeitnahmeStart :exec
 DELETE FROM zeitnahme_start
 WHERE id = $1;

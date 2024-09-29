@@ -7,6 +7,8 @@ import (
 
 	"github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/server"
+	"github.com/bata94/RegattaApi/internal/utils"
+	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
 
 	_ "github.com/joho/godotenv/autoload"
@@ -22,6 +24,10 @@ func main() {
 		Sslmode:  os.Getenv("DB_SSLMODE"),
 	})
 	defer DB.ShutdownConnection()
+
+	if !fiber.IsChild() {
+		utils.InitEmail()
+	}
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

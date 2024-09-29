@@ -1,7 +1,7 @@
 package pdf_templates
 
 import (
-  "fmt"
+	"fmt"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	"strconv"
 	"time"
@@ -22,22 +22,22 @@ func curDayCheck(i int, rennen []RennenMeldeergebnisPDF) string {
 
 func curWettkampfCheck(i int, rennen []RennenMeldeergebnisPDF) string {
 	if i == 0 || rennen[i-1].Wettkampf != rennen[i].Wettkampf {
-    return fmt.Sprint(rennen[i].Wettkampf) + ":"
+		return fmt.Sprint(rennen[i].Wettkampf) + ":"
 	}
 	return ""
 }
 
 func pauseCheck(i int, rennen []RennenMeldeergebnisPDF, pausen []PausenMeldeergebnisPDF) string {
-  for _, p := range pausen {
-    if p.NachRennenUuid == rennen[i].Uuid {
-      return fmt.Sprint(">>> Pause für ", p.Laenge, " Minuten <<<")
-    }
-  }
-  return ""
+	for _, p := range pausen {
+		if p.NachRennenUuid == rennen[i].Uuid {
+			return fmt.Sprint(">>> Pause für ", p.Laenge, " Minuten <<<")
+		}
+	}
+	return ""
 }
 
 type RennenMeldeergebnisPDF struct {
-  Uuid string
+	Uuid              string
 	RennNr            string
 	Bezeichnung       string
 	BezeichnungZusatz string
@@ -64,9 +64,9 @@ type MeldungMeldeergebnisPDF struct {
 }
 
 type PausenMeldeergebnisPDF struct {
-  Id int
-  Laenge int
-  NachRennenUuid string
+	Id             int
+	Laenge         int
+	NachRennenUuid string
 }
 
 templ MeldungsEntry(m MeldungMeldeergebnisPDF) {
@@ -149,7 +149,100 @@ templ MeldeErgebnis(rennen []RennenMeldeergebnisPDF, pausen []PausenMeldeergebni
 					</table>
 				</div>
 			}
-      <h2 class="text-center">{ pauseCheck(i, rennen, pausen) }</h2>
+			<h2 class="text-center">{ pauseCheck(i, rennen, pausen) }</h2>
+		</div>
+	}
+}
+
+type ErgebnisRennenPDF struct {
+	Uuid              string
+	RennNr            string
+	Bezeichnung       string
+	BezeichnungZusatz string
+	Startzeit         string
+	Rennabstand       int
+	Tag               string
+	NumMeldungen      int
+	NumAbteilungen    int
+	Wettkampf         sqlc.Wettkampf
+	Abteilungen       []ErgebnisAbteilungPDF
+	Dns               []MeldungMeldeergebnisPDF
+}
+type ErgebnisAbteilungPDF struct {
+	Nummer    int
+	Meldungen []ErgebnisMeldungPDF
+}
+type ErgebnisMeldungPDF struct {
+	StartNummer int
+	Bahn        int
+	Verein      string
+	Teilnehmer  string
+  Platz       int
+  Endzeit     float64
+  EndzeitStr  string
+}
+
+templ MeldungErgebnisEntry(m ErgebnisMeldungPDF) {
+	<tr class="mt-8 border-none">
+		<th class="w-1/12 font-bold text-center">
+      { strconv.Itoa(m.Platz) }. Platz
+    </th>
+		<th class="w-11/12 font-bold text-left">
+      { m.EndzeitStr }
+    </th>
+  <tr>
+  </tr>
+		<td>
+			{ strconv.Itoa(m.StartNummer) }
+		</td>
+		<td>
+			{ m.Verein }
+		</td>
+	</tr>
+	<tr>
+		<td></td>
+		<td>
+			{ m.Teilnehmer }
+		</td>
+	</tr>
+}
+
+templ Ergebnis(rennen []ErgebnisRennenPDF) {
+	<h1>Ergebnis</h1>
+	<h1>34. Mülheimer Jungen- und Mädchen-Regatta 2024</h1>
+	<h6 class="mb-8">Stand: { time.Now().Format("02.01.2006 - 15:04:05 Uhr") }</h6>
+	for _, r := range rennen {
+		<div class="w-full no-break">
+			if r.NumAbteilungen != 0 {
+				<h2 class="underline underline-offset-2">Rennen { r.RennNr } - { r.Bezeichnung }</h2>
+				for _, a := range r.Abteilungen {
+					<div class="mx-2 no-break">
+						if r.Wettkampf != sqlc.WettkampfLangstrecke {
+							<h3 class="">Abteilung { strconv.Itoa(a.Nummer) }:</h3>
+						} else {
+							<div class="h-4"></div>
+						}
+						<table class="my-2 table-fixed divide-y">
+							for _, m := range a.Meldungen {
+								@MeldungErgebnisEntry(m)
+							}
+						</table>
+					</div>
+				}
+			} else {
+				<h2 class="line-through">Rennen { r.RennNr } - { r.Bezeichnung } { r.BezeichnungZusatz }</h2>
+				// <!--- <h5 class="mx-auto text-center text-red-600 font-bold">Keine Meldungen, Rennen entfällt!</h5> --->
+			}
+			if len(r.Dns) != 0 {
+				<div class="mx-2 no-break">
+					<h4 class="">DNS/DNF/DSQ:</h4>
+					<table class="my-2 table-fixed">
+						for _, m := range r.Dns {
+							@MeldungsEntry(m)
+						}
+					</table>
+				</div>
+			}
 		</div>
 	}
 }

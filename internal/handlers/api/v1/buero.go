@@ -6,6 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
+	"github.com/google/uuid"
 
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handlers"
@@ -30,13 +31,8 @@ func KasseEinzahlung(c *fiber.Ctx) error {
 	return &api.NOT_FOUND
 }
 
-func KasseCreateRechnungPDF(c *fiber.Ctx) error {
-	uuid, err := api.GetUuidFromCtx(c)
-	if err != nil {
-		return err
-	}
-
-	v, err := crud.GetVereinMinimal(*uuid)
+func GenerateRechnugnPDF(uuid uuid.UUID) error {
+	v, err := crud.GetVereinMinimal(uuid)
 	if err != nil {
 		return err
 	}
@@ -55,8 +51,69 @@ func KasseCreateRechnungPDF(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	log.Debug(filePath)
 
-	return c.SendFile(filePath, true)
+	toMail := []string{}
+	obleute, err := crud.GetAllObmannForVerein(v.Uuid)
+	if err != nil {
+		return err
+	}
+
+	for _, o := range obleute {
+		if o.Name.Valid {
+			toMail = append(toMail, o.Email.String)
+		}
+	}
+
+	err = utils.SendMail(utils.SendMailParams{
+		To:      toMail,
+		CC:      []string{},
+		Subject: "MRG Regatta 24 - Rechnung " + reNr,
+		Body:    "Anbei finden Sie eine neu erstellte Rechnung für Ihren Verein.\nDies ist eine automatische Nachricht, sollte ein Fehler o.ä. auffallen Antworten Sie gerne direkt auf diese eMail!",
+		Files:   []string{filePath},
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func KasseCreateRechnungPDF(c *fiber.Ctx) error {
+	uuid, err := api.GetUuidFromCtx(c)
+	if err != nil {
+		return err
+	}
+
+	err = GenerateRechnugnPDF(*uuid)
+	if err != nil {
+		return err
+	}
+
+	// return c.SendFile(filePath, true)
+	return api.JSON(c, "success")
+}
+
+func KasseCreateRechnungAllVereine(c *fiber.Ctx) error {
+	vereine, err := crud.GetAllVerein()
+	if err != nil {
+		return err
+	}
+
+	errLs := []error{}
+	for _, v := range vereine {
+		err := GenerateRechnugnPDF(v.Uuid)
+		if err != nil {
+			log.Error("Error in CreateRechnungAllVereine: ", v.Name, err)
+			errLs = append(errLs, err)
+		}
+	}
+
+	if len(errLs) > 0 {
+		return api.JSON(c, errLs)
+	}
+	return api.JSON(c, "success")
 }
 
 func KasseCreateRechnungHTML(c *fiber.Ctx) error {
@@ -109,6 +166,11 @@ func KasseCreateRechnungHTML(c *fiber.Ctx) error {
 		retErr := api.NOT_FOUND
 		retErr.Msg = "Keine Meldungen gefunden, welche nicht schon abgerechnet sind!"
 		return &retErr
+	}
+
+	err = crud.CreateRechnung(reNr, v.Uuid, pdfParams.SumPreis)
+	if err != nil {
+		return err
 	}
 
 	fileName := fmt.Sprintf("Rechnung_%s", reNr)

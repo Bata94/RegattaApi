@@ -383,6 +383,57 @@ func (q *Queries) GetMeldung(ctx context.Context, argUuid uuid.UUID) ([]GetMeldu
 	return items, nil
 }
 
+const getMeldungByStartNrUndTag = `-- name: GetMeldungByStartNrUndTag :many
+SELECT meldung.uuid, meldung.drv_revision_uuid, meldung.typ, meldung.bemerkung, meldung.abgemeldet, meldung.dns, meldung.dnf, meldung.dsq, meldung.zeitnahme_bemerkung, meldung.start_nummer, meldung.abteilung, meldung.bahn, meldung.kosten, meldung.rechnungs_nummer, meldung.verein_uuid, meldung.rennen_uuid FROM meldung
+JOIN
+  rennen
+ON
+  meldung.rennen_uuid = rennen.uuid
+WHERE start_nummer = $1 AND rennen.tag = $2
+`
+
+type GetMeldungByStartNrUndTagParams struct {
+	StartNummer int32 `json:"start_nummer"`
+	Tag         Tag   `json:"tag"`
+}
+
+func (q *Queries) GetMeldungByStartNrUndTag(ctx context.Context, arg GetMeldungByStartNrUndTagParams) ([]Meldung, error) {
+	rows, err := q.db.Query(ctx, getMeldungByStartNrUndTag, arg.StartNummer, arg.Tag)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Meldung{}
+	for rows.Next() {
+		var i Meldung
+		if err := rows.Scan(
+			&i.Uuid,
+			&i.DrvRevisionUuid,
+			&i.Typ,
+			&i.Bemerkung,
+			&i.Abgemeldet,
+			&i.Dns,
+			&i.Dnf,
+			&i.Dsq,
+			&i.ZeitnahmeBemerkung,
+			&i.StartNummer,
+			&i.Abteilung,
+			&i.Bahn,
+			&i.Kosten,
+			&i.RechnungsNummer,
+			&i.VereinUuid,
+			&i.RennenUuid,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getMeldungMinimal = `-- name: GetMeldungMinimal :one
 SELECT uuid, drv_revision_uuid, typ, bemerkung, abgemeldet, dns, dnf, dsq, zeitnahme_bemerkung, start_nummer, abteilung, bahn, kosten, rechnungs_nummer, verein_uuid, rennen_uuid FROM meldung
 WHERE uuid = $1 LIMIT 1

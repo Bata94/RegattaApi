@@ -37,6 +37,11 @@ WHERE
 RETURNING 
   *;
 
+-- name: SetZeitnahmeZielVerarbeitet :exec
+UPDATE zeitnahme_ziel
+SET verarbeitet = true
+WHERE id = $1;
+
 -- name: DeleteZeitnahmeZiel :one
 DELETE FROM zeitnahme_ziel
 WHERE id = $1

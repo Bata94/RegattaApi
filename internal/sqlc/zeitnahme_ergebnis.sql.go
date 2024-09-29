@@ -81,6 +81,24 @@ func (q *Queries) GetAllZeitnahmeErgebnis(ctx context.Context) ([]ZeitnahmeErgeb
 	return items, nil
 }
 
+const getZeitnahmeErgebnisByMeld = `-- name: GetZeitnahmeErgebnisByMeld :one
+SELECT id, endzeit, zeitnahme_start_id, zeitnahme_ziel_id, meldung_uuid FROM zeitnahme_ergebnis
+WHERE meldung_uuid = $1 LIMIT 1
+`
+
+func (q *Queries) GetZeitnahmeErgebnisByMeld(ctx context.Context, meldungUuid uuid.UUID) (ZeitnahmeErgebni, error) {
+	row := q.db.QueryRow(ctx, getZeitnahmeErgebnisByMeld, meldungUuid)
+	var i ZeitnahmeErgebni
+	err := row.Scan(
+		&i.ID,
+		&i.Endzeit,
+		&i.ZeitnahmeStartID,
+		&i.ZeitnahmeZielID,
+		&i.MeldungUuid,
+	)
+	return i, err
+}
+
 const getZeitnahmeErgebnisMinimal = `-- name: GetZeitnahmeErgebnisMinimal :one
 SELECT id, endzeit, zeitnahme_start_id, zeitnahme_ziel_id, meldung_uuid FROM zeitnahme_ergebnis
 WHERE id = $1 LIMIT 1

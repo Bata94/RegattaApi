@@ -7,6 +7,7 @@ import (
 	"math/rand/v2"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -185,6 +186,138 @@ func DrvMeldungUpload(c *fiber.Ctx) error {
 	}
 
 	return api.JSON(c, "File uploaded successfully!")
+}
+
+func GenerateErgebnisHtml(c *fiber.Ctx) error {
+	rLsParsed := []pdf_templates.ErgebnisRennenPDF{}
+	rennen, err := crud.GetAllRennenWithAthlet(crud.GetAllRennenParams{
+		GetMeldungen:  true,
+		GetAthleten:   true,
+		ShowEmpty:     false,
+		ShowStarted:   true,
+		ShowWettkampf: sqlc.NullWettkampf{},
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, r := range rennen {
+    if r.Wettkampf != sqlc.WettkampfLangstrecke {
+      break
+    }
+		if *r.NumMeldungen != 0 {
+      rParsed := pdf_templates.ErgebnisRennenPDF{
+        Uuid:              r.Uuid.String(),
+        RennNr:            r.Nummer,
+        Bezeichnung:       r.Bezeichnung,
+        BezeichnungZusatz: r.Zusatz,
+        Startzeit:         r.Startzeit,
+        Rennabstand:       r.Rennabstand,
+        Tag:               string(r.Tag),
+        NumMeldungen:      *r.NumMeldungen,
+        NumAbteilungen:    *r.NumAbteilungen,
+        Wettkampf:         r.Wettkampf,
+        Abteilungen:       make([]pdf_templates.ErgebnisAbteilungPDF, *r.NumAbteilungen),
+        Dns:       []pdf_templates.MeldungMeldeergebnisPDF{},
+      }
+
+      for i := range rParsed.Abteilungen {
+        rParsed.Abteilungen[i].Nummer = i + 1
+      }
+
+      for _, m := range r.Meldungen {
+        if m.Abgemeldet {
+          continue
+        }
+
+        athletenStr := ""
+        for _, a := range m.Athleten {
+          if *a.Rolle == sqlc.RolleTrainer {
+            continue
+          }
+
+          if athletenStr != "" {
+            athletenStr += ", "
+          }
+
+          if *a.Rolle == sqlc.RolleStm {
+            athletenStr += fmt.Sprintf("\nStm.: %s %s (%s)", a.Vorname, a.Name, a.Jahrgang)
+          } else {
+            athletenStr += fmt.Sprintf("%s %s (%s)", a.Vorname, a.Name, a.Jahrgang)
+          }
+        }
+
+        ergebnis, err := crud.GetZeitnahmeErgebnisByMeld(m.Uuid)
+        if err != nil {
+          rParsed.Dns = append(rParsed.Dns, pdf_templates.MeldungMeldeergebnisPDF{
+            StartNummer: int(m.StartNummer),
+            Bahn:        int(m.Bahn),
+            Teilnehmer:  athletenStr,
+            Verein:      m.Verein.Name,
+          })
+          continue
+        }
+
+        endZeit := time.Duration(ergebnis.Endzeit * float64(time.Second))
+        minutes := int(endZeit / time.Minute)
+        secondsPart := int((endZeit % time.Minute) / time.Second)
+        milliseconds := int((endZeit % time.Second) / time.Millisecond)
+
+        // Print the formatted time as "Minutes:Seconds.Milliseconds"
+        endZeitStr := fmt.Sprintf("%02d:%02d.%03d\n", minutes, secondsPart, milliseconds)
+
+        meldungEntry := pdf_templates.ErgebnisMeldungPDF{
+          StartNummer: int(m.StartNummer),
+          Bahn:        int(m.Bahn),
+          Teilnehmer:  athletenStr,
+          Verein:      m.Verein.Name,
+          Platz:      1,
+          Endzeit:     ergebnis.Endzeit,
+          EndzeitStr: endZeitStr,
+        }
+
+        abteilung := int(m.Abteilung)
+        mParsed := meldungEntry
+        log.Debugf("RennNr %s numAbt %d lenAbt %d curAbt %d", r.Nummer, r.NumAbteilungen, len(rParsed.Abteilungen), abteilung)
+        // BUG: Throws Error if Setzung not done
+        rParsed.Abteilungen[abteilung-1].Meldungen = append(rParsed.Abteilungen[abteilung-1].Meldungen, mParsed)
+
+      }
+
+      for i, abt := range rParsed.Abteilungen {
+        sort.Slice(abt.Meldungen, func(i, j int) bool {
+          return abt.Meldungen[i].Endzeit < abt.Meldungen[j].Endzeit
+        })
+
+        p := 1
+
+        for j, _ := range abt.Meldungen {
+          rParsed.Abteilungen[i].Meldungen[j].Platz = p
+          p ++
+        }
+      }
+      rLsParsed = append(rLsParsed, rParsed)
+		}
+	}
+
+	return handlers.RenderPdf(
+		c,
+		fmt.Sprintf("Ergebnis_%s", time.Now().Format("2006-01-02_15-04-05")),
+		pdf_templates.Ergebnis(rLsParsed),
+	)
+}
+
+func GenerateErgebnis(c *fiber.Ctx) error {
+	filepath, err := utils.SavePDFfromHTML(
+		"leitung/ergebnis",
+		"ergebnis",
+		fmt.Sprintf("ergebnis_%s", time.Now().Format("2006-01-02_15-04-05")),
+		true,
+	)
+	if err != nil {
+		return err
+	}
+	return c.SendFile(filepath, true)
 }
 
 type DrvMeldungJson struct {

@@ -82,6 +82,38 @@ func (q *Queries) GetAllObmann(ctx context.Context) ([]Obmann, error) {
 	return items, nil
 }
 
+const getAllObmannForVerein = `-- name: GetAllObmannForVerein :many
+SELECT uuid, name, email, phone, verein_uuid FROM obmann
+WHERE verein_uuid = $1
+ORDER BY name ASC
+`
+
+func (q *Queries) GetAllObmannForVerein(ctx context.Context, vereinUuid uuid.UUID) ([]Obmann, error) {
+	rows, err := q.db.Query(ctx, getAllObmannForVerein, vereinUuid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Obmann{}
+	for rows.Next() {
+		var i Obmann
+		if err := rows.Scan(
+			&i.Uuid,
+			&i.Name,
+			&i.Email,
+			&i.Phone,
+			&i.VereinUuid,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getObmannMinimal = `-- name: GetObmannMinimal :one
 SELECT uuid, name, email, phone, verein_uuid FROM obmann
 WHERE uuid = $1 LIMIT 1

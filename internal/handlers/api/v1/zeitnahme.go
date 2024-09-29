@@ -3,14 +3,17 @@ package api_v1
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handlers"
 	"github.com/bata94/RegattaApi/internal/handlers/api"
+	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
+	"github.com/google/uuid"
 )
 
 type WSZnMsg struct {
@@ -96,7 +99,7 @@ func WsZeitnahmeZiel(c *websocket.Conn) {
 				}
 
 				log.Debug(zeitnahme, msg.Data)
-				q, err := crud.UpdateZeitnahmeZiel(zeitnahme, msg.Data.StartNummer, msg.Data.RennenNummer)
+				q, err := crud.UpdateZeitnahmeZiel(zeitnahme, msg.Data.RennenNummer, msg.Data.StartNummer)
 				if err != nil {
 					retMsg = "Error: " + err.Error()
 					goto ReturnMessage
@@ -190,4 +193,42 @@ func GetOpenStarts(c *fiber.Ctx) error {
 	}
 
 	return api.JSON(c, q)
+}
+
+func GenerateEndZeit(c *fiber.Ctx) error {
+	starts, err := crud.GetOpenZeitnahmeStart()
+	if err != nil {
+		return err
+	}
+
+	ziels, err := crud.GetOpenZeitnahmeZiel()
+	if err != nil {
+		return err
+	}
+
+	for _, z := range ziels {
+		for _, s := range starts {
+			if *z.StartNummer == *s.StartNummer {
+				startNummerInt, err := strconv.Atoi(*s.StartNummer)
+				if err != nil {
+					return err
+				}
+				// TODO: Make Tag dynamic
+				meld, err := crud.GetMeldungByStartNrUndTag(startNummerInt, sqlc.TagSa)
+				if err != nil {
+					return err
+				}
+				if meld.Uuid == uuid.Nil {
+					return &api.BAD_REQUEST
+				}
+
+				err = crud.CreateZeitnahmeErgebnis(s, z, meld)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return api.JSON(c, "success")
 }

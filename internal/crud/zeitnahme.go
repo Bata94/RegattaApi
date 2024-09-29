@@ -6,6 +6,8 @@ import (
 
 	DB "github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/sqlc"
+	"github.com/gofiber/fiber/v2/log"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -270,4 +272,43 @@ func DeleteZeitnahmeZiel(z Zeitnahme) (Zeitnahme, error) {
 	}
 
 	return SqlcZeitnahmeZielToZeitnahme(q), nil
+}
+
+func CreateZeitnahmeErgebnis(s, z Zeitnahme, meld Meldung) error {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	endZeit := z.TimeClient.Sub(*s.TimeClient)
+
+	params := sqlc.CreateZeitnahmeErgebnisParams{
+		Endzeit:          endZeit.Seconds(),
+		ZeitnahmeStartID: s.ID,
+		ZeitnahmeZielID:  z.ID,
+		MeldungUuid:      meld.Uuid,
+	}
+
+	q, err := DB.Queries.CreateZeitnahmeErgebnis(ctx, params)
+	if err != nil {
+		return err
+	}
+
+	err = DB.Queries.SetZeitnahmeStartVerarbeitet(ctx, s.ID)
+	if err != nil {
+		return err
+	}
+	err = DB.Queries.SetZeitnahmeZielVerarbeitet(ctx, z.ID)
+	if err != nil {
+		return err
+	}
+
+	log.Debug(q)
+
+	return nil
+}
+
+func GetZeitnahmeErgebnisByMeld(meldUuid uuid.UUID) (sqlc.ZeitnahmeErgebni, error) {
+  ctx, cancel := getCtxWithTo()
+  defer cancel()
+  
+  return DB.Queries.GetZeitnahmeErgebnisByMeld(ctx, meldUuid)
 }

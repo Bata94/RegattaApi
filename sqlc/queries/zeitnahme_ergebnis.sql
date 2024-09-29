@@ -2,6 +2,10 @@
 SELECT * FROM zeitnahme_ergebnis
 WHERE id = $1 LIMIT 1;
 
+-- name: GetZeitnahmeErgebnisByMeld :one
+SELECT * FROM zeitnahme_ergebnis
+WHERE meldung_uuid = $1 LIMIT 1;
+
 -- name: GetAllZeitnahmeErgebnis :many
 SELECT * FROM zeitnahme_ergebnis
 ORDER BY id ASC;
