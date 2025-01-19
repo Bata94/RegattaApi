@@ -7,6 +7,7 @@ import (
 	"github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/handlers/api"
 	"github.com/bata94/RegattaApi/internal/sqlc"
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/google/uuid"
@@ -83,6 +84,9 @@ func GetMeldungByStartNrUndTag(startNummer int, tag sqlc.Tag) (Meldung, error) {
 
 	if len(q) > 1 {
 		return Meldung{}, errors.New("Multiple Startnummern")
+	} else if len(q) == 0 {
+		log.Error("Keine Meldung, StartNummer: ", startNummer)
+		return Meldung{}, &api.NOT_FOUND
 	}
 
 	return Meldung{Meldung: q[0]}, nil

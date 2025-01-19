@@ -198,32 +198,50 @@ func GetOpenStarts(c *fiber.Ctx) error {
 func GenerateEndZeit(c *fiber.Ctx) error {
 	starts, err := crud.GetOpenZeitnahmeStart()
 	if err != nil {
+		log.Error("GetOpenZeitnahmeStart")
 		return err
 	}
 
 	ziels, err := crud.GetOpenZeitnahmeZiel()
 	if err != nil {
+		log.Error("GetOpenZeitnahmeZiel")
 		return err
 	}
 
+	if len(ziels) == 0 {
+		log.Error("0 Ziels")
+		return &api.BAD_REQUEST
+	}
+	if len(starts) == 0 {
+		log.Error("0 Starts")
+		return &api.BAD_REQUEST
+	}
+
 	for _, z := range ziels {
+		if z.StartNummer == nil || *z.StartNummer == "" {
+			continue
+		}
 		for _, s := range starts {
 			if *z.StartNummer == *s.StartNummer {
 				startNummerInt, err := strconv.Atoi(*s.StartNummer)
 				if err != nil {
+					log.Error("Error StartNummerStr to int")
 					return err
 				}
 				// TODO: Make Tag dynamic
 				meld, err := crud.GetMeldungByStartNrUndTag(startNummerInt, sqlc.TagSa)
 				if err != nil {
+					log.Error("GetMeldungByStartNrUndTag")
 					return err
 				}
 				if meld.Uuid == uuid.Nil {
+					log.Error("GetMeldungByStartNrUndTag meld.Uuid == nil")
 					return &api.BAD_REQUEST
 				}
 
 				err = crud.CreateZeitnahmeErgebnis(s, z, meld)
 				if err != nil {
+					log.Error("CreateZeitnahmeErgebnis")
 					return err
 				}
 			}

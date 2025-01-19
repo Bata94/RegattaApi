@@ -1,4 +1,16 @@
--include .env
+set dotenv-load := true
+
+BINARY_NAME := "regattaapi"
+DOCKER_REGISTRY := "ghcr.io/bata94/"
+# EXPORT_RESULT := false # for CI please set EXPORT_RESULT to true
+
+
+build-docker:
+	docker build --target prod --tag $(BINARY_NAME) .
+
+release-docker:
+	docker tag $(BINARY_NAME) $(DOCKER_REGISTRY)$(BINARY_NAME):latest
+	docker push $(DOCKER_REGISTRY)$(BINARY_NAME):latest
 
 sqlc-gen:
 	@echo "Generating SQLC..."
