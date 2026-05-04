@@ -2,60 +2,52 @@ package api_v1
 
 import (
 	"github.com/bata94/RegattaApi/internal/crud"
-	"github.com/bata94/RegattaApi/internal/handlers/api"
-	"github.com/oklog/ulid/v2"
-
-	// jwtware "github.com/gofiber/contrib/jwt"
+	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/golang-jwt/jwt/v5"
-
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
 )
 
-func Login(c *fiber.Ctx) error {
+func Login(c *handler.Context) error {
 	loginParams := new(crud.LoginParams)
-	if err := c.BodyParser(&loginParams); err != nil {
-		retErr := api.BAD_REQUEST
-		retErr.Details = err.Error()
-		return &retErr
+	if err := c.BodyParser(loginParams); err != nil {
+		return &handler.Error{StatusCode: 400, Message: err.Error()}
 	}
-
-	log.Debug("Login attempt, Username: ", loginParams.Username, " Password: ", loginParams.Password)
 
 	u, err := crud.AuthLogin(*loginParams)
 	if err != nil {
 		return err
 	}
 
-	return api.JSON(c, u)
+	return c.JSON(u)
 }
 
-// TODO: Implement
-func Logout(c *fiber.Ctx) error {
-	return api.JSON(c, "Logout successful!")
+func Logout(c *handler.Context) error {
+	return c.JSON("Logout successful!")
 }
 
-func AuthValidate(c *fiber.Ctx) error {
-	return api.JSON(c, "Auth successful!")
+func AuthValidate(c *handler.Context) error {
+	return c.JSON("Auth successful!")
 }
 
-func AuthMe(c *fiber.Ctx) error {
-	user := c.Locals("user").(*jwt.Token)
+func AuthMe(c *handler.Context) error {
+	user := c.GetLocals("user").(*jwt.Token)
 	claims := user.Claims.(jwt.MapClaims)
-	ulidStr := claims["user_id"].(string)
+	uuidStr := claims["user_id"].(string)
 
-	ulid, err := ulid.Parse(ulidStr)
+	userID, err := crud.ParseUUID(uuidStr)
 	if err != nil {
-		return &api.UNAUTHORIZED
+		return &handler.Error{StatusCode: 401, Message: "Invalid token"}
 	}
 
-	userRaw, err := crud.GetUser(ulid)
+	userRaw, err := crud.GetUser(userID)
+	if err != nil {
+		return err
+	}
 
 	u := crud.ReturnUser{
-		Ulid:      userRaw.Ulid,
+		Uuid:      userRaw.Uuid,
 		Username:  userRaw.Username,
 		UserGroup: userRaw.UserGroup,
 	}
 
-	return api.JSON(c, u)
+	return c.JSON(u)
 }

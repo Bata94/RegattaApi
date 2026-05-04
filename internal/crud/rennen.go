@@ -2,12 +2,12 @@ package crud
 
 import (
 	"cmp"
+	"log"
 	"slices"
 
 	"github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/handlers/api"
 	"github.com/bata94/RegattaApi/internal/sqlc"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 )
 
@@ -66,7 +66,7 @@ func GetAllRennen(p GetAllRennenParams) ([]Rennen, error) {
 
 	q, err = DB.Queries.GetAllRennenWithMeld(ctx, wettkampfFilterLs)
 	if err != nil {
-		log.Debug("Query error: ", err)
+		log.Println("Query error: ", err)
 		return nil, err
 	}
 
@@ -163,7 +163,7 @@ func GetAllRennenWithAthlet(p GetAllRennenParams) ([]Rennen, error) {
 func RennenFromSqlc(rennen sqlc.Rennen, numMeld int, numAbt interface{}) Rennen {
 	numAbteilungenI32, ok := numAbt.(int32)
 	if !ok {
-		log.Error("Error converting numAbt to int32 ", numAbt)
+		log.Println("Error converting numAbt to int32 ", numAbt)
 		numAbteilungenI32 = 0
 	}
 	numAbteilungen := int(numAbteilungenI32)

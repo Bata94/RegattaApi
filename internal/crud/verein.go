@@ -2,12 +2,12 @@ package crud
 
 import (
 	"errors"
+	"log"
 	"strconv"
 
 	"github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/handlers/api"
 	"github.com/bata94/RegattaApi/internal/sqlc"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 )
 
@@ -46,12 +46,12 @@ func (verein *Verein) GetNextRechnungsnummer() (string, error) {
 	}
 	fwdNr := 0
 
-	log.Debug(len(rechnungsNummern))
+	log.Println(len(rechnungsNummern))
 	if len(rechnungsNummern) != 0 {
 		for _, r := range rechnungsNummern {
 			l := len(r)
 			rNrStr := r[l-3 : l]
-			log.Debug(rNrStr)
+			log.Println(rNrStr)
 
 			rNr, err := strconv.Atoi(rNrStr)
 			if err != nil {

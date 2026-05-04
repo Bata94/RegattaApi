@@ -2,48 +2,47 @@ package api_v1
 
 import (
 	"github.com/bata94/RegattaApi/internal/crud"
-	"github.com/bata94/RegattaApi/internal/handlers/api"
-	"github.com/gofiber/fiber/v2"
+	"github.com/bata94/RegattaApi/internal/handler"
 )
 
-func GetAllUsers(c *fiber.Ctx) error {
+func GetAllUsers(c *handler.Context) error {
 	uLs, err := crud.GetAllUsers()
 	if err != nil {
 		return err
 	}
 
-	return api.JSON(c, uLs)
+	return c.JSON(uLs)
 }
 
-func GetUser(c *fiber.Ctx) error {
-	ulid, err := api.GetUlidFromCtx(c)
+func GetUser(c *handler.Context) error {
+	uuid, err := c.GetUUID("ulid")
+	if err != nil {
+		return &handler.Error{StatusCode: 400, Message: err.Error()}
+	}
+
+	u, err := crud.GetUser(uuid)
 	if err != nil {
 		return err
 	}
 
-	u, err := crud.GetUser(*ulid)
-	if err != err {
-		return err
-	}
-
-	return api.JSON(c, u.ToReturnUser())
+	return c.JSON(u.ToReturnUser())
 }
 
-func GetUserByName(c *fiber.Ctx) error {
-	name, err := api.GetStrParamFromCtx(c, "name")
-	if err != nil {
-		return err
+func GetUserByName(c *handler.Context) error {
+	name := c.Param("name")
+	if name == "" {
+		return &handler.Error{StatusCode: 400, Message: "name parameter required"}
 	}
 
 	u, err := crud.GetUserByUsername(name)
-	if err != err {
+	if err != nil {
 		return err
 	}
 
-	return api.JSON(c, u.ToReturnUser())
+	return c.JSON(u.ToReturnUser())
 }
 
-func CreateUser(c *fiber.Ctx) error {
+func CreateUser(c *handler.Context) error {
 	uParams := new(crud.CreateUserParams)
 	err := c.BodyParser(&uParams)
 	if err != nil {
@@ -55,42 +54,42 @@ func CreateUser(c *fiber.Ctx) error {
 		return err
 	}
 
-	return api.JSON(c, u)
+	return c.JSON(u)
 }
 
-func GetAllUsersGroups(c *fiber.Ctx) error {
+func GetAllUsersGroups(c *handler.Context) error {
 	ugLs, err := crud.GetAllUsersGroups()
 	if err != nil {
 		return err
 	}
 
-	return api.JSON(c, ugLs)
+	return c.JSON(ugLs)
 }
 
-func GetUsersGroup(c *fiber.Ctx) error {
-	ulid, err := api.GetUlidFromCtx(c)
+func GetUsersGroup(c *handler.Context) error {
+	uuid, err := c.GetUUID("ulid")
+	if err != nil {
+		return &handler.Error{StatusCode: 400, Message: err.Error()}
+	}
+
+	ug, err := crud.GetUsersGroup(uuid)
 	if err != nil {
 		return err
 	}
 
-	ug, err := crud.GetUsersGroup(*ulid)
-	if err != err {
-		return err
-	}
-
-	return api.JSON(c, ug)
+	return c.JSON(ug)
 }
 
-func GetUsersGroupByName(c *fiber.Ctx) error {
-	name, err := api.GetStrParamFromCtx(c, "name")
-	if err != nil {
-		return err
+func GetUsersGroupByName(c *handler.Context) error {
+	name := c.Param("name")
+	if name == "" {
+		return &handler.Error{StatusCode: 400, Message: "name parameter required"}
 	}
 
 	ug, err := crud.GetUsersGroupByName(name)
-	if err != err {
+	if err != nil {
 		return err
 	}
 
-	return api.JSON(c, ug)
+	return c.JSON(ug)
 }

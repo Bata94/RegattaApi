@@ -23,10 +23,3 @@ sql:
             go_type:
               import: "github.com/google/uuid"
               type: "UUID"
-          - column: "*.ulid"
-            go_type: 
-              type: "string"
-          - column: "*.*ulid"
-            go_type: 
-              type: "string"
-

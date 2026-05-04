@@ -1,29 +1,30 @@
 -- name: GetUserGroupMinimal :one
 SELECT *
 FROM users_group
-WHERE users_group.ulid = $1;
+WHERE users_group.uuid = $1;
 
 -- name: GetUserGroup :many
 SELECT sqlc.embed(users_group), sqlc.embed(users)
 FROM users_group
 JOIN users
-ON users_group.ulid = users.group_ulid
-WHERE users_group.ulid = $1;
+ON users_group.uuid = users.group_uuid
+WHERE users_group.uuid = $1;
 
--- name: GetUserGroupUlidByName :one
-SELECT ulid
+-- name: GetUserGroupUuidByName :one
+SELECT uuid
 FROM users_group
 WHERE name = $1;
 
 -- name: GetAllUserGroup :many
 SELECT * FROM users_group
-ORDER BY ulid;
+ORDER BY uuid;
 
 -- name: CreateUserGroup :one
 INSERT INTO users_group (
   name,
-  allowed_admin
+  allowed_admin,
+  uuid
 ) VALUES (
-  $1, $2
+  $1, $2, gen_random_uuid()
 )
 RETURNING *;

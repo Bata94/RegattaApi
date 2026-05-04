@@ -2,13 +2,12 @@ package crud
 
 import (
 	"errors"
-	"strconv"
 	"time"
 
 	"github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/handlers/api"
 	"github.com/bata94/RegattaApi/internal/sqlc"
-	"github.com/oklog/ulid/v2"
+	"github.com/google/uuid"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -25,19 +24,19 @@ type JWT struct {
 }
 
 type ReturnUserWithJWT struct {
-	Ulid      string           `json:"ulid"`
+	Uuid      uuid.UUID        `json:"uuid"`
 	Jwt       JWT              `json:"jwt"`
 	Username  string           `json:"username"`
 	UserGroup *sqlc.UsersGroup `json:"user_group"`
 }
 
 type ReturnUserMinimal struct {
-	Ulid     string `json:"ulid"`
-	Username string `json:"username"`
+	Uuid     uuid.UUID `json:"uuid"`
+	Username string    `json:"username"`
 }
 
 type ReturnUser struct {
-	Ulid      string           `json:"ulid"`
+	Uuid      uuid.UUID        `json:"uuid"`
 	Username  string           `json:"username"`
 	UserGroup *sqlc.UsersGroup `json:"user_group"`
 }
@@ -48,7 +47,7 @@ type LoginParams struct {
 }
 
 type CreateUserParams struct {
-	GroupUlid ulid.ULID `json:"group_ulid"`
+	GroupUuid uuid.UUID `json:"group_uuid"`
 	Username  string    `json:"username"`
 	Password  string    `json:"password"`
 }
@@ -64,7 +63,7 @@ func genJWT(u sqlc.User) (string, time.Time, error) {
 
 	claims := token.Claims.(jwt.MapClaims)
 	claims["username"] = u.Username
-	claims["user_id"] = u.Ulid
+	claims["user_id"] = u.Uuid.String()
 	claims["exp"] = exp.Unix()
 
 	// TODO: RM this in Prod
@@ -77,20 +76,12 @@ func hashPassword(password string) (string, error) {
 	return string(bytes), err
 }
 
-func validToken(t *jwt.Token, id string) bool {
-	n, err := strconv.Atoi(id)
-	if err != nil {
-		return false
-	}
-
-	claims := t.Claims.(jwt.MapClaims)
-	uid := int(claims["user_id"].(float64))
-
-	return uid == n
+func ParseUUID(s string) (uuid.UUID, error) {
+	return uuid.Parse(s)
 }
 
-func validUser(ulid ulid.ULID, p string) bool {
-	user, err := GetUser(ulid)
+func validUser(id uuid.UUID, p string) bool {
+	user, err := GetUser(id)
 	if err != nil {
 		return false
 	}
@@ -102,7 +93,7 @@ func validUser(ulid ulid.ULID, p string) bool {
 
 func (u *User) ToReturnUser() ReturnUser {
 	return ReturnUser{
-		Ulid:      u.Ulid,
+		Uuid:      u.Uuid,
 		Username:  u.Username,
 		UserGroup: u.UserGroup,
 	}
@@ -124,11 +115,11 @@ func GetAllUsers() ([]sqlc.User, error) {
 	return uLs, nil
 }
 
-func GetUser(ulid ulid.ULID) (*User, error) {
+func GetUser(id uuid.UUID) (*User, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	u, err := DB.Queries.GetUser(ctx, ulid.String())
+	u, err := DB.Queries.GetUser(ctx, id)
 	if err != nil {
 		if isNoRowError(err) {
 			return nil, &api.NOT_FOUND
@@ -146,17 +137,12 @@ func GetUserByUsername(name string) (*User, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	ulidStr, err := DB.Queries.GetUserUlidByName(ctx, name)
+	id, err := DB.Queries.GetUserUuidByName(ctx, name)
 	if err != nil {
 		return nil, err
 	}
 
-	ulid, err := ulid.Parse(ulidStr)
-	if err != nil {
-		return nil, err
-	}
-
-	return GetUser(ulid)
+	return GetUser(id)
 }
 
 func CreateUser(uInp CreateUserParams) (User, error) {
@@ -169,7 +155,7 @@ func CreateUser(uInp CreateUserParams) (User, error) {
 	}
 
 	uParams := sqlc.CreateUserParams{
-		GroupUlid:      uInp.GroupUlid.String(),
+		GroupUuid:      uInp.GroupUuid,
 		Username:       uInp.Username,
 		HashedPassword: hashedPW,
 	}
@@ -206,7 +192,7 @@ func AuthLogin(l LoginParams) (*ReturnUserWithJWT, error) {
 	}
 
 	return &ReturnUserWithJWT{
-		Ulid: u.User.Ulid,
+		Uuid: u.User.Uuid,
 		Jwt: JWT{
 			Token:      tokenStr,
 			Expiration: tokenExp,

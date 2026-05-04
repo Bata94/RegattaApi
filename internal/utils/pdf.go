@@ -4,13 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/gofiber/fiber/v2/log"
 )
 
 func SavePDFfromHTML(htmlUrl, subDir, filename string, footer bool) (string, error) {
@@ -55,10 +54,10 @@ func SavePDFfromHTML(htmlUrl, subDir, filename string, footer bool) (string, err
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Error("Error in HttpRequest module")
+		log.Println("Error in HttpRequest module")
 		return "", err
 	} else if resp.StatusCode != 200 {
-		log.Error("Error in HttpRequest Status")
+		log.Println("Error in HttpRequest Status")
 		return "", errors.New("gotenberg error: " + resp.Status)
 	}
 	defer resp.Body.Close()
@@ -69,21 +68,21 @@ func SavePDFfromHTML(htmlUrl, subDir, filename string, footer bool) (string, err
 	basePath := filepath.Join("./files", subDir)
 	err = os.MkdirAll(basePath, 0o666)
 	if err != nil {
-		log.Error("Error in Dir creation")
+		log.Println("Error in Dir creation")
 		return "", err
 	}
 	filePath := filepath.Join(basePath, filename)
 	outputFile, err := os.Create(filePath)
 	defer outputFile.Close()
 	if err != nil {
-		log.Error("Error in creation of file")
+		log.Println("Error in creation of file")
 		return "", err
 	}
 
 	_, err = io.Copy(outputFile, resp.Body)
 
 	if err != nil {
-		log.Error("Error in Writing to file")
+		log.Println("Error in Writing to file")
 		return "", err
 	}
 

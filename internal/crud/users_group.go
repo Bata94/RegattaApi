@@ -4,7 +4,7 @@ import (
 	"github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/handlers/api"
 	"github.com/bata94/RegattaApi/internal/sqlc"
-	"github.com/oklog/ulid/v2"
+	"github.com/google/uuid"
 )
 
 type UsersGroupWithUsers struct {
@@ -28,11 +28,11 @@ func GetAllUsersGroups() ([]sqlc.UsersGroup, error) {
 	return ugLs, nil
 }
 
-func GetUsersGroupsMinimal(ulid ulid.ULID) (sqlc.UsersGroup, error) {
+func GetUsersGroupsMinimal(id uuid.UUID) (sqlc.UsersGroup, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	ug, err := DB.Queries.GetUserGroupMinimal(ctx, ulid.String())
+	ug, err := DB.Queries.GetUserGroupMinimal(ctx, id)
 	if err != nil {
 		if isNoRowError(err) {
 			return sqlc.UsersGroup{}, &api.NOT_FOUND
@@ -43,14 +43,14 @@ func GetUsersGroupsMinimal(ulid ulid.ULID) (sqlc.UsersGroup, error) {
 	return ug, nil
 }
 
-func UGwUsersFromSQLC(q []sqlc.GetUserGroupRow, ulid ulid.ULID) (UsersGroupWithUsers, error) {
+func UGwUsersFromSQLC(q []sqlc.GetUserGroupRow, id uuid.UUID) (UsersGroupWithUsers, error) {
 	users := []ReturnUserMinimal{}
 	var (
 		ug  sqlc.UsersGroup
 		err error
 	)
 	if len(q) == 0 {
-		ug, err = GetUsersGroupsMinimal(ulid)
+		ug, err = GetUsersGroupsMinimal(id)
 		if err != nil {
 			return UsersGroupWithUsers{}, err
 		}
@@ -58,7 +58,7 @@ func UGwUsersFromSQLC(q []sqlc.GetUserGroupRow, ulid ulid.ULID) (UsersGroupWithU
 		ug = q[0].UsersGroup
 		for _, u := range q {
 			users = append(users, ReturnUserMinimal{
-				Ulid:     u.User.Ulid,
+				Uuid:     u.User.Uuid,
 				Username: u.User.Username,
 			})
 		}
@@ -70,11 +70,11 @@ func UGwUsersFromSQLC(q []sqlc.GetUserGroupRow, ulid ulid.ULID) (UsersGroupWithU
 	}, nil
 }
 
-func GetUsersGroup(ulid ulid.ULID) (UsersGroupWithUsers, error) {
+func GetUsersGroup(id uuid.UUID) (UsersGroupWithUsers, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	q, err := DB.Queries.GetUserGroup(ctx, ulid.String())
+	q, err := DB.Queries.GetUserGroup(ctx, id)
 	if err != nil {
 		if isNoRowError(err) {
 			return UsersGroupWithUsers{}, &api.NOT_FOUND
@@ -82,22 +82,17 @@ func GetUsersGroup(ulid ulid.ULID) (UsersGroupWithUsers, error) {
 		return UsersGroupWithUsers{}, err
 	}
 
-	return UGwUsersFromSQLC(q, ulid)
+	return UGwUsersFromSQLC(q, id)
 }
 
 func GetUsersGroupByName(name string) (UsersGroupWithUsers, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	ulidStr, err := DB.Queries.GetUserGroupUlidByName(ctx, name)
+	id, err := DB.Queries.GetUserGroupUuidByName(ctx, name)
 	if err != nil {
 		return UsersGroupWithUsers{}, err
 	}
 
-	ulid, err := ulid.Parse(ulidStr)
-	if err != nil {
-		return UsersGroupWithUsers{}, err
-	}
-
-	return GetUsersGroup(ulid)
+	return GetUsersGroup(id)
 }

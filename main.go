@@ -1,15 +1,15 @@
 package main
 
 import (
+	"fmt"
+	"log"
+	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 
-	"github.com/bata94/RegattaApi/internal/db"
+	DB "github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/server"
 	"github.com/bata94/RegattaApi/internal/utils"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
 
 	_ "github.com/joho/godotenv/autoload"
 )
@@ -25,15 +25,13 @@ func main() {
 	})
 	defer DB.ShutdownConnection()
 
-	if !fiber.IsChild() {
-		utils.InitEmail()
-	}
+	utils.InitEmail()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
 		for sig := range c {
-			log.Error(sig)
+			log.Println("Received signal:", sig)
 			if sig == os.Interrupt {
 				DB.ShutdownConnection()
 				os.Exit(0)
@@ -41,9 +39,12 @@ func main() {
 		}
 	}()
 
-	port, err := strconv.Atoi(os.Getenv("PORT"))
-	if err != nil || port <= 0 {
-		port = 3000
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3000"
 	}
-	server.Init(true, true, port)
+
+	addr := fmt.Sprintf(":%s", port)
+	log.Printf("Starting server on %s", addr)
+	log.Fatal(http.ListenAndServe(addr, server.GetRouter()))
 }

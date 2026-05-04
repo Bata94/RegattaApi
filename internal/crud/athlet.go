@@ -1,10 +1,11 @@
 package crud
 
 import (
+	"log"
+
 	"github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/handlers/api"
 	"github.com/bata94/RegattaApi/internal/sqlc"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -180,7 +181,7 @@ func CreateAthlet(aParams sqlc.CreateAthletParams) (Athlet, error) {
 
 	a, err := DB.Queries.CreateAthlet(ctx, aParams)
 	if err != nil {
-		log.Error(err.Error())
+		log.Println(err.Error())
 		return Athlet{}, err
 	}
 

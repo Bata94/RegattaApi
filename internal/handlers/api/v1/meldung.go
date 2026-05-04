@@ -1,19 +1,17 @@
 package api_v1
 
 import (
+	"log"
 	"strconv"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
+	"github.com/bata94/RegattaApi/internal/crud"
+	"github.com/bata94/RegattaApi/internal/handler"
+	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-
-	"github.com/bata94/RegattaApi/internal/crud"
-	"github.com/bata94/RegattaApi/internal/handlers/api"
-	"github.com/bata94/RegattaApi/internal/sqlc"
 )
 
-func GetAllMeldung(c *fiber.Ctx) error {
+func GetAllMeldung(c *handler.Context) error {
 	mLs, err := crud.GetAllMeldungen()
 	if err != nil {
 		return err
@@ -22,38 +20,38 @@ func GetAllMeldung(c *fiber.Ctx) error {
 		mLs = []crud.Meldung{}
 	}
 
-	return api.JSON(c, mLs)
+	return c.JSON(mLs)
 }
 
-func GetMeldung(c *fiber.Ctx) error {
-	uuid, err := api.GetUuidFromCtx(c)
+func GetMeldung(c *handler.Context) error {
+	meldungUUID, err := c.GetUUID("uuid")
+	if err != nil {
+		return &handler.Error{StatusCode: 400, Message: err.Error()}
+	}
+
+	m, err := crud.GetMeldung(meldungUUID)
 	if err != nil {
 		return err
 	}
 
-	m, err := crud.GetMeldung(*uuid)
-	if err != nil {
-		return err
-	}
-
-	return api.JSON(c, m)
+	return c.JSON(m)
 }
 
-func PostAbmeldung(c *fiber.Ctx) error {
+func PostAbmeldung(c *handler.Context) error {
 	params := new(AbmeldungsParams)
 	c.BodyParser(params)
 
-	uuid, err := uuid.Parse(params.Uuid)
+	meldungUUID, err := uuid.Parse(params.Uuid)
 	if err != nil {
 		return err
 	}
 
-	err = crud.Abmeldung(uuid)
+	err = crud.Abmeldung(meldungUUID)
 	if err != nil {
 		return err
 	}
 
-	return api.JSON(c, "Meldung erfolgreich abgemeldet!")
+	return c.JSON("Meldung erfolgreich abgemeldet!")
 }
 
 type PostUmmeldungsParams struct {
@@ -61,7 +59,7 @@ type PostUmmeldungsParams struct {
 	Athleten    []PostNachmeldungAthletParams `json:"athleten"`
 }
 
-func PostUmmeldung(c *fiber.Ctx) error {
+func PostUmmeldung(c *handler.Context) error {
 	params := new(PostUmmeldungsParams)
 	c.BodyParser(params)
 	meldungUuid, err := uuid.Parse(params.MeldungUuid)
@@ -108,7 +106,7 @@ func PostUmmeldung(c *fiber.Ctx) error {
 		return err
 	}
 
-	return api.JSON(c, m)
+	return c.JSON(m)
 }
 
 type PostNachmeldungParams struct {
@@ -123,22 +121,22 @@ type PostNachmeldungAthletParams struct {
 	Position   string `json:"position"`
 }
 
-func PostNachmeldung(c *fiber.Ctx) error {
+func PostNachmeldung(c *handler.Context) error {
 	params := new(PostNachmeldungParams)
 	err := c.BodyParser(params)
 	if err != nil {
-		log.Error("Parm parse Error: ", params)
+		log.Println("Parm parse Error: ", params)
 		return err
 	}
 
 	vereinUuid, err := uuid.Parse(params.VereinUuid)
 	if err != nil {
-		log.Error("Verein Error: ", vereinUuid)
+		log.Println("Verein Error: ", vereinUuid)
 		return err
 	}
 	rennenUuid, err := uuid.Parse(params.RennenUuid)
 	if err != nil {
-		log.Error("Rennen Error: ", rennenUuid)
+		log.Println("Rennen Error: ", rennenUuid)
 		return err
 	}
 
@@ -172,7 +170,6 @@ func PostNachmeldung(c *fiber.Ctx) error {
 		} else if rennen.Wettkampf == sqlc.WettkampfSlalom {
 			maxBahn = 3
 		}
-		// TODO: find better algo
 		if *rennen.NumMeldungen < maxBahn {
 			abteilung = int32(1)
 			bahn = int32(*rennen.NumMeldungen + 1)
@@ -227,7 +224,6 @@ func PostNachmeldung(c *fiber.Ctx) error {
 		})
 	}
 
-	// TODO: add Startnummer, check athleten for doubles and num of entries, check Jahrgang & Geschlecht
 	m, err := crud.CreateMeldung(crud.CreateMeldungParams{
 		CreateMeldungParams: sqlc.CreateMeldungParams{
 			Uuid:            uuid.New(),
@@ -249,10 +245,10 @@ func PostNachmeldung(c *fiber.Ctx) error {
 		return err
 	}
 
-	return api.JSON(c, m)
+	return c.JSON(m)
 }
 
-func UpdateSetzungBatch(c *fiber.Ctx) error {
+func UpdateSetzungBatch(c *handler.Context) error {
 	params := new(crud.UpdateSetzungBatchParams)
 	err := c.BodyParser(params)
 	if err != nil {
@@ -264,19 +260,19 @@ func UpdateSetzungBatch(c *fiber.Ctx) error {
 		return err
 	}
 
-	return api.JSON(c, "Setzung erfolgreich aktualisiert!")
+	return c.JSON("Setzung erfolgreich aktualisiert!")
 }
 
-func GetAllMeldungForVerein(c *fiber.Ctx) error {
-	vereinUuid, err := api.GetUuidFromCtx(c)
+func GetAllMeldungForVerein(c *handler.Context) error {
+	vereinUuid, err := c.GetUUID("uuid")
+	if err != nil {
+		return &handler.Error{StatusCode: 400, Message: err.Error()}
+	}
+
+	meldungen, err := crud.GetAllMeldungForVerein(vereinUuid)
 	if err != nil {
 		return err
 	}
 
-	meldungen, err := crud.GetAllMeldungForVerein(*vereinUuid)
-	if err != nil {
-		return err
-	}
-
-	return api.JSON(c, meldungen)
+	return c.JSON(meldungen)
 }

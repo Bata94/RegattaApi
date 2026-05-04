@@ -1,10 +1,10 @@
 package utils
 
 import (
+	"log"
 	"os"
 	"strconv"
 
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/wneessen/go-mail"
 )
 
@@ -21,7 +21,7 @@ type EMailOptions struct {
 }
 
 func InitEmail() {
-	log.Info("Init Mail")
+	log.Println("Init Mail")
 	var err error
 	emailOptions = new(EMailOptions)
 
@@ -30,7 +30,7 @@ func InitEmail() {
 	emailOptions.SmtpHost = os.Getenv("EMAIL_SMTP_HOST")
 	emailOptions.SmtpPort, err = strconv.Atoi(os.Getenv("EMAIL_SMTP_PORT"))
 	if err != nil {
-		log.Error("Mail Init Failed, at reading ENVs: ", err, "Mail Options: ", &emailOptions)
+		log.Println("Mail Init Failed, at reading ENVs: ", err, "Mail Options: ", &emailOptions)
 		emailOptions = nil
 		return
 	}
@@ -44,12 +44,12 @@ func InitEmail() {
 		mail.WithPassword(emailOptions.PW),
 	)
 	if err != nil {
-		log.Error("Mail Init Failed, at client creation: ", err, "Mail Options: ", &emailOptions)
+		log.Println("Mail Init Failed, at client creation: ", err, "Mail Options: ", &emailOptions)
 		emailOptions = nil
 		return
 	}
 
-	log.Info("Mail Init Successfull")
+	log.Println("Mail Init Successfull")
 }
 
 type SendMailParams struct {
@@ -64,12 +64,12 @@ func SendMail(params SendMailParams) error {
 	m := mail.NewMsg()
 
 	if err := m.From(emailOptions.Sender); err != nil {
-		log.Error("failed to set From address: %s", err)
+		log.Println("failed to set From address: %s", err)
 		return err
 	}
 
 	if err := m.To(params.To...); err != nil {
-		log.Error("failed to set To address: %s", err)
+		log.Println("failed to set To address: %s", err)
 		return err
 	}
 
@@ -85,7 +85,7 @@ func SendMail(params SendMailParams) error {
 	}
 
 	if err := m.Cc(params.CC...); err != nil {
-		log.Error("failed to set CC address: %s", err)
+		log.Println("failed to set CC address: %s", err)
 		return err
 	}
 
@@ -99,7 +99,7 @@ func SendMail(params SendMailParams) error {
 	m.SetBodyString(mail.TypeTextPlain, params.Body)
 
 	if err := emailClient.DialAndSend(m); err != nil {
-		log.Error("Failed to send email: ", err)
+		log.Println("Failed to send email: ", err)
 		return err
 	}
 

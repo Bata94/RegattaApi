@@ -2,11 +2,11 @@ package crud
 
 import (
 	"errors"
+	"log"
 	"time"
 
 	DB "github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/sqlc"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -301,14 +301,14 @@ func CreateZeitnahmeErgebnis(s, z Zeitnahme, meld Meldung) error {
 		return err
 	}
 
-	log.Debug(q)
+	log.Println(q)
 
 	return nil
 }
 
 func GetZeitnahmeErgebnisByMeld(meldUuid uuid.UUID) (sqlc.ZeitnahmeErgebni, error) {
-  ctx, cancel := getCtxWithTo()
-  defer cancel()
-  
-  return DB.Queries.GetZeitnahmeErgebnisByMeld(ctx, meldUuid)
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	return DB.Queries.GetZeitnahmeErgebnisByMeld(ctx, meldUuid)
 }

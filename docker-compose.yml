@@ -1,23 +1,24 @@
 volumes:
-  api-dev-files:
-  postgres:
+  # api-dev-files:
+  postgres-data:
+  postgres-config:
   pgadmin:
-  tailscale-state:
+  # tailscale-state:
 
 services:
-  tailscale:
-    image: tailscale/tailscale:latest
-    hostname: docker-xps
-    environment:
-      - TS_AUTHKEY=tskey-auth-kwVs44FFW311CNTRL-RB2LaBrke2VFgtdCRGZR2V4jwf4ayPFUV
-      - TS_STATE_DIR=/var/lib/tailscale
-    volumes:
-      - tailscale-state:/var/lib/tailscale
-      - /dev/net/tun:/dev/net/tun
-    cap_add:
-      - net_admin
-      - sys_module
-    restart: unless-stopped
+  # tailscale:
+  #   image: tailscale/tailscale:latest
+  #   hostname: docker-xps
+  #   environment:
+  #     - TS_AUTHKEY=tskey-auth-kwVs44FFW311CNTRL-RB2LaBrke2VFgtdCRGZR2V4jwf4ayPFUV
+  #     - TS_STATE_DIR=/var/lib/tailscale
+  #   volumes:
+  #     - tailscale-state:/var/lib/tailscale
+  #     - /dev/net/tun:/dev/net/tun
+  #   cap_add:
+  #     - net_admin
+  #     - sys_module
+  #   restart: unless-stopped
 
 
   gotenberg:
@@ -31,14 +32,12 @@ services:
 
   db:
     platform: linux/amd64
-    build:
-      dockerfile: Dockerfile
-      context: ./
-      target: pg
+    image: postgres:latest
     ports:
       - 5432:5432
     volumes:
-      - postgres:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql
+      - postgres-config:/etc/postgresql/postgresql.conf
     environment:
       PGUSER: postgres
       POSTGRES_USER: postgres
@@ -67,44 +66,44 @@ services:
       PGADMIN_DEFAULT_PASSWORD: admin
     restart: unless-stopped
 
-  api-dev:
-    build:
-      dockerfile: Dockerfile
-      context: ./
-      target: dev
-    tty: true
-    stdin_open: true
-    volumes:
-      - ./assets:/opt/app/assets
-      - ./docs:/opt/app/docs
-      - ./internal:/opt/app/internal
-      - ./sqlc:/opt/app/sqlc
-      - api-dev-files:/opt/app/files
-      - ./main.go:/opt/app/main.go
-    ports:
-      - 8081:8080
-    env_file: "dev.env"
-    depends_on:
-      - gotenberg
-      - db
-
-  api:
-    build:
-      dockerfile: Dockerfile
-      context: ./
-      target: prod
-    # ports:
-    #   - 8080:8080
-    env_file: "prod.env"
-    network_mode: service:tailscale
-    deploy:
-      resources:
-        limits:
-          cpus: '4'
-          memory: 2048M
-    volumes:
-      - api-dev-files:/opt/app/files
-    depends_on:
-      - tailscale
-      - gotenberg
-      - db
+  # api-dev:
+  #   build:
+  #     dockerfile: Dockerfile
+  #     context: ./
+  #     target: dev
+  #   tty: true
+  #   stdin_open: true
+  #   volumes:
+  #     - ./assets:/opt/app/assets
+  #     - ./docs:/opt/app/docs
+  #     - ./internal:/opt/app/internal
+  #     - ./sqlc:/opt/app/sqlc
+  #     - api-dev-files:/opt/app/files
+  #     - ./main.go:/opt/app/main.go
+  #   ports:
+  #     - 8081:8080
+  #   env_file: "dev.env"
+  #   depends_on:
+  #     - gotenberg
+  #     - db
+  #
+  # api:
+  #   build:
+  #     dockerfile: Dockerfile
+  #     context: ./
+  #     target: prod
+  #   # ports:
+  #   #   - 8080:8080
+  #   env_file: "prod.env"
+  #   network_mode: service:tailscale
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '4'
+  #         memory: 2048M
+  #   volumes:
+  #     - api-dev-files:/opt/app/files
+  #   depends_on:
+  #     - tailscale
+  #     - gotenberg
+  #     - db
