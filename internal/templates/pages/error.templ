@@ -1,0 +1,25 @@
+package ui_pages
+
+import "github.com/bata94/RegattaApi/internal/templates/layout"
+
+func msg(code int) string {
+  switch code {
+  case 404:
+    return "Not found"
+  default:
+    return "An error occurred"
+  }
+}
+
+templ errorBody(code int, detailedMessage string) {
+  <div class="flex flex-col items-center justify-center min-h-screen px-4 py-12 sm:px-6 lg:px-8 m-auto">
+      <h1 class="text-4xl font-extrabold tracking-tight underline sm:text-5xl p-8">Error:</h1>
+      <h1 class="text-4xl font-extrabold tracking-tight sm:text-5xl">{code}</h1>
+      <h1 class="text-4xl font-extrabold tracking-tight sm:text-5xl p-2">{msg(code)}</h1>
+      <h3 class="text-xl font-extrabold tracking-tight sm:text-5xl">{detailedMessage}</h3>
+  </div>
+}
+
+templ Error(code int, detailedMessage string) {
+  @ui_layouts.MinimalLayout(errorBody(code, detailedMessage))
+}

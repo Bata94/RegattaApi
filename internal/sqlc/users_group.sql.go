@@ -17,9 +17,9 @@ INSERT INTO users_group (
   allowed_admin,
   uuid
 ) VALUES (
-  $1, $2, gen_random_uuid()
+  $1, $2, uuidv7()
 )
-RETURNING ulid, name, allowed_admin, allowed_zeitnahme, allowed_startlisten, allowed_regattaleitung, uuid
+RETURNING uuid, name, allowed_admin, allowed_zeitnahme, allowed_startlisten, allowed_regattaleitung
 `
 
 type CreateUserGroupParams struct {
@@ -31,19 +31,18 @@ func (q *Queries) CreateUserGroup(ctx context.Context, arg CreateUserGroupParams
 	row := q.db.QueryRow(ctx, createUserGroup, arg.Name, arg.AllowedAdmin)
 	var i UsersGroup
 	err := row.Scan(
-		&i.Ulid,
+		&i.Uuid,
 		&i.Name,
 		&i.AllowedAdmin,
 		&i.AllowedZeitnahme,
 		&i.AllowedStartlisten,
 		&i.AllowedRegattaleitung,
-		&i.Uuid,
 	)
 	return i, err
 }
 
 const getAllUserGroup = `-- name: GetAllUserGroup :many
-SELECT ulid, name, allowed_admin, allowed_zeitnahme, allowed_startlisten, allowed_regattaleitung, uuid FROM users_group
+SELECT uuid, name, allowed_admin, allowed_zeitnahme, allowed_startlisten, allowed_regattaleitung FROM users_group
 ORDER BY uuid
 `
 
@@ -57,13 +56,12 @@ func (q *Queries) GetAllUserGroup(ctx context.Context) ([]UsersGroup, error) {
 	for rows.Next() {
 		var i UsersGroup
 		if err := rows.Scan(
-			&i.Ulid,
+			&i.Uuid,
 			&i.Name,
 			&i.AllowedAdmin,
 			&i.AllowedZeitnahme,
 			&i.AllowedStartlisten,
 			&i.AllowedRegattaleitung,
-			&i.Uuid,
 		); err != nil {
 			return nil, err
 		}
@@ -76,7 +74,7 @@ func (q *Queries) GetAllUserGroup(ctx context.Context) ([]UsersGroup, error) {
 }
 
 const getUserGroup = `-- name: GetUserGroup :many
-SELECT users_group.ulid, users_group.name, users_group.allowed_admin, users_group.allowed_zeitnahme, users_group.allowed_startlisten, users_group.allowed_regattaleitung, users_group.uuid, users.ulid, users.username, users.hashed_password, users.is_active, users.group_uuid, users.uuid
+SELECT users_group.uuid, users_group.name, users_group.allowed_admin, users_group.allowed_zeitnahme, users_group.allowed_startlisten, users_group.allowed_regattaleitung, users.uuid, users.username, users.hashed_password, users.is_active, users.group_uuid
 FROM users_group
 JOIN users
 ON users_group.uuid = users.group_uuid
@@ -98,19 +96,17 @@ func (q *Queries) GetUserGroup(ctx context.Context, argUuid uuid.UUID) ([]GetUse
 	for rows.Next() {
 		var i GetUserGroupRow
 		if err := rows.Scan(
-			&i.UsersGroup.Ulid,
+			&i.UsersGroup.Uuid,
 			&i.UsersGroup.Name,
 			&i.UsersGroup.AllowedAdmin,
 			&i.UsersGroup.AllowedZeitnahme,
 			&i.UsersGroup.AllowedStartlisten,
 			&i.UsersGroup.AllowedRegattaleitung,
-			&i.UsersGroup.Uuid,
-			&i.User.Ulid,
+			&i.User.Uuid,
 			&i.User.Username,
 			&i.User.HashedPassword,
 			&i.User.IsActive,
 			&i.User.GroupUuid,
-			&i.User.Uuid,
 		); err != nil {
 			return nil, err
 		}
@@ -123,7 +119,7 @@ func (q *Queries) GetUserGroup(ctx context.Context, argUuid uuid.UUID) ([]GetUse
 }
 
 const getUserGroupMinimal = `-- name: GetUserGroupMinimal :one
-SELECT ulid, name, allowed_admin, allowed_zeitnahme, allowed_startlisten, allowed_regattaleitung, uuid
+SELECT uuid, name, allowed_admin, allowed_zeitnahme, allowed_startlisten, allowed_regattaleitung
 FROM users_group
 WHERE users_group.uuid = $1
 `
@@ -132,13 +128,12 @@ func (q *Queries) GetUserGroupMinimal(ctx context.Context, argUuid uuid.UUID) (U
 	row := q.db.QueryRow(ctx, getUserGroupMinimal, argUuid)
 	var i UsersGroup
 	err := row.Scan(
-		&i.Ulid,
+		&i.Uuid,
 		&i.Name,
 		&i.AllowedAdmin,
 		&i.AllowedZeitnahme,
 		&i.AllowedStartlisten,
 		&i.AllowedRegattaleitung,
-		&i.Uuid,
 	)
 	return i, err
 }

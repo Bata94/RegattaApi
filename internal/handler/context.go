@@ -5,7 +5,9 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/google/uuid"
 )
@@ -25,7 +27,7 @@ type Context struct {
 	Writer     http.ResponseWriter
 	Request    *http.Request
 	pathParams map[string]string
-	locals     map[string]interface{}
+	locals     map[string]any
 	statusCode int
 }
 
@@ -34,7 +36,7 @@ func NewContext(w http.ResponseWriter, r *http.Request) *Context {
 		Writer:     w,
 		Request:    r,
 		pathParams: make(map[string]string),
-		locals:     make(map[string]interface{}),
+		locals:     make(map[string]any),
 		statusCode: http.StatusOK,
 	}
 }
@@ -55,7 +57,32 @@ func (c *Context) FormValue(key string) string {
 	return c.Request.FormValue(key)
 }
 
-func (c *Context) BodyParser(v interface{}) error {
+func (c *Context) FormFile(key string) (string, []byte, error) {
+	if err := c.Request.ParseMultipartForm(32 << 20); err != nil {
+		return "", nil, err
+	}
+	file, header, err := c.Request.FormFile(key)
+	if err != nil {
+		return "", nil, err
+	}
+	defer file.Close()
+
+	content, err := io.ReadAll(file)
+	if err != nil {
+		return "", nil, err
+	}
+	return header.Filename, content, nil
+}
+
+func (c *Context) SaveFile(filename string, data []byte) error {
+	dir := filepath.Dir(filename)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(filename, data, 0o644)
+}
+
+func (c *Context) BodyParser(v any) error {
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		return err
@@ -63,12 +90,12 @@ func (c *Context) BodyParser(v interface{}) error {
 	return json.Unmarshal(body, v)
 }
 
-func (c *Context) JSON(data interface{}) error {
+func (c *Context) JSON(data any) error {
 	c.Writer.Header().Set("Content-Type", "application/json")
 	return json.NewEncoder(c.Writer).Encode(data)
 }
 
-func (c *Context) JSONOk(data interface{}) error {
+func (c *Context) JSONOk(data any) error {
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(http.StatusOK)
 	return json.NewEncoder(c.Writer).Encode(data)
@@ -108,11 +135,11 @@ func (c *Context) Headers() http.Header {
 	return c.Request.Header
 }
 
-func (c *Context) Locals(key string, value interface{}) {
+func (c *Context) Locals(key string, value any) {
 	c.locals[key] = value
 }
 
-func (c *Context) GetLocals(key string) interface{} {
+func (c *Context) GetLocals(key string) any {
 	return c.locals[key]
 }
 

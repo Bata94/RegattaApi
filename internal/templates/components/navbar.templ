@@ -1,0 +1,78 @@
+package ui_components
+
+type NavBarConfig struct {
+  Entries []NavBarEntry
+}
+
+type NavBarEntry struct {
+  Name string
+  URL string
+}
+
+func NewNavBarConfig() NavBarConfig {
+  return NavBarConfig{
+    Entries: []NavBarEntry{},
+  }
+}
+
+templ navbarEntries(entries []NavBarEntry) {
+  for _, entry := range entries {
+    <li><button hx-get={entry.URL} hx-target="main" hx-push-url="true" href={entry.URL}>{entry.Name}</button></li>
+  }
+}
+
+templ NavbarIcon() {
+  <div
+    class="flex items-center gap-2 btn btn-ghost !h-[44px] !min-h-0 px-2"
+    hx-boost="true"
+    hx-get="/"
+    hx-target="main"
+    hx-push-url="true"
+    href="/"
+  >
+    <img
+      src="/assets/icons/mrg_logo.png"
+      alt="MRG-Logo"
+      loading="lazy"
+      width="58"
+      height="42"
+    />
+    <span class="text-2xl text-clip text-mrgblau">MRG Regatta</span>
+  </div>
+}
+
+templ loginIcon() {
+  <a class="btn btn-circle btn-ghost" href="/login">
+    <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+  </a>
+}
+
+templ Navbar(c NavBarConfig) {
+  <div class="max-lg:collapse w-full rounded-md">
+  <input id="navbar-1-toggle" class="peer hidden" type="checkbox" />
+  <label for="navbar-1-toggle" class="fixed inset-0 hidden max-lg:peer-checked:block"></label>
+  <div class="collapse-title navbar">
+    <div class="navbar-start">
+      <label for="navbar-1-toggle" class="btn btn-ghost lg:hidden">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16" /></svg>
+      </label>
+      @NavbarIcon()
+    </div>
+    <div class="navbar-center hidden lg:flex">
+      <ul class="menu menu-horizontal px-1">
+        @navbarEntries(c.Entries)
+      </ul>
+    </div>
+    <div class="navbar-end flex items-center gap-2">
+      @loginIcon()
+      @themeSwitcher()
+    </div>
+  </div>
+
+  <div class="collapse-content lg:hidden z-1">
+    <ul class="menu">
+      @navbarEntries(c.Entries)
+    </ul>
+  </div>
+</div>
+}

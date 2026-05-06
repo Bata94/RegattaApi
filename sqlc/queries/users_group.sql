@@ -25,6 +25,6 @@ INSERT INTO users_group (
   allowed_admin,
   uuid
 ) VALUES (
-  $1, $2, gen_random_uuid()
+  $1, $2, uuidv7()
 )
 RETURNING *;

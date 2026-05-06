@@ -82,13 +82,13 @@ func (q *Queries) GetAllVerein(ctx context.Context) ([]Verein, error) {
 
 const getRechnungungenByVerein = `-- name: GetRechnungungenByVerein :many
 SELECT
-  ulid, nummer, date, verein_uuid, cost_sum
+  uuid, nummer, date, verein_uuid, cost_sum
 FROM
   rechnung
 WHERE
   verein_uuid = $1
 ORDER BY
-  ulid ASC
+  uuid ASC
 `
 
 func (q *Queries) GetRechnungungenByVerein(ctx context.Context, vereinUuid uuid.UUID) ([]Rechnung, error) {
@@ -101,7 +101,7 @@ func (q *Queries) GetRechnungungenByVerein(ctx context.Context, vereinUuid uuid.
 	for rows.Next() {
 		var i Rechnung
 		if err := rows.Scan(
-			&i.Ulid,
+			&i.Uuid,
 			&i.Nummer,
 			&i.Date,
 			&i.VereinUuid,

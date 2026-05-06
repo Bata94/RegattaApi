@@ -15,7 +15,7 @@ func GetAllUsers(c *handler.Context) error {
 }
 
 func GetUser(c *handler.Context) error {
-	uuid, err := c.GetUUID("ulid")
+	uuid, err := c.GetUUID("uuid")
 	if err != nil {
 		return &handler.Error{StatusCode: 400, Message: err.Error()}
 	}
@@ -67,7 +67,7 @@ func GetAllUsersGroups(c *handler.Context) error {
 }
 
 func GetUsersGroup(c *handler.Context) error {
-	uuid, err := c.GetUUID("ulid")
+	uuid, err := c.GetUUID("uuid")
 	if err != nil {
 		return &handler.Error{StatusCode: 400, Message: err.Error()}
 	}

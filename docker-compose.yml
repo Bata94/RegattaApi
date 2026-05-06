@@ -10,7 +10,7 @@ services:
   #   image: tailscale/tailscale:latest
   #   hostname: docker-xps
   #   environment:
-  #     - TS_AUTHKEY=tskey-auth-kwVs44FFW311CNTRL-RB2LaBrke2VFgtdCRGZR2V4jwf4ayPFUV
+  #     - TS_AUTHKEY=${TS_AUTHKEY}
   #     - TS_STATE_DIR=/var/lib/tailscale
   #   volumes:
   #     - tailscale-state:/var/lib/tailscale

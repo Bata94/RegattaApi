@@ -1,6 +1,28 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --text-md: 1rem;
+  --text-md--line-height: 1.5rem;
+  --text-md--letter-spacing: 0.125rem;
+  --text-md--font-weight: 500;
+
+  --text-2xs: 0.6rem;
+  --text-2xs--line-height: 0.8rem;
+  --text-2xs--letter-spacing: 0.1rem;
+  --text-2xs--font-weight: 400;
+
+  --text-3xs: 0.45rem;
+  --text-3xs--line-height: 0.6rem;
+  --text-3xs--letter-spacing: 0.075rem;
+  --text-3xs--font-weight: 300;
+
+  --color-mrgblau: "#183b93"
+}
+
+@plugin "daisyui" {
+  themes: light --default, dark --prefersdark;
+}
 
 @media print {
   div.no-break {

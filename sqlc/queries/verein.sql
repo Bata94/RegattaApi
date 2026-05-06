@@ -24,7 +24,7 @@ FROM
 WHERE
   verein_uuid = $1
 ORDER BY
-  ulid ASC;
+  uuid ASC;
 
 -- name: GetVereinRechnungsnummern :many
 SELECT DISTINCT

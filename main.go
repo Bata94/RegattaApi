@@ -44,7 +44,12 @@ func main() {
 		port = "3000"
 	}
 
-	addr := fmt.Sprintf(":%s", port)
+	host := os.Getenv("HOST")
+	if host == "" {
+		host = "127.0.0.1"
+	}
+
+	addr := fmt.Sprintf("%s:%s", host, port)
 	log.Printf("Starting server on %s", addr)
 	log.Fatal(http.ListenAndServe(addr, server.GetRouter()))
 }

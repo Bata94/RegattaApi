@@ -114,7 +114,7 @@ CREATE TABLE obmann (
 );
 
 CREATE TABLE rechnung (
-  uuid uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  uuid uuid PRIMARY KEY DEFAULT uuidv7(),
   nummer text UNIQUE NOT NULL,
   date date DEFAULT NOW() NOT NULL,
   verein_uuid uuid NOT NULL,
@@ -122,7 +122,7 @@ CREATE TABLE rechnung (
 );
 
 CREATE TABLE zahlung (
-  uuid uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  uuid uuid PRIMARY KEY DEFAULT uuidv7(),
   nummer text UNIQUE NOT NULL,
   date date DEFAULT NOW() NOT NULL,
   verein_uuid uuid NOT NULL,
@@ -130,7 +130,7 @@ CREATE TABLE zahlung (
 );
 
 CREATE TABLE startnummer_ausgabe (
-  uuid uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  uuid uuid PRIMARY KEY DEFAULT uuidv7(),
   verein_uuid uuid NOT NULL,
   date date DEFAULT NOW() NOT NULL,
   pfand int DEFAULT 20 NOT NULL,
@@ -151,7 +151,7 @@ CREATE TABLE zeitnahme_ergebnis (
 );
 
 CREATE TABLE users_group (
-  uuid uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  uuid uuid PRIMARY KEY DEFAULT uuidv7(),
   name text NOT NULL,
   allowed_admin boolean DEFAULT false NOT NULL,
   allowed_zeitnahme boolean DEFAULT false NOT NULL,
@@ -160,7 +160,7 @@ CREATE TABLE users_group (
 );
 
 CREATE TABLE users (
-  uuid uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  uuid uuid PRIMARY KEY DEFAULT uuidv7(),
   username text UNIQUE NOT NULL,
   hashed_password text NOT NULL,
   is_active boolean DEFAULT false NOT NULL,
@@ -176,7 +176,7 @@ INSERT INTO users_group (
   allowed_startlisten,
   allowed_regattaleitung
 ) VALUES (
-  gen_random_uuid(),
+  uuidv7(),
   'full_admin',
   true,
   true,
@@ -188,7 +188,7 @@ INSERT INTO users_group (
   name,
   allowed_regattaleitung
 ) VALUES (
-  gen_random_uuid(),
+  uuidv7(),
   'regattaleitung',
   true
 );
@@ -197,7 +197,7 @@ INSERT INTO users_group (
   name,
   allowed_zeitnahme
 ) VALUES (
-  gen_random_uuid(),
+  uuidv7(),
   'zeitnahme',
   true
 );
@@ -206,7 +206,7 @@ INSERT INTO users_group (
   name,
   allowed_startlisten
 ) VALUES (
-  gen_random_uuid(),
+  uuidv7(),
   'startlisten',
   true
 );
@@ -230,6 +230,9 @@ SELECT 'down SQL query';
 
 DROP TABLE users;
 DROP TABLE users_group;
+DROP TABLE rechnung;
+DROP TABLE zahlung;
+DROP TABLE startnummer_ausgabe;
 DROP TABLE zeitnahme_ergebnis;
 DROP TABLE obmann;
 DROP TABLE link_meldung_athlet;

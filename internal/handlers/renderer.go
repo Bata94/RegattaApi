@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"context"
+
 	"github.com/a-h/templ"
 	"github.com/bata94/RegattaApi/internal/handler"
 	pdf_templates "github.com/bata94/RegattaApi/internal/templates/pdf"
@@ -8,5 +10,6 @@ import (
 
 func RenderPdf(c *handler.Context, title string, comp templ.Component) error {
 	comp = pdf_templates.PdfLayout(title, comp)
-	return c.JSON("PDF rendering not implemented in net/http")
+	c.Writer.Header().Set("Content-Type", "text/html")
+	return comp.Render(context.Background(), c.Writer)
 }

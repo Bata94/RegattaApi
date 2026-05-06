@@ -25,6 +25,6 @@ INSERT INTO users (
   hashed_password,
   uuid
 ) VALUES (
-  $1, $2, $3, gen_random_uuid()
+  $1, $2, $3, uuidv7()
 )
 RETURNING *;

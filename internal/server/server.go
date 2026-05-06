@@ -3,11 +3,36 @@ package server
 import (
 	"log"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/bata94/RegattaApi/internal/handlers"
-	api_v1 "github.com/bata94/RegattaApi/internal/handlers/api/v1"
+	"github.com/bata94/RegattaApi/internal/handlers/api/v1"
+	"github.com/bata94/RegattaApi/internal/templates/components"
+	"github.com/bata94/RegattaApi/internal/templates/pages"
 )
+
+var (
+	corsAllowedOrigins    = os.Getenv("CORS_ALLOWED_ORIGINS")
+	corsAllowedMethods     = os.Getenv("CORS_ALLOWED_METHODS")
+	corsAllowedHeaders    = os.Getenv("CORS_ALLOWED_HEADERS")
+
+	r = newRouter()
+	navBarConfig = ui_components.NewNavBarConfig()
+)
+
+func init() {
+	if corsAllowedOrigins == "" {
+		corsAllowedOrigins = "*"
+	}
+	if corsAllowedMethods == "" {
+		corsAllowedMethods = "GET, POST, PUT, DELETE, OPTIONS"
+	}
+	if corsAllowedHeaders == "" {
+		corsAllowedHeaders = "Content-Type, Authorization"
+	}
+}
 
 type router struct {
 	handlers map[string]map[string]http.HandlerFunc
@@ -35,6 +60,9 @@ func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	handler := methodHandlers[req.URL.Path]
 	if handler == nil {
+		handler = r.matchWildcard(req.Method, req.URL.Path, req)
+	}
+	if handler == nil {
 		http.NotFound(w, req)
 		return
 	}
@@ -42,8 +70,73 @@ func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	handler(w, req)
 }
 
+func (r *router) matchWildcard(method, path string, req *http.Request) http.HandlerFunc {
+	methodHandlers := r.handlers[method]
+	for pattern := range methodHandlers {
+		params, ok := matchPath(pattern, path)
+		if ok {
+			for k, v := range params {
+				req.URL.Query().Set(k, v)
+			}
+			return methodHandlers[pattern]
+		}
+	}
+	return nil
+}
+
+func matchPath(pattern, path string) (map[string]string, bool) {
+	patParts := strings.Split(pattern, "/")
+	pathParts := strings.Split(path, "/")
+
+	if len(patParts) == 0 || len(pathParts) == 0 {
+		return nil, false
+	}
+
+	params := make(map[string]string)
+
+	for i := 0; i < len(patParts); i++ {
+		if i >= len(pathParts) {
+			return nil, false
+		}
+
+		if strings.HasPrefix(patParts[i], "{") && strings.HasSuffix(patParts[i], "}") {
+			if i == len(patParts)-1 {
+				params[patParts[i][1:len(patParts[i])-1]] = strings.Join(pathParts[i:], "/")
+				return params, true
+			}
+			params[patParts[i][1:len(patParts[i])-1]] = pathParts[i]
+		} else if patParts[i] != pathParts[i] {
+			return nil, false
+		}
+	}
+
+	return params, len(patParts) == len(pathParts)
+}
+
+type corsRouter struct {
+	h http.Handler
+}
+
+func (c *corsRouter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", corsAllowedOrigins)
+	w.Header().Set("Access-Control-Allow-Methods", corsAllowedMethods)
+	w.Header().Set("Access-Control-Allow-Headers", corsAllowedHeaders)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	c.h.ServeHTTP(w, r)
+}
+
 func GetRouter() http.Handler {
-	r := newRouter()
+	navBarConfig.Entries = []ui_components.NavBarEntry{
+		{Name: "Home", URL: "/"},
+		{Name: "Livestream", URL: "/live"},
+		{Name: "Ausschreibung", URL: "/ausschreibung"},
+		{Name: "Zeitplan", URL: "/zeitplan"},
+		{Name: "Meldeergebnis", URL: "/meldeergebnis"},
+		{Name: "Ergebnisse", URL: "/ergebnisse"},
+	}
 
 	r.Handle("GET", "/metrics", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Metrics placeholder"))
@@ -59,6 +152,16 @@ func GetRouter() http.Handler {
 		http.ServeFile(w, r, "./files/"+r.URL.Path[len("/files/"):])
 	})
 
+	// UI Handlers
+	baseLayoutHandler("/", ui_pages.Index())
+	baseLayoutHandler("/live", ui_pages.Livestream())
+	baseLayoutHandler("/ausschreibung", ui_pages.Ausschreibung())
+	baseLayoutHandler("/zeitplan", ui_pages.Zeitplan())
+	baseLayoutHandler("/meldeergebnis", ui_pages.Meldeergebnis())
+	baseLayoutHandler("/ergebnisse", ui_pages.Ergebnisse())
+	baseLayoutHandler("/login", ui_pages.Login())
+
+	// API Handlers
 	r.Handle("POST", "/api/auth/login", wrapHandler(api_v1.Login))
 	r.Handle("POST", "/api/auth/logout", wrapHandler(api_v1.Logout))
 	r.Handle("GET", "/api/auth/valid", wrapHandler(api_v1.AuthValidate))
@@ -115,11 +218,11 @@ func GetRouter() http.Handler {
 	r.Handle("GET", "/api/v1/rennen/{uuid}", wrapHandler(api_v1.GetRennen))
 
 	r.Handle("GET", "/api/v1/users", wrapHandler(api_v1.GetAllUsers))
-	r.Handle("GET", "/api/v1/users/{ulid}", wrapHandler(api_v1.GetUser))
+	r.Handle("GET", "/api/v1/users/{uuid}", wrapHandler(api_v1.GetUser))
 	r.Handle("GET", "/api/v1/users/name/{name}", wrapHandler(api_v1.GetUserByName))
 	r.Handle("POST", "/api/v1/users", wrapHandler(api_v1.CreateUser))
 	r.Handle("GET", "/api/v1/users/group", wrapHandler(api_v1.GetAllUsersGroups))
-	r.Handle("GET", "/api/v1/users/group/{ulid}", wrapHandler(api_v1.GetUsersGroup))
+	r.Handle("GET", "/api/v1/users/group/{uuid}", wrapHandler(api_v1.GetUsersGroup))
 	r.Handle("GET", "/api/v1/users/group/name/{name}", wrapHandler(api_v1.GetUsersGroupByName))
 
 	r.Handle("GET", "/api/v1/verein", wrapHandler(api_v1.GetAllVerein))
@@ -135,15 +238,15 @@ func GetRouter() http.Handler {
 
 	go handlers.RunHub()
 
-	return r
+	return &corsRouter{h: r}
 }
 
 func wrapHandler(h handler.Handler) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%s | %s | %s", r.Method, r.URL.Path, r.RemoteAddr)
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Origin", corsAllowedOrigins)
+		w.Header().Set("Access-Control-Allow-Methods", corsAllowedMethods)
+		w.Header().Set("Access-Control-Allow-Headers", corsAllowedHeaders)
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
@@ -157,9 +260,12 @@ func wrapHandler(h handler.Handler) func(http.ResponseWriter, *http.Request) {
 		}()
 		ctx := handler.NewContext(w, r)
 		if err := h(ctx); err != nil {
-			if e, ok := err.(*handler.Error); ok {
-				w.WriteHeader(e.StatusCode)
-				w.Write([]byte(e.Message))
+			if he, ok := err.(*handler.Error); ok {
+				w.WriteHeader(he.StatusCode)
+				w.Write([]byte(he.Message))
+			} else {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(err.Error()))
 			}
 		}
 	}

@@ -237,7 +237,7 @@ type Pause struct {
 }
 
 type Rechnung struct {
-	Ulid       interface{} `json:"ulid"`
+	Uuid       uuid.UUID   `json:"uuid"`
 	Nummer     string      `json:"nummer"`
 	Date       pgtype.Date `json:"date"`
 	VereinUuid uuid.UUID   `json:"verein_uuid"`
@@ -265,7 +265,7 @@ type Rennen struct {
 }
 
 type StartnummerAusgabe struct {
-	Ulid                      interface{} `json:"ulid"`
+	Uuid                      uuid.UUID   `json:"uuid"`
 	VereinUuid                uuid.UUID   `json:"verein_uuid"`
 	Date                      pgtype.Date `json:"date"`
 	Pfand                     int32       `json:"pfand"`
@@ -275,22 +275,20 @@ type StartnummerAusgabe struct {
 }
 
 type User struct {
-	Ulid           interface{} `json:"ulid"`
-	Username       string      `json:"username"`
-	HashedPassword string      `json:"hashed_password"`
-	IsActive       bool        `json:"is_active"`
-	GroupUuid      uuid.UUID   `json:"group_uuid"`
-	Uuid           uuid.UUID   `json:"uuid"`
+	Uuid           uuid.UUID `json:"uuid"`
+	Username       string    `json:"username"`
+	HashedPassword string    `json:"hashed_password"`
+	IsActive       bool      `json:"is_active"`
+	GroupUuid      uuid.UUID `json:"group_uuid"`
 }
 
 type UsersGroup struct {
-	Ulid                  interface{} `json:"ulid"`
-	Name                  string      `json:"name"`
-	AllowedAdmin          bool        `json:"allowed_admin"`
-	AllowedZeitnahme      bool        `json:"allowed_zeitnahme"`
-	AllowedStartlisten    bool        `json:"allowed_startlisten"`
-	AllowedRegattaleitung bool        `json:"allowed_regattaleitung"`
-	Uuid                  uuid.UUID   `json:"uuid"`
+	Uuid                  uuid.UUID `json:"uuid"`
+	Name                  string    `json:"name"`
+	AllowedAdmin          bool      `json:"allowed_admin"`
+	AllowedZeitnahme      bool      `json:"allowed_zeitnahme"`
+	AllowedStartlisten    bool      `json:"allowed_startlisten"`
+	AllowedRegattaleitung bool      `json:"allowed_regattaleitung"`
 }
 
 type Verein struct {
@@ -301,7 +299,7 @@ type Verein struct {
 }
 
 type Zahlung struct {
-	Ulid       interface{} `json:"ulid"`
+	Uuid       uuid.UUID   `json:"uuid"`
 	Nummer     string      `json:"nummer"`
 	Date       pgtype.Date `json:"date"`
 	VereinUuid uuid.UUID   `json:"verein_uuid"`

@@ -18,9 +18,9 @@ INSERT INTO users (
   hashed_password,
   uuid
 ) VALUES (
-  $1, $2, $3, gen_random_uuid()
+  $1, $2, $3, uuidv7()
 )
-RETURNING ulid, username, hashed_password, is_active, group_uuid, uuid
+RETURNING uuid, username, hashed_password, is_active, group_uuid
 `
 
 type CreateUserParams struct {
@@ -33,18 +33,17 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	row := q.db.QueryRow(ctx, createUser, arg.GroupUuid, arg.Username, arg.HashedPassword)
 	var i User
 	err := row.Scan(
-		&i.Ulid,
+		&i.Uuid,
 		&i.Username,
 		&i.HashedPassword,
 		&i.IsActive,
 		&i.GroupUuid,
-		&i.Uuid,
 	)
 	return i, err
 }
 
 const getAllUser = `-- name: GetAllUser :many
-SELECT ulid, username, hashed_password, is_active, group_uuid, uuid FROM users
+SELECT uuid, username, hashed_password, is_active, group_uuid FROM users
 ORDER BY uuid
 `
 
@@ -58,12 +57,11 @@ func (q *Queries) GetAllUser(ctx context.Context) ([]User, error) {
 	for rows.Next() {
 		var i User
 		if err := rows.Scan(
-			&i.Ulid,
+			&i.Uuid,
 			&i.Username,
 			&i.HashedPassword,
 			&i.IsActive,
 			&i.GroupUuid,
-			&i.Uuid,
 		); err != nil {
 			return nil, err
 		}
@@ -76,7 +74,7 @@ func (q *Queries) GetAllUser(ctx context.Context) ([]User, error) {
 }
 
 const getUser = `-- name: GetUser :one
-SELECT users.ulid, users.username, users.hashed_password, users.is_active, users.group_uuid, users.uuid, users_group.ulid, users_group.name, users_group.allowed_admin, users_group.allowed_zeitnahme, users_group.allowed_startlisten, users_group.allowed_regattaleitung, users_group.uuid
+SELECT users.uuid, users.username, users.hashed_password, users.is_active, users.group_uuid, users_group.uuid, users_group.name, users_group.allowed_admin, users_group.allowed_zeitnahme, users_group.allowed_startlisten, users_group.allowed_regattaleitung
 FROM users
 JOIN users_group
 ON users.group_uuid = users_group.uuid
@@ -92,25 +90,23 @@ func (q *Queries) GetUser(ctx context.Context, argUuid uuid.UUID) (GetUserRow, e
 	row := q.db.QueryRow(ctx, getUser, argUuid)
 	var i GetUserRow
 	err := row.Scan(
-		&i.User.Ulid,
+		&i.User.Uuid,
 		&i.User.Username,
 		&i.User.HashedPassword,
 		&i.User.IsActive,
 		&i.User.GroupUuid,
-		&i.User.Uuid,
-		&i.UsersGroup.Ulid,
+		&i.UsersGroup.Uuid,
 		&i.UsersGroup.Name,
 		&i.UsersGroup.AllowedAdmin,
 		&i.UsersGroup.AllowedZeitnahme,
 		&i.UsersGroup.AllowedStartlisten,
 		&i.UsersGroup.AllowedRegattaleitung,
-		&i.UsersGroup.Uuid,
 	)
 	return i, err
 }
 
 const getUserMinimal = `-- name: GetUserMinimal :one
-SELECT ulid, username, hashed_password, is_active, group_uuid, uuid FROM users
+SELECT uuid, username, hashed_password, is_active, group_uuid FROM users
 WHERE uuid = $1 LIMIT 1
 `
 
@@ -118,12 +114,11 @@ func (q *Queries) GetUserMinimal(ctx context.Context, argUuid uuid.UUID) (User, 
 	row := q.db.QueryRow(ctx, getUserMinimal, argUuid)
 	var i User
 	err := row.Scan(
-		&i.Ulid,
+		&i.Uuid,
 		&i.Username,
 		&i.HashedPassword,
 		&i.IsActive,
 		&i.GroupUuid,
-		&i.Uuid,
 	)
 	return i, err
 }
