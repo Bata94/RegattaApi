@@ -30,13 +30,7 @@ templ NavbarIcon() {
     hx-push-url="true"
     href="/"
   >
-    <img
-      src="/assets/icons/mrg_logo.png"
-      alt="MRG-Logo"
-      loading="lazy"
-      width="58"
-      height="42"
-    />
+    @Image("/assets/icons/mrg_logo.png", "MRG-Logo", WithWidth("58"), WithHeight("42"), WithoutLazyLoading())
     <span class="text-2xl text-clip text-mrgblau">MRG Regatta</span>
   </div>
 }

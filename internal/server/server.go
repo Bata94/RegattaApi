@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/a-h/templ"
 	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/bata94/RegattaApi/internal/handlers"
 	"github.com/bata94/RegattaApi/internal/handlers/api/v1"
@@ -130,7 +131,7 @@ func (c *corsRouter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func GetRouter() http.Handler {
 	navBarConfig.Entries = []ui_components.NavBarEntry{
-		{Name: "Home", URL: "/"},
+		// {Name: "Home", URL: "/"},
 		{Name: "Livestream", URL: "/live"},
 		{Name: "Ausschreibung", URL: "/ausschreibung"},
 		{Name: "Zeitplan", URL: "/zeitplan"},
@@ -160,6 +161,34 @@ func GetRouter() http.Handler {
 	baseLayoutHandler("/meldeergebnis", ui_pages.Meldeergebnis())
 	baseLayoutHandler("/ergebnisse", ui_pages.Ergebnisse())
 	baseLayoutHandler("/login", ui_pages.Login())
+
+	// Pure HTMX UI Components
+	r.Handle("GET", "/components/image", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("Image component endpoint hit!")
+		queryParams := r.URL.Query()
+		src := queryParams.Get("src")
+		alt := queryParams.Get("alt")
+
+		if src == "" {
+			log.Printf("Image component: src is empty")
+			http.NotFound(w, r)
+			return
+		}
+
+		imgOpt := ui_components.DefaultImageOptions()
+
+		if w := queryParams.Get("width"); w != "" {
+			imgOpt.Width = w
+		}
+		if h := queryParams.Get("height"); h != "" {
+			imgOpt.Height = h
+		}
+		if c := queryParams.Get("class"); c != "" {
+			imgOpt.ClassImage = c
+		}
+
+		templ.Handler(ui_components.RawImageComponent(src, alt, imgOpt)).ServeHTTP(w, r)
+	})
 
 	// API Handlers
 	r.Handle("POST", "/api/auth/login", wrapHandler(api_v1.Login))

@@ -1,84 +1,85 @@
 package ui_pages
 
+import (
+	"github.com/bata94/RegattaApi/internal/templates/components"
+)
+
 templ Index() {
-  <h2>
-    Willkommen zur 33. JuM Regatta der Mülheimer Ruder-Gesellschaft!
-  </h2>
+	<h2>
+		Willkommen zur 33. JuM Regatta der Mülheimer Ruder-Gesellschaft!
+	</h2>
 
-  <div class="flex flex-col md:flex-row gap-4">
-    <img
-      src="/assets/images/regattaplatz.jpg"
-      class="max-w-sm md:max-w-md lg:max-w-lg rounded-lg shadow-2xl mx-auto md:mx-0 md:ml-auto"
-      alt="Bild während der MRG Regatta von dem belebten Regattaplatz"
-      loading="lazy"
-    />
-    <p class="flex-1 my-auto">
-      Nach dreijähriger Pause freuen wir uns, euch am 23. & 24.09.2023 zur 33.
-      Jungen und Mädchen Regatta der Mülheimer Ruder-Gesellschaft begrüßen zu
-      dürfen!<br /><br />
-       Natürlich waren wir in dieser Zeit nicht untätig und können euch ein paar
-      digitale Neuerungen bringen, u.a. wird die gesamte Regatta im <a href="/live">LiveStream</a> zu verfolgen sein! Außerdem haben wir die Zeitnahme und das Meldewesen
-      komplett automatisiert, dadurch werden <a href="/ergebnisse">Ergebnisse</a> zeitnah nach einem Rennen abrufbar sein!<br/><br/>
-    </p>
-  </div>
+	<div class="flex flex-col md:flex-row gap-4">
+		@ui_components.Image(
+			"/assets/images/regattaplatz.jpg",
+			"Bild während der MRG Regatta von dem belebten Regattaplatz",
+			ui_components.WithImageClass("max-w-sm md:max-w-md lg:max-w-lg rounded-lg shadow-2xl mx-auto md:mx-0 md:ml-auto"),
+		)
+		<p class="flex-1 my-auto">
+			Nach dreijähriger Pause freuen wir uns, euch am 23. & 24.09.2023 zur 33.
+			Jungen und Mädchen Regatta der Mülheimer Ruder-Gesellschaft begrüßen zu
+			dürfen!<br /><br />
+			Natürlich waren wir in dieser Zeit nicht untätig und können euch ein paar
+			digitale Neuerungen bringen, u.a. wird die gesamte Regatta im <a href="/live">LiveStream</a> zu verfolgen sein! Außerdem haben wir die Zeitnahme und das Meldewesen
+			komplett automatisiert, dadurch werden <a href="/ergebnisse">Ergebnisse</a> zeitnah nach einem Rennen abrufbar sein!<br/><br/>
+		</p>
+	</div>
 
-  <div class="flex flex-col md:flex-row gap-4">
-    <p class="flex-1 my-auto">
-      Wie in den letzten Jahren findet die Regatta auf dem Bootsplatz der
-      Mülheimer Ruder-Gesellschaft e.V. statt. Um euer leibliches Wohl kümmert
-      sich dort das Team unserer Vereinsgastronomie <a
-        href="https://www.bootshausmuelheim.de/"
-        target="_blank">"Bootshaus"</a>. <br /><br />
-       Hier hat man auch den besten Blick auf das Regattatreiben. Etwas
-      unterhalb unseres Steges befindet sich der Zieleinlauf, die Langstrecke
-      startet auch dort und der Parallelslalom wird direkt vor dem Bootsplatz
-      aufgebaut. Das Regattabüro befindet sich in diesem Jahr auf unserem
-      Bootsplatz.
-    </p>
-    <img
-      src="/assets/images/zuschauer.jpg"
-      class="max-w-sm md:max-w-md lg:max-w-lg rounded-lg shadow-2xl mx-auto md:mx-0 md:ml-auto"
-      alt="Bild während der MRG Regatta von dem belebten Regattaplatz"
-      loading="lazy"
-    />
-  </div>
+	<div class="flex flex-col md:flex-row gap-4">
+		<p class="flex-1 my-auto">
+			Wie in den letzten Jahren findet die Regatta auf dem Bootsplatz der
+			Mülheimer Ruder-Gesellschaft e.V. statt. Um euer leibliches Wohl kümmert
+			sich dort das Team unserer Vereinsgastronomie <a
+				href="https://www.bootshausmuelheim.de/"
+				target="_blank">"Bootshaus"</a>. <br /><br />
+			Hier hat man auch den besten Blick auf das Regattatreiben. Etwas
+			unterhalb unseres Steges befindet sich der Zieleinlauf, die Langstrecke
+			startet auch dort und der Parallelslalom wird direkt vor dem Bootsplatz
+			aufgebaut. Das Regattabüro befindet sich in diesem Jahr auf unserem
+			Bootsplatz.
+		</p>
+		@ui_components.Image(
+			"/assets/images/zuschauer.jpg",
+			"Bild während der MRG Regatta von dem belebten Regattaplatz",
+			ui_components.WithImageClass("max-w-sm md:max-w-md lg:max-w-lg rounded-lg shadow-2xl mx-auto md:mx-0 md:ml-auto"),
+		)
+	</div>
 
-  <div class="flex flex-col md:flex-row gap-4">
-    <img
-      src="/assets/images/faehre.jpg"
-      class="max-w-sm md:max-w-md lg:max-w-lg rounded-lg shadow-2xl mx-auto md:mx-0 md:ml-auto"
-      alt="Bild während der MRG Regatta von dem belebten Regattaplatz"
-      loading="lazy"
-    />
-    <p class="flex-1 my-auto">
-      Die meisten Vereine sind auf der anderen Ruhrseite, unterhalb der Mendener
-      Brücke untergebracht. Für die schnelle Überfahrt pendelt unsere Fähre
-      natürlich wieder zwischen den beiden Ruhrufern, wie in jedem Jahr!
-    </p>
-  </div>
+	<div class="flex flex-col md:flex-row gap-4">
+		@ui_components.Image(
+			"/assets/images/faehre.jpg",
+			"Bild während der MRG Regatta von dem belebten Regattaplatz",
+			ui_components.WithImageClass("max-w-sm md:max-w-md lg:max-w-lg rounded-lg shadow-2xl mx-auto md:mx-0 md:ml-auto"),
+		)
+		<p class="flex-1 my-auto">
+			Die meisten Vereine sind auf der anderen Ruhrseite, unterhalb der Mendener
+			Brücke untergebracht. Für die schnelle Überfahrt pendelt unsere Fähre
+			natürlich wieder zwischen den beiden Ruhrufern, wie in jedem Jahr!
+		</p>
+	</div>
 
-  <div class="divider"></div>
+	<div class="divider"></div>
 
-  <div
-    class="grid grid-flow-row grid-cols-1 grid-rows-3 md:grid-cols-2 md:grid-rows-2 xl:grid-cols-3 xl:grid-rows-1 place-items-center"
-  >
-    <img
-      src="/assets/images/wettkampf4x+.jpg"
-      class="max-w-sm rounded-lg shadow-2xl mx-auto md:mx-0"
-      alt="Bild während der MRG Regatta von dem belebten Regattaplatz"
-      loading="lazy"
-    />
-    <img
-      src="/assets/images/ruhr_olymp_06.jpg"
-      class="max-w-sm rounded-lg shadow-2xl mx-auto md:mx-0"
-      alt="Bild während der MRG Regatta von dem belebten Regattaplatz"
-      loading="lazy"
-    />
-    <img
-      src="/assets/images/ruhr_olymp_06_2.jpg"
-      class="max-w-sm rounded-lg shadow-2xl mx-auto md:mx-0"
-      alt="Bild während der MRG Regatta von dem belebten Regattaplatz"
-      loading="lazy"
-    />
-  </div>
+	<div
+		class="grid grid-flow-row grid-cols-1 grid-rows-3 md:grid-cols-2 md:grid-rows-2 xl:grid-cols-3 xl:grid-rows-1 place-items-center"
+	>
+		@ui_components.Image(
+			"/assets/images/wettkampf4x+.jpg",
+			"Bild während der MRG Regatta von dem belebten Regattaplatz",
+			ui_components.WithImageClass("max-w-sm rounded-lg shadow-2xl mx-auto md:mx-0"),
+      ui_components.WithVeryLazyLoading(),
+		)
+		@ui_components.Image(
+			"/assets/images/ruhr_olymp_06.jpg",
+			"Bild während der MRG Regatta von dem belebten Regattaplatz",
+			ui_components.WithImageClass("max-w-sm rounded-lg shadow-2xl mx-auto md:mx-0"),
+      ui_components.WithVeryLazyLoading(),
+		)
+		@ui_components.Image(
+			"/assets/images/ruhr_olymp_06_2.jpg",
+			"Bild während der MRG Regatta von dem belebten Regattaplatz",
+			ui_components.WithImageClass("max-w-sm rounded-lg shadow-2xl mx-auto md:mx-0"),
+      ui_components.WithVeryLazyLoading(),
+		)
+	</div>
 }

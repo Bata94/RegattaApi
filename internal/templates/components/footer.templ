@@ -3,14 +3,7 @@ package ui_components
 templ Footer() {
 <footer class="footer grid grid-flow-col grid-cols-4 p-10 bg-neutral text-neutral-content">
   <aside>
-    <img
-      class=""
-      src="/assets/icons/mrg_logo.png"
-      alt="MRG-Logo"
-      loading="lazy"
-      width="200"
-      height="120"
-    />
+    @Image("/assets/icons/mrg_logo.png", "MRG-Logo", WithWidth("200"), WithHeight("120"))
   </aside>
   <aside class="flex flex-col">
     <header class="footer-title">Anschrift</header>

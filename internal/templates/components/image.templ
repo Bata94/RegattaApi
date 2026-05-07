@@ -1,0 +1,144 @@
+package ui_components
+
+import (
+	"fmt"
+	"net/url"
+	"strings"
+)
+
+// TODO: Skeleton sizing should be more infeared instead of fixed!
+
+type ImageOptions struct {
+  Width string
+  Height string
+  ClassImage string
+  ClassSkeleton string
+  LazyLoading bool
+  VeryLazyLoading bool
+}
+
+func DefaultImageOptions() ImageOptions {
+  return ImageOptions{
+    Width: "100%",
+    Height: "100%",
+    ClassImage: "",
+    ClassSkeleton: "",
+    LazyLoading: true,
+    VeryLazyLoading: false,
+  }
+}
+
+// WithWidth sets the width of the imageFile
+func WithWidth(width string) func(ImageOptions) ImageOptions {
+  return func(opts ImageOptions) ImageOptions {
+    opts.Width = width
+    return opts
+  }
+}
+
+// WithHeight sets the height of the imageFile
+func WithHeight(height string) func(ImageOptions) ImageOptions {
+  return func(opts ImageOptions) ImageOptions {
+    opts.Height = height
+    return opts
+  }
+}
+
+// WithSkeletonClass sets (sizing) classes for the loading skeleton
+// Skeleton is only shown if the image is not loaded yet, and LazyLoading active.
+func WithSkeletonClass(class string) func(ImageOptions) ImageOptions {
+  return func(opts ImageOptions) ImageOptions {
+    opts.ClassSkeleton = class
+    return opts
+  }
+}
+
+// WithImageClass sets classes for the Image
+func WithImageClass(class string) func(ImageOptions) ImageOptions {
+  return func(opts ImageOptions) ImageOptions {
+    opts.ClassImage = class
+    return opts
+  }
+}
+
+// WithoutLazyLoading disables lazy loading
+// It bypasses the HTMX trigger and loads the image immediately
+// With LazyLoading Images are requested when DOM rendering is complete
+func WithoutLazyLoading() func(ImageOptions) ImageOptions {
+  return func(opts ImageOptions) ImageOptions {
+    opts.LazyLoading = false
+    return opts
+  }
+}
+
+// WithVeryLazyLoading enables very lazy loading
+// Now the HTMX trigger is set to "intersect once" and the image is loaded on Viewport intersection
+func WithVeryLazyLoading() func(ImageOptions) ImageOptions {
+  return func(opts ImageOptions) ImageOptions {
+    opts.VeryLazyLoading = true
+    return opts
+  }
+}
+
+func mergeImageOpts(opts ...func(ImageOptions) ImageOptions) ImageOptions {
+  c := DefaultImageOptions()
+  for _, o := range opts {
+    c = o(c)
+  }
+  return c
+}
+
+templ Image(src, alt string, opts ...func(ImageOptions) ImageOptions) {
+  {{
+    c := mergeImageOpts(opts...)
+    u, _ := url.Parse("/components/image")
+    q := u.Query()
+    q.Set("src", src)
+    q.Set("alt", alt)
+    q.Set("width", c.Width)
+    q.Set("height", c.Height)
+    q.Set("class", c.ClassImage)
+    q.Set("skeleton", c.ClassSkeleton)
+    u.RawQuery = q.Encode()
+    hx_src := u.String()
+    skeletonClass := "skeleton w-32 h-32"
+
+    hx_trigger := "load"
+    if c.VeryLazyLoading {
+      hx_trigger = "intersect once"
+    }
+
+    if c.ClassSkeleton != "" {
+      skeletonClass = fmt.Sprintf("skeleton %s", c.ClassSkeleton)
+      if !strings.Contains(c.ClassSkeleton, "w-") {
+        skeletonClass += " w-32"
+      }
+      if !strings.Contains(c.ClassSkeleton, "h-") {
+        skeletonClass += " h-32"
+      }
+    }
+  }}
+
+  if c.LazyLoading {
+    <div
+      hx-get={hx_src}
+      hx-target="this"
+      hx-swap="outerHTML"
+      hx-trigger={hx_trigger}
+    >
+      <div class={skeletonClass}></div>
+    </div>
+  } else {
+    @RawImageComponent(src, alt, c)
+  }
+}
+
+templ RawImageComponent(src, alt string, c ImageOptions) {
+  <img
+    src={src}
+    alt={alt}
+    class={c.ClassImage}
+    width={c.Width}
+    height={c.Height}
+  />
+}
