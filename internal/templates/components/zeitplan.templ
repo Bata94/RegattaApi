@@ -1,0 +1,78 @@
+package ui_components
+
+import (
+  "fmt"
+
+  "github.com/bata94/RegattaApi/internal/crud"
+	"github.com/bata94/RegattaApi/internal/sqlc"
+)
+
+// TODO: Implement Pausen
+// TODO: Load Data on expand
+
+type ZeitplanungUIData struct {
+  Langstrecke []crud.RennenZeitplaung
+  Slalom []crud.RennenZeitplaung
+  Staffel []crud.RennenZeitplaung
+  Kurzstrecke []crud.RennenZeitplaung
+}
+
+templ zeitplanEntry(r crud.RennenZeitplaung) {
+  <div id={r.Uuid.String()} class="mx-2 my-1">
+    <h5 class="font-semibold">
+      {r.Startzeit} Uhr: {r.Nummer} -{" "}
+      {r.Bezeichnung_lang} {r.Zusatz}
+    </h5>
+  </div>
+}
+
+templ zeitplanPause(p crud.Pause) {
+  <div class="divider divider-primary">
+    <h5 class="font-semibold text-mrgblau mx-auto">
+      Pause: {p.Laenge} Minuten
+    </h5>
+  </div>
+}
+
+templ ZeitplanCollapseBody(w sqlc.Wettkampf) {
+  {{
+    rennen, err := crud.GetZeitplanung([]sqlc.Wettkampf{w})
+    pausen, errPausen := crud.GetPausenByWettkampf([]sqlc.Wettkampf{w})
+ }}
+  if err != nil {
+    @ErrorBody(500, err.Error())
+    return
+  } else if errPausen != nil {
+    @ErrorBody(500, errPausen.Error())
+    return
+  }
+
+  for _, r := range rennen.Rennen {
+    @zeitplanEntry(r)
+    for _, p := range pausen {
+      if p.NachRennenUuid == r.Uuid {
+        @zeitplanPause(p)
+      }
+    }
+  }
+}
+
+templ zeitplanWettkampf(w sqlc.Wettkampf) {
+  @CollapseWithLoading(fmt.Sprintf("%s", w), fmt.Sprintf("/comp/zeitplan/%s", w))
+}
+
+templ Zeitplan() {
+  <h2>
+    Zeitplan:
+  </h2>
+
+  <h3 class="text-2xl text-mrgblau">Samstag</h3>
+  @zeitplanWettkampf(sqlc.WettkampfLangstrecke)
+  @zeitplanWettkampf(sqlc.WettkampfSlalom)
+
+  <hr class="my-4" />
+
+  <h3 class="text-2xl text-mrgblau">Sonntag</h3>
+  @zeitplanWettkampf(sqlc.WettkampfKurzstrecke)
+  @zeitplanWettkampf(sqlc.WettkampfStaffel)
+}

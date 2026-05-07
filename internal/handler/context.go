@@ -46,7 +46,13 @@ func (c *Context) SetPathParams(params map[string]string) {
 }
 
 func (c *Context) Param(key string) string {
-	return c.pathParams[key]
+	if v, ok := c.pathParams[key]; ok {
+		return v
+	}
+	if p := c.Request.Context().Value("pathParams"); p != nil {
+		return p.(map[string]string)[key]
+	}
+	return ""
 }
 
 func (c *Context) Query(key string) string {

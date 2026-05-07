@@ -1,0 +1,43 @@
+package ui_components
+
+templ Collapse(title string, content templ.Component) {
+  <details class="collapse collapse-arrow bg-base-200 my-4">
+    <summary class="collapse-title text-2xl font-semibold">{title}</summary>
+    <div class="collapse-content">
+      @content
+    </div>
+  </details>
+}
+
+templ CollapseWithLoading(title, reqUrl string) {
+  {{
+    loadingCompID := "loading-" + title
+  }}
+  <details class="collapse collapse-arrow bg-base-200 my-4">
+    <summary
+      class="collapse-title text-2xl font-semibold"
+      hx-boost="true"
+      hx-get={reqUrl}
+      hx-trigger="click once"
+      hx-target={"#" + loadingCompID}
+    >
+      {title}
+    </summary>
+    <div class="collapse-content">
+      <div id={loadingCompID} class="flex flex-col gap-4">
+        <div class="skeleton h-4 w-128"></div>
+        <div class="skeleton h-4 w-124"></div>
+        <div class="skeleton h-4 w-126"></div>
+        <div class="skeleton h-4 w-128"></div>
+        <div class="skeleton h-4 w-122"></div>
+        <div class="skeleton h-4 w-128"></div>
+        <div class="skeleton h-4 w-128"></div>
+        <div class="skeleton h-4 w-124"></div>
+        <div class="skeleton h-4 w-128"></div>
+        <div class="skeleton h-4 w-132"></div>
+        <div class="skeleton h-4 w-126"></div>
+        <div class="skeleton h-4 w-122"></div>
+      </div>
+    </div>
+  </details>
+}

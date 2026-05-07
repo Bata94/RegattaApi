@@ -9,7 +9,31 @@ import (
 	"github.com/bata94/RegattaApi/internal/handlers/api"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/google/uuid"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
+
+var (
+	AllWettkampf = []sqlc.Wettkampf{
+		sqlc.WettkampfLangstrecke,
+		sqlc.WettkampfSlalom,
+		sqlc.WettkampfKurzstrecke,
+		sqlc.WettkampfStaffel,
+	}
+)
+
+func WettkampfFromString(str string) (sqlc.Wettkampf, error) {
+	caser := cases.Title(language.German)
+	str = caser.String(str)
+
+	for _, w := range AllWettkampf {
+		if string(w) == str {
+			return w, nil
+		}
+	}
+
+	return "", &api.NOT_FOUND
+}
 
 type GetAllRennenParams struct {
 	GetMeldungen  bool
@@ -40,6 +64,60 @@ type Rennen struct {
 	NumMeldungen     *int            `json:"num_meldungen"`
 	NumAbteilungen   *int            `json:"num_abteilungen"`
 	Meldungen        []Meldung       `json:"meldungen"`
+}
+type Zeitplaung struct {
+	Rennen []RennenZeitplaung `json:"rennen"`
+}
+
+type RennenZeitplaung struct {
+  Uuid uuid.UUID `json:"uuid"`
+  Sort_id int `json:"sort_id"`
+  Nummer string `json:"nummer"`
+  Bezeichnung string `json:"bezeichnung"`
+  Bezeichnung_lang string `json:"bezeichnung_lang"`
+  Zusatz string `json:"zusatz"`
+  Wettkampf sqlc.Wettkampf `json:"wettkampf"`
+  Tag sqlc.Tag `json:"tag"`
+  Startzeit string `json:"startzei"`
+}
+
+func RennenZeitplaungFromSqlc(rennen sqlc.GetRennenZeitplanRow) RennenZeitplaung {
+	return RennenZeitplaung{
+		Uuid: rennen.Uuid,
+		Sort_id: int(rennen.SortID),
+		Nummer: rennen.Nummer,
+		Bezeichnung: rennen.Bezeichnung,
+		Bezeichnung_lang: rennen.BezeichnungLang,
+		Zusatz: rennen.Zusatz.String,
+		Wettkampf: rennen.Wettkampf,
+		Tag: rennen.Tag,
+		Startzeit: rennen.Startzeit.String,
+	}
+}
+
+func ZeitplaungFromSqlc(rennen []sqlc.GetRennenZeitplanRow) Zeitplaung {
+	var retLs []RennenZeitplaung
+	for _, r := range rennen {
+		retLs = append(retLs, RennenZeitplaungFromSqlc(r))
+	}
+	return Zeitplaung{
+		Rennen: retLs,
+	}
+}
+
+func GetZeitplanung(wettkampf []sqlc.Wettkampf) (Zeitplaung, error) {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	q, err := DB.Queries.GetRennenZeitplan(ctx, wettkampf)
+	if err != nil {
+		return Zeitplaung{}, err
+	}
+	if len(q) == 0 {
+		return Zeitplaung{}, &api.NOT_FOUND
+	}
+
+	return ZeitplaungFromSqlc(q), nil
 }
 
 func GetAllRennen(p GetAllRennenParams) ([]Rennen, error) {
@@ -263,6 +341,9 @@ func GetRennenMinimal(uuid uuid.UUID) (Rennen, error) {
 
 func GetRennen(uuidParam uuid.UUID) (Rennen, error) {
 	// TODO: Implement queryParams
+	// TODO: Fix NULL scan issue - SQL query uses FULL JOINs that return NULL values
+	//       but sqlc generated non-pointer types can't handle NULL
+	//       Fix by using COALESCE in SQL or regenerating sqlc with nullable types
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 

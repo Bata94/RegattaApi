@@ -17,7 +17,7 @@
   --text-3xs--letter-spacing: 0.075rem;
   --text-3xs--font-weight: 300;
 
-  --color-mrgblau: "#183b93"
+  --color-mrgblau: #183b93
 }
 
 @plugin "daisyui" {

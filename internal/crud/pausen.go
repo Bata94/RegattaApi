@@ -29,6 +29,29 @@ func GetAllPausen() ([]Pause, error) {
 	return pLs, err
 }
 
+func GetPausenByWettkampf(w []sqlc.Wettkampf) ([]Pause, error) {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	if len(w) == 0 {
+		w = []sqlc.Wettkampf{sqlc.WettkampfLangstrecke, sqlc.WettkampfSlalom, sqlc.WettkampfKurzstrecke, sqlc.WettkampfStaffel}
+	}
+
+	pLs := []Pause{}
+	q, err := DB.Queries.GetPausenByWettkampf(ctx, w)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, p := range q {
+		pLs = append(pLs, Pause{
+			Pause: p,
+		})
+	}
+
+	return pLs, err
+}
+
 func GetPause(id int) (Pause, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()

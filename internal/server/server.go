@@ -1,12 +1,14 @@
 package server
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
 	"strings"
 
 	"github.com/a-h/templ"
+	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/bata94/RegattaApi/internal/handlers"
 	"github.com/bata94/RegattaApi/internal/handlers/api/v1"
@@ -60,29 +62,32 @@ func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	handler := methodHandlers[req.URL.Path]
+	var params map[string]string
 	if handler == nil {
-		handler = r.matchWildcard(req.Method, req.URL.Path, req)
+		handler, params = r.matchWildcard(req.Method, req.URL.Path)
 	}
 	if handler == nil {
 		http.NotFound(w, req)
 		return
 	}
 
+	if params != nil {
+		ctx := context.WithValue(req.Context(), "pathParams", params)
+		req = req.WithContext(ctx)
+	}
+
 	handler(w, req)
 }
 
-func (r *router) matchWildcard(method, path string, req *http.Request) http.HandlerFunc {
+func (r *router) matchWildcard(method, path string) (http.HandlerFunc, map[string]string) {
 	methodHandlers := r.handlers[method]
 	for pattern := range methodHandlers {
 		params, ok := matchPath(pattern, path)
 		if ok {
-			for k, v := range params {
-				req.URL.Query().Set(k, v)
-			}
-			return methodHandlers[pattern]
+			return methodHandlers[pattern], params
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 func matchPath(pattern, path string) (map[string]string, bool) {
@@ -129,6 +134,16 @@ func (c *corsRouter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	c.h.ServeHTTP(w, r)
 }
 
+func zeitplanCollapseBodyHandler(c *handler.Context) error {
+	wettkampfStr := c.Param("wettkampf")
+	wettkampf, err := crud.WettkampfFromString(wettkampfStr)
+	if err != nil {
+		return &handler.Error{StatusCode: 404, Message: "Wettkampf not found"}
+	}
+	templ.Handler(ui_components.ZeitplanCollapseBody(wettkampf)).ServeHTTP(c.Writer, c.Request)
+	return nil
+}
+
 func GetRouter() http.Handler {
 	navBarConfig.Entries = []ui_components.NavBarEntry{
 		// {Name: "Home", URL: "/"},
@@ -163,7 +178,7 @@ func GetRouter() http.Handler {
 	baseLayoutHandler("/login", ui_pages.Login())
 
 	// Pure HTMX UI Components
-	r.Handle("GET", "/components/image", func(w http.ResponseWriter, r *http.Request) {
+	r.Handle("GET", "/comp/image", func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Image component endpoint hit!")
 		queryParams := r.URL.Query()
 		src := queryParams.Get("src")
@@ -189,6 +204,7 @@ func GetRouter() http.Handler {
 
 		templ.Handler(ui_components.RawImageComponent(src, alt, imgOpt)).ServeHTTP(w, r)
 	})
+	r.Handle("GET", "/comp/zeitplan/{wettkampf}", templHandler(zeitplanCollapseBodyHandler))
 
 	// API Handlers
 	r.Handle("POST", "/api/auth/login", wrapHandler(api_v1.Login))
@@ -288,6 +304,9 @@ func wrapHandler(h handler.Handler) func(http.ResponseWriter, *http.Request) {
 			}
 		}()
 		ctx := handler.NewContext(w, r)
+		if p := r.Context().Value("pathParams"); p != nil {
+			ctx.SetPathParams(p.(map[string]string))
+		}
 		if err := h(ctx); err != nil {
 			if he, ok := err.(*handler.Error); ok {
 				w.WriteHeader(he.StatusCode)
@@ -296,6 +315,18 @@ func wrapHandler(h handler.Handler) func(http.ResponseWriter, *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
 				w.Write([]byte(err.Error()))
 			}
+		}
+	}
+}
+
+func templHandler(h handler.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := handler.NewContext(w, r)
+		if p := r.Context().Value("pathParams"); p != nil {
+			ctx.SetPathParams(p.(map[string]string))
+		}
+		if err := h(ctx); err != nil {
+			http.Error(w, err.Error(), 500)
 		}
 	}
 }

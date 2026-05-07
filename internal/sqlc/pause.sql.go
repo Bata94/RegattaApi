@@ -81,6 +81,34 @@ func (q *Queries) GetPause(ctx context.Context, id int32) (Pause, error) {
 	return i, err
 }
 
+const getPausenByWettkampf = `-- name: GetPausenByWettkampf :many
+SELECT id, laenge, nach_rennen_uuid FROM pause
+WHERE nach_rennen_uuid IN (
+  SELECT uuid FROM rennen WHERE wettkampf = ANY($1::wettkampf[])
+)
+ORDER BY id ASC
+`
+
+func (q *Queries) GetPausenByWettkampf(ctx context.Context, dollar_1 []Wettkampf) ([]Pause, error) {
+	rows, err := q.db.Query(ctx, getPausenByWettkampf, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Pause{}
+	for rows.Next() {
+		var i Pause
+		if err := rows.Scan(&i.ID, &i.Laenge, &i.NachRennenUuid); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updatePause = `-- name: UpdatePause :one
 UPDATE pause
 SET laenge = $2

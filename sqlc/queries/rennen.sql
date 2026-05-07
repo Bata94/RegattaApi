@@ -3,7 +3,7 @@ SELECT * FROM rennen
 WHERE uuid = $1 LIMIT 1;
 
 -- name: GetRennen :many
-SELECT 
+SELECT
   sqlc.embed(rennen),
   sqlc.embed(meldung),
   sqlc.embed(athlet),
@@ -16,7 +16,7 @@ FULL JOIN
 ON
   rennen.uuid = meldung.rennen_uuid
 FULL JOIN
-  link_meldung_athlet 
+  link_meldung_athlet
 ON
   meldung.uuid = link_meldung_athlet.meldung_uuid
 FULL JOIN
@@ -65,7 +65,7 @@ ORDER BY
   rennen.sort_id;
 
 -- name: GetAllRennenWithAthlet :many
-SELECT 
+SELECT
   sqlc.embed(rennen),
   sqlc.embed(meldung),
   sqlc.embed(athlet),
@@ -73,28 +73,46 @@ SELECT
   link_meldung_athlet.position, link_meldung_athlet.rolle,
   (SELECT COUNT(meldung.uuid) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid AND meldung.abgemeldet = false) as num_meldungen,
   (SELECT COALESCE(MAX(meldung.abteilung),0) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid) as num_abteilungen
-FROM 
+FROM
   rennen
-JOIN 
+JOIN
   meldung
-ON 
+ON
   rennen.uuid = meldung.rennen_uuid
-JOIN 
+JOIN
   verein
-ON 
+ON
   meldung.verein_uuid = verein.uuid
-JOIN 
+JOIN
   link_meldung_athlet
-ON 
+ON
   meldung.uuid = link_meldung_athlet.meldung_uuid
-JOIN 
+JOIN
   athlet
-ON 
+ON
   link_meldung_athlet.athlet_uuid = athlet.uuid
-WHERE 
+WHERE
   wettkampf = ANY($1::wettkampf[])
-ORDER BY 
+ORDER BY
   rennen.sort_id, meldung.uuid, link_meldung_athlet.rolle, link_meldung_athlet.position;
+
+-- name: GetRennenZeitplan :many
+SELECT
+  uuid,
+  sort_id,
+  nummer,
+  bezeichnung,
+  bezeichnung_lang,
+  zusatz,
+  wettkampf,
+  tag,
+  startzeit
+FROM
+  rennen
+WHERE
+  wettkampf = ANY($1::wettkampf[])
+ORDER BY
+  sort_id ASC;
 
 -- name: UpdateStartZeit :exec
 UPDATE rennen SET startzeit = $1 WHERE uuid = $2;

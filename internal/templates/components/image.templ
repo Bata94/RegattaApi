@@ -91,7 +91,7 @@ func mergeImageOpts(opts ...func(ImageOptions) ImageOptions) ImageOptions {
 templ Image(src, alt string, opts ...func(ImageOptions) ImageOptions) {
   {{
     c := mergeImageOpts(opts...)
-    u, _ := url.Parse("/components/image")
+    u, _ := url.Parse("/comp/image")
     q := u.Query()
     q.Set("src", src)
     q.Set("alt", alt)

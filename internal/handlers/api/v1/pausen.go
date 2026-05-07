@@ -2,6 +2,8 @@ package api_v1
 
 import (
 	"strconv"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handler"
@@ -9,7 +11,18 @@ import (
 )
 
 func GetAllPausen(c *handler.Context) error {
-	pLs, err := crud.GetAllPausen()
+	showWettkampfStr := c.Query("wettkampf")
+	showWettkampf := sqlc.NullWettkampf{}
+	if showWettkampfStr != "" {
+		caser := cases.Title(language.German)
+		showWettkampfStr = caser.String(showWettkampfStr)
+		showWettkampf = sqlc.NullWettkampf{
+			Wettkampf: sqlc.Wettkampf(showWettkampfStr),
+			Valid:     true,
+		}
+	}
+
+	pLs, err := crud.GetPausenByWettkampf([]sqlc.Wettkampf{showWettkampf.Wettkampf})
 	if err != nil {
 		return err
 	}

@@ -154,7 +154,7 @@ func (q *Queries) GetAllRennen(ctx context.Context) ([]GetAllRennenRow, error) {
 }
 
 const getAllRennenWithAthlet = `-- name: GetAllRennenWithAthlet :many
-SELECT 
+SELECT
   rennen.uuid, rennen.sort_id, rennen.nummer, rennen.bezeichnung, rennen.bezeichnung_lang, rennen.zusatz, rennen.leichtgewicht, rennen.geschlecht, rennen.bootsklasse, rennen.bootsklasse_lang, rennen.altersklasse, rennen.altersklasse_lang, rennen.tag, rennen.wettkampf, rennen.kosten_eur, rennen.rennabstand, rennen.startzeit,
   meldung.uuid, meldung.drv_revision_uuid, meldung.typ, meldung.bemerkung, meldung.abgemeldet, meldung.dns, meldung.dnf, meldung.dsq, meldung.zeitnahme_bemerkung, meldung.start_nummer, meldung.abteilung, meldung.bahn, meldung.kosten, meldung.rechnungs_nummer, meldung.verein_uuid, meldung.rennen_uuid,
   athlet.uuid, athlet.vorname, athlet.name, athlet.geschlecht, athlet.jahrgang, athlet.gewicht, athlet.startberechtigt, athlet.verein_uuid,
@@ -162,27 +162,27 @@ SELECT
   link_meldung_athlet.position, link_meldung_athlet.rolle,
   (SELECT COUNT(meldung.uuid) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid AND meldung.abgemeldet = false) as num_meldungen,
   (SELECT COALESCE(MAX(meldung.abteilung),0) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid) as num_abteilungen
-FROM 
+FROM
   rennen
-JOIN 
+JOIN
   meldung
-ON 
+ON
   rennen.uuid = meldung.rennen_uuid
-JOIN 
+JOIN
   verein
-ON 
+ON
   meldung.verein_uuid = verein.uuid
-JOIN 
+JOIN
   link_meldung_athlet
-ON 
+ON
   meldung.uuid = link_meldung_athlet.meldung_uuid
-JOIN 
+JOIN
   athlet
-ON 
+ON
   link_meldung_athlet.athlet_uuid = athlet.uuid
-WHERE 
+WHERE
   wettkampf = ANY($1::wettkampf[])
-ORDER BY 
+ORDER BY
   rennen.sort_id, meldung.uuid, link_meldung_athlet.rolle, link_meldung_athlet.position
 `
 
@@ -375,7 +375,7 @@ func (q *Queries) GetAllRennenWithMeld(ctx context.Context, dollar_1 []Wettkampf
 }
 
 const getRennen = `-- name: GetRennen :many
-SELECT 
+SELECT
   rennen.uuid, rennen.sort_id, rennen.nummer, rennen.bezeichnung, rennen.bezeichnung_lang, rennen.zusatz, rennen.leichtgewicht, rennen.geschlecht, rennen.bootsklasse, rennen.bootsklasse_lang, rennen.altersklasse, rennen.altersklasse_lang, rennen.tag, rennen.wettkampf, rennen.kosten_eur, rennen.rennabstand, rennen.startzeit,
   meldung.uuid, meldung.drv_revision_uuid, meldung.typ, meldung.bemerkung, meldung.abgemeldet, meldung.dns, meldung.dnf, meldung.dsq, meldung.zeitnahme_bemerkung, meldung.start_nummer, meldung.abteilung, meldung.bahn, meldung.kosten, meldung.rechnungs_nummer, meldung.verein_uuid, meldung.rennen_uuid,
   athlet.uuid, athlet.vorname, athlet.name, athlet.geschlecht, athlet.jahrgang, athlet.gewicht, athlet.startberechtigt, athlet.verein_uuid,
@@ -388,7 +388,7 @@ FULL JOIN
 ON
   rennen.uuid = meldung.rennen_uuid
 FULL JOIN
-  link_meldung_athlet 
+  link_meldung_athlet
 ON
   meldung.uuid = link_meldung_athlet.meldung_uuid
 FULL JOIN
@@ -512,6 +512,67 @@ func (q *Queries) GetRennenMinimal(ctx context.Context, argUuid uuid.UUID) (Renn
 		&i.Startzeit,
 	)
 	return i, err
+}
+
+const getRennenZeitplan = `-- name: GetRennenZeitplan :many
+SELECT
+  uuid,
+  sort_id,
+  nummer,
+  bezeichnung,
+  bezeichnung_lang,
+  zusatz,
+  wettkampf,
+  tag,
+  startzeit
+FROM
+  rennen
+WHERE
+  wettkampf = ANY($1::wettkampf[])
+ORDER BY
+  sort_id ASC
+`
+
+type GetRennenZeitplanRow struct {
+	Uuid            uuid.UUID   `json:"uuid"`
+	SortID          int32       `json:"sort_id"`
+	Nummer          string      `json:"nummer"`
+	Bezeichnung     string      `json:"bezeichnung"`
+	BezeichnungLang string      `json:"bezeichnung_lang"`
+	Zusatz          pgtype.Text `json:"zusatz"`
+	Wettkampf       Wettkampf   `json:"wettkampf"`
+	Tag             Tag         `json:"tag"`
+	Startzeit       pgtype.Text `json:"startzeit"`
+}
+
+func (q *Queries) GetRennenZeitplan(ctx context.Context, dollar_1 []Wettkampf) ([]GetRennenZeitplanRow, error) {
+	rows, err := q.db.Query(ctx, getRennenZeitplan, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetRennenZeitplanRow{}
+	for rows.Next() {
+		var i GetRennenZeitplanRow
+		if err := rows.Scan(
+			&i.Uuid,
+			&i.SortID,
+			&i.Nummer,
+			&i.Bezeichnung,
+			&i.BezeichnungLang,
+			&i.Zusatz,
+			&i.Wettkampf,
+			&i.Tag,
+			&i.Startzeit,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateStartZeit = `-- name: UpdateStartZeit :exec
