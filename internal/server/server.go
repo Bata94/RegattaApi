@@ -144,6 +144,16 @@ func zeitplanCollapseBodyHandler(c *handler.Context) error {
 	return nil
 }
 
+func ausschreibungRennenCollapseBodyHandler(c *handler.Context) error {
+	wettkampfStr := c.Param("wettkampf")
+	wettkampf, err := crud.WettkampfFromString(wettkampfStr)
+	if err != nil {
+		return &handler.Error{StatusCode: 404, Message: "Wettkampf not found"}
+	}
+	templ.Handler(ui_pages.AusschreibungRennenCollapseBody(wettkampf)).ServeHTTP(c.Writer, c.Request)
+	return nil
+}
+
 func GetRouter() http.Handler {
 	navBarConfig.Entries = []ui_components.NavBarEntry{
 		// {Name: "Home", URL: "/"},
@@ -205,6 +215,7 @@ func GetRouter() http.Handler {
 		templ.Handler(ui_components.RawImageComponent(src, alt, imgOpt)).ServeHTTP(w, r)
 	})
 	r.Handle("GET", "/comp/zeitplan/{wettkampf}", templHandler(zeitplanCollapseBodyHandler))
+	r.Handle("GET", "/comp/ausschreibung/{wettkampf}", templHandler(ausschreibungRennenCollapseBodyHandler))
 
 	// API Handlers
 	r.Handle("POST", "/api/auth/login", wrapHandler(api_v1.Login))

@@ -1,7 +1,222 @@
 package ui_pages
 
+import (
+  "github.com/bata94/RegattaApi/internal/sqlc"
+	"github.com/bata94/RegattaApi/internal/crud"
+	"github.com/bata94/RegattaApi/internal/templates/components"
+	"fmt"
+)
+
+templ allgBestimmung() {
+    <div class="card mb-3">
+      <div class="card-body">
+        <h5 class="card-title">1. Allgemeine Angaben</h5>
+        <p><strong>Jungen- und Mädchen-Regatta</strong></p><p>
+          Die Rennen der Altersklasse 9 bis einschließlich 14 Jahre werden nach
+          den Bestimmungen für das Jungen- und Mädchenrudern der Deutschen
+          Ruderjugend durchgeführt. Die Rennen der Junioren werden nach den
+          Ruderwettkampfregeln des Deutschen Ruderverbandes ausgetragen. Beide
+          Regelwerke gelten, solang im Folgenden nicht abweichende Bestimmungen
+          festgelegt werden.
+        </p><p><strong>Streckenlängen:</strong></p><ul>
+          <li>
+            Langstrecke: 2.000m für die die Altersklasse 11/12 Jahre und 3.000m
+            für die Altersklasse 13/14 Jahre und Juniorinnen/Junioren
+          </li><li>Slalom: ca. 150 Meter</li><li>Kurzstrecke: 500 Meter</li><li>
+            Staffel: 3 x 300 Meter
+          </li>
+        </ul><p><strong>Startplätze:</strong></p><ul>
+          <li>(Parallel-)Slalom: 3</li><li>Kurzstrecke: 4</li><li>
+            Staffel: 2
+          </li>
+        </ul><p><strong>Rennabstände:</strong></p><ul>
+          <li>Langstrecke: 1 Minute</li><li>Rennstrecke: 3 Minuten</li><li>
+            Slalom: &nbsp;&nbsp; 9/10/11 Jahre – 5 Minuten; 12/13 Jahre – 4
+            Minuten; 14 Jahre – 3 Minuten
+          </li><li>Staffel:&nbsp;&nbsp;&nbsp; 10 Minuten</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card mb-3">
+      <div class="card-body">
+        <h5 class="card-title">2. Meldeschluss</h5>
+        <p>Mittwoch, 13. September 2023, 19:00 Uhr</p><p>
+          <strong>Mülheimer Ruder-Gesellschaft e.V.</strong><br /><strong>Mendener Str. 74</strong> <br /><strong>45470 Mülheim an der Ruhr</strong>
+        </p><p>
+          <br />E-Mail: <a href="mailto:meldungen@muelheimer-rg.de">
+            meldungen@muelheimer-rg.de</a>
+        </p>
+      </div>
+    </div>
+    <div class="card mb-3">
+      <div class="card-body">
+        <h5 class="card-title">3. Startverlosung</h5>
+        <p>
+          Mittwoch, 13. September 2023, 20 Uhr<br />(Ort bitte unter VII
+          erfragen)
+        </p>
+      </div>
+    </div>
+    <div class="card mb-3">
+      <div class="card-body">
+        <h5 class="card-title">4. Regattabeiträge</h5>
+        <p>
+          Langstrecken- / Kurzstrecken- / Staffel-Rennen: <strong>12,00 EUR pro Boot</strong>
+          <br />Slalom-Rennen: <strong>5,00 EUR pro Boot</strong>
+        </p>
+      </div>
+    </div>
+    <div class="card mb-3">
+      <div class="card-body">
+        <h5 class="card-title">5. Bankverbindung</h5>
+        <p>
+          Konto-Inh.: <strong>Mülheimer Ruder-Gesellschaft e.V.</strong><br/>IBAN: <strong>DE98 3625 0000 0300 0394 13</strong><br />BIC: <strong>SPMHDE3EXXX</strong><br />Institut: <strong>Sparkasse Mülheim an der Ruhr</strong>
+        </p>
+      </div>
+    </div>
+    <div class="card mb-3">
+      <div class="card-body">
+        <h5 class="card-title">6. zusätzliche Bestimmungen</h5>
+        <p>
+          <strong>a) Angabe der Leistungsklassen:</strong><br />Bei den
+          Meldungen zu den Kinder-Wettbewerben sind die Leistungsklassen (I, II,
+          III) unbedingt anzugeben. Bei Nichtangabe werden die Ruderer/innen der
+          Leistungsklasse I zugeordnet.
+        </p><p>
+          <strong>b) Abgabe der Meldungen:</strong><br />&nbsp;Die Meldungen
+          sind bitte über das Meldeportal des DRV einzureichen. In
+          Ausnahmefällen können die Meldungen auch per E-Mail abgeben werden.
+        </p><p>
+          <strong>c) Langstrecke:</strong><br />Die Langstrecke hat eine Wende
+          nach der Hälfte der Strecke. Der Start erfolgt „fliegend“ in der
+          Reihenfolge, wie im Regattaprogramm angegeben.<br /><i>Hinweis: Zuerst werden alle Rennen über 2000m gestartet. Danach
+            erfolgt der Start der Rennen über 3000m.</i>
+        </p><p>
+          <strong>d) Slalom:</strong><br />Der Slalom wird als Parallelslalom
+          ausgetragen. Es stehen drei Startbahnen für den Slalom zur Verfügung.
+          Es erfolgt <strong>keine</strong>
+           Zeitnahme. Die Reihenfolge beim Zieleinlauf ist entscheidend. Bei
+          Meldungen zum Slalom ist die Leistungsklasse der gemeldeten Ruderinnen
+          / Ruderer unbedingt anzugeben. Die Einteilung in Abteilungen kann noch
+          am<br />Regattatag verändert werden.
+        </p><p>
+          <strong>e) Kurzstrecke:</strong><br />Auch bei diesem Wettbewerb kann
+          die Einteilung in Abteilungen noch am Regattatag verändert werden. Die
+          Rennen der 10 und 11-jährigen Jungen/Mädchen finden in den Pausen,
+          nämlich Rennen 301 und 302 in der ersten und Rennen 303 und 304 in der
+          zweiten Pause statt.
+        </p><p>
+          <strong>f) Staffel:</strong><br />Jede Staffel-Mannschaft besteht aus
+          drei Booten, die sich jeweils nach 300m ablösen. Es stehen zwei
+          Startbahnen zur Verfügung. Es erfolgt keine Zeitnahme. Auch bei diesem
+          Wettbewerb kann die Einteilung in Abteilungen noch am Regattatag
+          verändert werden.&nbsp;<br />Die Staffelmannschaften können aus Jungen
+          und Mädchen aller Leistungsklassen gemäß der in der Ausschreibung
+          aufgeführten Jahrgänge zusammengestellt werden. Bei der Meldung bitte
+          Jahrgänge und Leistungsklassen der Ruderer/Ruderinnen angeben.
+        </p><p>
+          <strong>g) Betreuerslalom:</strong><br />Der Betreuerslalom (Rennen
+          320) findet als Einlagerennen am 23. September 2023 statt. Das
+          Betreuerrennen (Rennen 321) ist ein Einlagerennen über 500m am 24.
+          September 2023.
+        </p><p>
+          <strong>h) Reihenfolge der Wettkämpfe:</strong><br />Die Langstrecke-
+          und der Slalom-Rennen werden am Samstag, die&nbsp;Kurzstrecke- und die
+          Staffel-Rennen am Sonntag ausgetragen.
+        </p><p>
+          <strong>i) Waage:</strong><br />Zur Waage ist ein Lichtbildausweis
+          mitzubringen.
+        </p><p>
+          <strong>j) Startnummern:&nbsp;</strong><br />Die Rennen der
+          Langstrecke, die Slalom-Wettbewerbe, die Kurzstrecke, die
+          Staffelwettbewerbe sowie die Betreuerwettbewerbe werden mit Bugnummern
+          gestartet. Für die nötigen Halterungen an den Booten muss gesorgt
+          werden. Die Bugnummern sind gegen ein Pfand von 20,- €/Verein im
+          Regattabüro erhältlich. Bei Verlust oder Nichtrückgabe der
+          Startnummern werden 5,- € pro Startnummer einbehalten oder sind zu
+          entrichten.
+        </p><p>
+          <strong>h) Informationen:</strong><br />Die Ausschreibung, alle
+          Änderungen und weitere Informationen werden im Meldeportal des DRV
+          veröffentlicht.&nbsp;
+        </p>
+      </div>
+    </div>
+    <div class="card mb-3">
+      <div class="card-body">
+        <h5 class="card-title">7. Verantwortliche</h5>
+        <p>Regattaleitung:</p><ol>
+          <li>
+            <strong>Thomas Heipcke (Regattaleiter)</strong><br />Tel.:&nbsp;0179
+            / 6924207<br />E-Mail: meldungen@muelheimer-rg.de
+          </li><li>
+            <strong>Peter Becker</strong><br />Tel.: 0208 / 667135 und 01515 /
+            6386182<br />E-Mail: <a href="mailto:beckerpeter@t-online.de">beckerpeter@t-online.de</a>
+          </li>
+        </ol>
+      </div>
+    </div>
+}
+
+templ AusschreibungRennenCollapseBody(w sqlc.Wettkampf) {
+  {{
+    zeitplan, err := crud.GetZeitplanung([]sqlc.Wettkampf{w})
+  }}
+
+  if err != nil {
+    @ui_components.ErrorBody(500, err.Error())
+    return
+  }
+
+  for _, r := range zeitplan.Rennen {
+    <div id={r.Uuid.String()} class="my-2 p-4">
+      <h5>
+        {r.Nummer} - {r.Bezeichnung_lang} {r.Zusatz}
+      </h5>
+    </div>
+  }
+}
+
+templ ausschreibungRennen(w sqlc.Wettkampf) {
+  @ui_components.CollapseWithLoading(fmt.Sprintf("%s", w), fmt.Sprintf("/comp/ausschreibung/%s", w))
+}
+
 templ Ausschreibung() {
   <h2>
     Ausschreibung
   </h2>
+    <p class="mb-8">
+    Hier findet man die offizielle Ausschreibung für das Jahr 2023, sowie die
+    Allgemeinen Bestimmungen. Diese können ebenfalls im <a href="https://meldeportal.rudern.de/regattas/01871580-4218-71ae-a993-278ad14423f3" target="_blank">DRV Meldeportal</a>
+    eingesehen werden. Dort gibst du auch bitte deine Meldungen zum
+    Meldeschluss ab! Weitere Information für die teilnehmenden Vereine werden
+    nach Meldeschluss an die jeweiligen Obleute per Mail verschickt. Solltest du
+    diese nicht erhalten haben, schreib uns gerne eine Mail (
+    <a
+      class=""
+      target="_blank"
+      href="mailto:regattaleiter@muelheimer-rg.de"
+    >
+      regattaleiter@muelheimer-rg.de
+    </a>
+    ). Das Anschreiben findest du auch
+    <a
+      href="/obleute_anschreiben_2023.pdf"
+      target="_blank"
+    >
+      hier
+    </a>.
+  </p>
+
+  @ui_components.Collapse("Allgemeine Bestimmungen", allgBestimmung())
+
+  <h2>Ausschreibung</h2>
+  <div class="md:px-4 py-2">
+    <h3 class="text-2xl px-2 text-mrgblau">Samstag</h3>
+    @ausschreibungRennen(sqlc.WettkampfLangstrecke)
+    @ausschreibungRennen(sqlc.WettkampfSlalom)
+    <h3 class="text-2xl px-2 text-mrgblau">Sonntag</h3>
+    @ausschreibungRennen(sqlc.WettkampfKurzstrecke)
+    @ausschreibungRennen(sqlc.WettkampfStaffel)
+  </div>
 }
