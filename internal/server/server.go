@@ -154,6 +154,16 @@ func ausschreibungRennenCollapseBodyHandler(c *handler.Context) error {
 	return nil
 }
 
+func meldeergebnisCollapseBodyHandler(c *handler.Context) error {
+	wettkampfStr := c.Param("wettkampf")
+	wettkampf, err := crud.WettkampfFromString(wettkampfStr)
+	if err != nil {
+		return &handler.Error{StatusCode: 404, Message: "Wettkampf not found"}
+	}
+	templ.Handler(ui_pages.MeldeergebnisCollapseBody(wettkampf)).ServeHTTP(c.Writer, c.Request)
+	return nil
+}
+
 func GetRouter() http.Handler {
 	navBarConfig.Entries = []ui_components.NavBarEntry{
 		// {Name: "Home", URL: "/"},
@@ -186,6 +196,7 @@ func GetRouter() http.Handler {
 	baseLayoutHandler("/meldeergebnis", ui_pages.Meldeergebnis())
 	baseLayoutHandler("/ergebnisse", ui_pages.Ergebnisse())
 	baseLayoutHandler("/login", ui_pages.Login())
+	baseLayoutHandler("/datenschutz", ui_pages.Datenschutz())
 
 	// Pure HTMX UI Components
 	r.Handle("GET", "/comp/image", func(w http.ResponseWriter, r *http.Request) {
@@ -216,6 +227,7 @@ func GetRouter() http.Handler {
 	})
 	r.Handle("GET", "/comp/zeitplan/{wettkampf}", templHandler(zeitplanCollapseBodyHandler))
 	r.Handle("GET", "/comp/ausschreibung/{wettkampf}", templHandler(ausschreibungRennenCollapseBodyHandler))
+	r.Handle("GET", "/comp/meldeergebnis/{wettkampf}", templHandler(meldeergebnisCollapseBodyHandler))
 
 	// API Handlers
 	r.Handle("POST", "/api/auth/login", wrapHandler(api_v1.Login))
