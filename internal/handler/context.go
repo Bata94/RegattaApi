@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -184,6 +185,12 @@ func (c *Context) DeleteCookie(name string) {
 }
 
 func (c *Context) IP() string {
+	if forwarded := c.Request.Header.Get("X-Forwarded-For"); forwarded != "" {
+		if idx := strings.Index(forwarded, ","); idx > 0 {
+			return strings.TrimSpace(forwarded[:idx])
+		}
+		return strings.TrimSpace(forwarded)
+	}
 	return c.Request.RemoteAddr
 }
 

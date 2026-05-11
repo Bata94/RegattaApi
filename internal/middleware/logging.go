@@ -18,7 +18,7 @@ func Logging() Middleware {
 			log.Printf("%s | %s | %d | %s | %s",
 				c.Method(),
 				c.Path(),
-				c.StatusCode,
+				c.StatusCode(),
 				duration,
 				c.IP())
 
