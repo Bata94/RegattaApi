@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -148,8 +149,7 @@ func GetRouter() http.Handler {
 			URL:          "",
 			RequiredCaps: []string{"allowed_logged_in"},
 			SubEntries: []ui_components.NavBarEntry{
-				{Name: "Profil", URL: "/profil", RequiredCaps: []string{"allowed_logged_in"}},
-
+				{Name: "Profil", URL: "/internal/profil", RequiredCaps: []string{"allowed_logged_in"}},
 				{Name: "Zeitnahme", URL: "/internal/zeitnahme", RequiredCaps: []string{"allowed_zeitnahme"}},
 				{Name: "Startlisten", URL: "/internal/startlisten", RequiredCaps: []string{"allowed_startlisten"}},
 				{Name: "Regattabüro", URL: "/internal/regattabüro", RequiredCaps: []string{"allowed_regattaleitung"}},
@@ -159,12 +159,11 @@ func GetRouter() http.Handler {
 		},
 	}
 
-	r.Handle("GET", "/metrics", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Metrics placeholder"))
-	})
-	r.Handle("GET", "/metricsApi", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("API Metrics placeholder"))
-	})
+	baseLayoutHandler("/metrics", metricsPageHandler)
+
+	r.Handle("GET", "/metricsApi", wrapHandler(func(c *handler.Context) error {
+		return api_v1.MetricsApi(c)
+	}, true))
 
 	r.Handle("GET", "/assets/{file}", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./assets/"+r.URL.Path[len("/assets/"):])
@@ -200,11 +199,13 @@ func GetRouter() http.Handler {
 	})
 	r.Handle("POST", "/login", wrapHandler(loginPostHandler, false))
 	r.Handle("GET", "/logout", logoutHandler)
-	baseLayoutHandler("/profil", func(c *handler.Context) (templ.Component, error) {
-		return getProfilePage(c)
-	})
+
 	baseLayoutHandler("/datenschutz", func(c *handler.Context) (templ.Component, error) {
 		return ui_pages.Datenschutz(), nil
+	})
+
+	baseLayoutHandler("(internal)/profil", func(c *handler.Context) (templ.Component, error) {
+		return getProfilePage(c)
 	})
 
 	// Pure HTMX UI Components
@@ -432,6 +433,33 @@ func getProfilePage(c *handler.Context) (templ.Component, error) {
 	}
 
 	return ui_pages.Profil(data), nil
+}
+
+func metricsPageHandler(c *handler.Context) (templ.Component, error) {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		secret = "DO_NOT_USE_IN_PROD"
+	}
+
+	tokenString := c.Cookie("auth_token")
+	if tokenString == "" {
+		return nil, &handler.Error{StatusCode: 401, Message: "Nicht angemeldet"}
+	}
+
+	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+		return []byte(secret), nil
+	})
+	if err != nil || !token.Valid {
+		return nil, &handler.Error{StatusCode: 401, Message: "Ungültiges oder abgelaufenes Token"}
+	}
+
+	claims := token.Claims.(jwt.MapClaims)
+	admin, ok := claims["allowed_admin"].(bool)
+	if !ok || !admin {
+		return nil, &handler.Error{StatusCode: 403, Message: "Keine Admin-Berechtigung"}
+	}
+
+	return ui_pages.Metrics(), nil
 }
 
 func loginPostHandler(c *handler.Context) error {
