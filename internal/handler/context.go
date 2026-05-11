@@ -113,6 +113,10 @@ func (c *Context) Status(code int) *Context {
 	return c
 }
 
+func (c *Context) StatusCode() int {
+	return c.statusCode
+}
+
 func (c *Context) SendString(msg string) error {
 	c.Writer.Header().Set("Content-Type", "text/plain")
 	_, err := c.Writer.Write([]byte(msg))
