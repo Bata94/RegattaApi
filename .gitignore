@@ -50,3 +50,4 @@ assets/css/output.css
 # Project build
 bin/
 **/*.fiber.gz
+public/

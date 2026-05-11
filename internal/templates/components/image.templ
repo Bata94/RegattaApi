@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"strconv"
+	"github.com/bata94/RegattaApi/internal/utils"
 )
 
 // TODO: Skeleton sizing should be more infeared instead of fixed!
@@ -11,6 +13,8 @@ import (
 type ImageOptions struct {
   Width string
   Height string
+  Quality float32
+  Lossless bool
   ClassImage string
   ClassSkeleton string
   LazyLoading bool
@@ -21,6 +25,8 @@ func DefaultImageOptions() ImageOptions {
   return ImageOptions{
     Width: "100%",
     Height: "100%",
+    Quality:  utils.WEBP_DEFAULT_QUALITY,
+    Lossless: false,
     ClassImage: "",
     ClassSkeleton: "",
     LazyLoading: true,
@@ -40,6 +46,21 @@ func WithWidth(width string) func(ImageOptions) ImageOptions {
 func WithHeight(height string) func(ImageOptions) ImageOptions {
   return func(opts ImageOptions) ImageOptions {
     opts.Height = height
+    return opts
+  }
+}
+
+// WithQuality sets the quality of the imageFile
+func WithQuality(quality float32) func(ImageOptions) ImageOptions {
+  return func(opts ImageOptions) ImageOptions {
+    opts.Quality = quality
+    return opts
+  }
+}
+
+func WithLossless() func(ImageOptions) ImageOptions {
+  return func(opts ImageOptions) ImageOptions {
+    opts.Lossless = true
     return opts
   }
 }
@@ -97,6 +118,8 @@ templ Image(src, alt string, opts ...func(ImageOptions) ImageOptions) {
     q.Set("alt", alt)
     q.Set("width", c.Width)
     q.Set("height", c.Height)
+    q.Set("quality", strconv.FormatFloat(float64(c.Quality), 'f', 2, 32))
+    q.Set("lossless", strconv.FormatBool(c.Lossless))
     q.Set("class", c.ClassImage)
     q.Set("skeleton", c.ClassSkeleton)
     u.RawQuery = q.Encode()
@@ -134,8 +157,44 @@ templ Image(src, alt string, opts ...func(ImageOptions) ImageOptions) {
 }
 
 templ RawImageComponent(src, alt string, c ImageOptions) {
+  {{
+   width, err := strconv.Atoi(c.Width)
+     if err == nil {
+       width = 0
+     }
+   height, err := strconv.Atoi(c.Height)
+     if err == nil {
+       height = 0
+     }
+
+    srcFileNameLS := strings.Split(src, "/")
+    srcFileNameLS = srcFileNameLS[len(srcFileNameLS)-1:]
+    srcFileNameWithExt := srcFileNameLS[0]
+    srcFileName := srcFileNameWithExt[:strings.LastIndex(srcFileNameWithExt, ".")]
+
+    webpSrc := fmt.Sprintf("/public/img_%s_w%d_h%d_q%d_l%t.webp", srcFileName, width, height, int(c.Quality), c.Lossless)
+    fmt.Println(webpSrc)
+    var errConv error
+
+    if !utils.FileExists(webpSrc[1:]) {
+      imgParams := utils.NewConvertResizeParams()
+
+      imgParams.Width = uint(width)
+      imgParams.Height = uint(height)
+      imgParams.Quality = c.Quality
+      imgParams.Lossless = c.Lossless
+
+      errConv = utils.ConvertAndResizeImage(src[1:], webpSrc[1:], imgParams)
+    } else {
+      fmt.Println("File exists, skipping conversion")
+    }
+  }}
+  if errConv != nil {
+    {{fmt.Println(errConv)}}
+  }
+
   <img
-    src={src}
+    src={webpSrc}
     alt={alt}
     class={c.ClassImage}
     width={c.Width}

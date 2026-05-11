@@ -2,6 +2,7 @@ package ui_pages
 
 import (
 	"github.com/bata94/RegattaApi/internal/templates/components"
+	"github.com/bata94/RegattaApi/internal/utils"
 )
 
 templ Index() {
@@ -68,18 +69,21 @@ templ Index() {
 			"Bild während der MRG Regatta von dem belebten Regattaplatz",
 			ui_components.WithImageClass("max-w-sm rounded-lg shadow-2xl mx-auto md:mx-0"),
       ui_components.WithVeryLazyLoading(),
+      ui_components.WithQuality(utils.WEBP_SMALL_QUALITY),
 		)
 		@ui_components.Image(
 			"/assets/images/ruhr_olymp_06.jpg",
 			"Bild während der MRG Regatta von dem belebten Regattaplatz",
 			ui_components.WithImageClass("max-w-sm rounded-lg shadow-2xl mx-auto md:mx-0"),
       ui_components.WithVeryLazyLoading(),
+      ui_components.WithQuality(utils.WEBP_SMALL_QUALITY),
 		)
 		@ui_components.Image(
 			"/assets/images/ruhr_olymp_06_2.jpg",
 			"Bild während der MRG Regatta von dem belebten Regattaplatz",
 			ui_components.WithImageClass("max-w-sm rounded-lg shadow-2xl mx-auto md:mx-0"),
       ui_components.WithVeryLazyLoading(),
+      ui_components.WithQuality(utils.WEBP_SMALL_QUALITY),
 		)
 	</div>
 }

@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/a-h/templ"
@@ -187,6 +188,9 @@ func GetRouter() http.Handler {
 	r.Handle("GET", "/files/{file}", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./files/"+r.URL.Path[len("/files/"):])
 	})
+	r.Handle("GET", "/public/{file}", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./public/"+r.URL.Path[len("/public/"):])
+	})
 
 	// UI Handlers
 	baseLayoutHandler("/", ui_pages.Index())
@@ -200,7 +204,7 @@ func GetRouter() http.Handler {
 
 	// Pure HTMX UI Components
 	r.Handle("GET", "/comp/image", func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("Image component endpoint hit!")
+		// log.Printf(r.URL.Query().Encode(), " Image component endpoint hit!")
 		queryParams := r.URL.Query()
 		src := queryParams.Get("src")
 		alt := queryParams.Get("alt")
@@ -212,12 +216,28 @@ func GetRouter() http.Handler {
 		}
 
 		imgOpt := ui_components.DefaultImageOptions()
+		var err error
 
 		if w := queryParams.Get("width"); w != "" {
 			imgOpt.Width = w
 		}
 		if h := queryParams.Get("height"); h != "" {
 			imgOpt.Height = h
+		}
+		if q := queryParams.Get("quality"); q != "" {
+			qFloat64, err := strconv.ParseFloat(q, 32)
+			if err != nil || qFloat64 <= 0.0 || qFloat64 > 100.0 {
+				log.Printf("Image component: quality is not a float32 value or out of range... Setting default value")
+			} else {
+				imgOpt.Quality = float32(qFloat64)
+			}
+		}
+		if l := queryParams.Get("lossless"); l != "" {
+			imgOpt.Lossless, err = strconv.ParseBool(l)
+			if err != nil {
+				log.Printf("Image component: lossless is not a bool value... Setting default value")
+				imgOpt.Lossless = false
+			}
 		}
 		if c := queryParams.Get("class"); c != "" {
 			imgOpt.ClassImage = c

@@ -6,11 +6,13 @@ toolchain go1.24.3
 
 require (
 	github.com/a-h/templ v0.3.1001
+	github.com/chai2010/webp v1.4.0
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
+	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/swaggo/swag v1.16.4
 	github.com/wneessen/go-mail v0.4.4
 	golang.org/x/crypto v0.40.0
