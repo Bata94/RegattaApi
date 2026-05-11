@@ -137,12 +137,22 @@ func meldeergebnisCollapseBodyHandler(c *handler.Context) error {
 
 func GetRouter() http.Handler {
 	navBarConfig.Entries = []ui_components.NavBarEntry{
-		// {Name: "Home", URL: "/"},
 		{Name: "Livestream", URL: "/live"},
 		{Name: "Ausschreibung", URL: "/ausschreibung"},
 		{Name: "Zeitplan", URL: "/zeitplan"},
 		{Name: "Meldeergebnis", URL: "/meldeergebnis"},
 		{Name: "Ergebnisse", URL: "/ergebnisse"},
+		{
+			Name:         "Verwaltung",
+			URL:          "/admin",
+			RequiredCaps: []string{"allowed_admin"},
+			SubEntries: []ui_components.NavBarEntry{
+				{Name: "Benutzer", URL: "/admin/users"},
+				{Name: "Zeitnahme", URL: "/admin/zeitnahme"},
+				{Name: "Startlisten", URL: "/admin/startlisten"},
+				{Name: "Regattaleitung", URL: "/admin/regattaleitung"},
+			},
+		},
 	}
 
 	r.Handle("GET", "/metrics", func(w http.ResponseWriter, r *http.Request) {

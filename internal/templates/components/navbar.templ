@@ -1,23 +1,75 @@
 package ui_components
 
 type NavBarConfig struct {
-  Entries []NavBarEntry
+  Entries  []NavBarEntry
+  UserCaps []string
+  LoggedIn bool
 }
 
 type NavBarEntry struct {
-  Name string
-  URL string
+  Name         string
+  URL          string
+  RequiredCaps []string
+  SubEntries   []NavBarEntry
 }
 
 func NewNavBarConfig() NavBarConfig {
   return NavBarConfig{
-    Entries: []NavBarEntry{},
+    Entries:  []NavBarEntry{},
+    UserCaps: []string{},
+    LoggedIn: false,
   }
 }
 
-templ navbarEntries(entries []NavBarEntry) {
+func hasCapability(userCaps []string, requiredCaps []string) bool {
+  if len(requiredCaps) == 0 {
+    return true
+  }
+  for _, required := range requiredCaps {
+    for _, cap := range userCaps {
+      if cap == required {
+        return true
+      }
+    }
+  }
+  return false
+}
+
+templ navbarEntry(entry NavBarEntry, userCaps []string, loggedIn bool) {
+  if hasCapability(userCaps, entry.RequiredCaps) {
+    if len(entry.SubEntries) > 0 {
+      <li>
+        <details>
+          <summary>{entry.Name}</summary>
+          <ul class="bg-base-100 rounded-t-none p-2">
+            for _, sub := range entry.SubEntries {
+              @navbarEntry(sub, userCaps, loggedIn)
+            }
+          </ul>
+        </details>
+      </li>
+    } else {
+      <li>
+        <button hx-get={entry.URL} hx-target="main" hx-push-url="true" href={entry.URL}>{entry.Name}</button>
+      </li>
+    }
+  }
+}
+
+templ navbarEntries(entries []NavBarEntry, userCaps []string, loggedIn bool) {
   for _, entry := range entries {
-    <li><button hx-get={entry.URL} hx-target="main" hx-push-url="true" href={entry.URL}>{entry.Name}</button></li>
+    @navbarEntry(entry, userCaps, loggedIn)
+  }
+  if loggedIn {
+    <li>
+      <details>
+        <summary>Mein Konto</summary>
+        <ul class="bg-base-100 rounded-t-none p-2">
+          <li><button hx-get="/profil" hx-target="main" hx-push-url="true" href="/profil">Profil</button></li>
+          <li><button hx-get="/logout" hx-target="main" hx-push-url="true" href="/logout">Abmelden</button></li>
+        </ul>
+      </details>
+    </li>
   }
 }
 
@@ -54,7 +106,7 @@ templ Navbar(c NavBarConfig) {
     </div>
     <div class="navbar-center hidden lg:flex">
       <ul class="menu menu-horizontal px-1">
-        @navbarEntries(c.Entries)
+        @navbarEntries(c.Entries, c.UserCaps, c.LoggedIn)
       </ul>
     </div>
     <div class="navbar-end flex items-center gap-2">
@@ -65,7 +117,7 @@ templ Navbar(c NavBarConfig) {
 
   <div class="collapse-content lg:hidden z-1">
     <ul class="menu">
-      @navbarEntries(c.Entries)
+      @navbarEntries(c.Entries, c.UserCaps, c.LoggedIn)
     </ul>
   </div>
 </div>

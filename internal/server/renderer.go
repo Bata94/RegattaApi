@@ -19,10 +19,25 @@ func baseLayoutHandler(url string, pageBody templ.Component) {
 
 func pageHandler(pageBody templ.Component, layout func(templ.Component, ui_components.NavBarConfig) templ.Component) func(http.ResponseWriter, *http.Request) {
 	h := func(c *handler.Context) error {
+		var caps []string
+		if c.GetLocals("capabilities") != nil {
+			caps = c.GetLocals("capabilities").([]string)
+		}
+		loggedIn := false
+		if c.GetLocals("logged_in") != nil {
+			loggedIn = c.GetLocals("logged_in").(bool)
+		}
+
+		navbarCfg := ui_components.NavBarConfig{
+			Entries:  navBarConfig.Entries,
+			UserCaps: caps,
+			LoggedIn: loggedIn,
+		}
+
 		if c.Headers().Get("HX-Request") == "true" {
 			templ.Handler(pageBody).ServeHTTP(c.Writer, c.Request)
 		} else {
-			templ.Handler(layout(pageBody, navBarConfig)).ServeHTTP(c.Writer, c.Request)
+			templ.Handler(layout(pageBody, navbarCfg)).ServeHTTP(c.Writer, c.Request)
 		}
 		return nil
 	}
@@ -33,6 +48,7 @@ func pageHandler(pageBody templ.Component, layout func(templ.Component, ui_compo
 		middleware.Logging(),
 		middleware.CORS(),
 		middleware.RateLimit(),
+		middleware.OptionalAuth(),
 		middleware.Timeout(60*time.Second, "Request timeout"),
 	}
 
@@ -65,6 +81,7 @@ func compHandler(url string, comp templ.Component) {
 		middleware.Logging(),
 		middleware.CORS(),
 		middleware.RateLimit(),
+		middleware.OptionalAuth(),
 		middleware.Timeout(60*time.Second, "Request timeout"),
 	}
 
