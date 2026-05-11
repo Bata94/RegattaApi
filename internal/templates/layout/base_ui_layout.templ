@@ -90,7 +90,7 @@ templ MinimalLayout(body templ.Component) {
   <script src="/assets/js/htmx.min.js"></script>
   <script src="/assets/js/theming.js"></script>
 </head>
-<body class="max-w-screen prose antialiased">
+<body class="max-w-screen prose antialiased" hx-on:click="if (!event.target.closest('details')) document.querySelectorAll('details[open]').forEach(d => d.removeAttribute('open'))">
   @body
 </body>
 </html>

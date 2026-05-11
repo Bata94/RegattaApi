@@ -16,6 +16,7 @@ import (
 	"github.com/bata94/RegattaApi/internal/middleware"
 	"github.com/bata94/RegattaApi/internal/templates/components"
 	"github.com/bata94/RegattaApi/internal/templates/pages"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 var (
@@ -143,14 +144,17 @@ func GetRouter() http.Handler {
 		{Name: "Meldeergebnis", URL: "/meldeergebnis"},
 		{Name: "Ergebnisse", URL: "/ergebnisse"},
 		{
-			Name:         "Verwaltung",
-			URL:          "/admin",
-			RequiredCaps: []string{"allowed_admin"},
+			Name:         "Internes",
+			URL:          "",
+			RequiredCaps: []string{"allowed_logged_in"},
 			SubEntries: []ui_components.NavBarEntry{
-				{Name: "Benutzer", URL: "/admin/users"},
-				{Name: "Zeitnahme", URL: "/admin/zeitnahme"},
-				{Name: "Startlisten", URL: "/admin/startlisten"},
-				{Name: "Regattaleitung", URL: "/admin/regattaleitung"},
+				{Name: "Profil", URL: "/profil", RequiredCaps: []string{"allowed_logged_in"}},
+
+				{Name: "Zeitnahme", URL: "/internal/zeitnahme", RequiredCaps: []string{"allowed_zeitnahme"}},
+				{Name: "Startlisten", URL: "/internal/startlisten", RequiredCaps: []string{"allowed_startlisten"}},
+				{Name: "Regattabüro", URL: "/internal/regattabüro", RequiredCaps: []string{"allowed_regattaleitung"}},
+				{Name: "Regattaleitung", URL: "/internal/regattaleitung", RequiredCaps: []string{"allowed_regattaleitung"}},
+				{Name: "Admin", URL: "/internal/admin", RequiredCaps: []string{"allowed_admin"}},
 			},
 		},
 	}
@@ -173,14 +177,35 @@ func GetRouter() http.Handler {
 	})
 
 	// UI Handlers
-	baseLayoutHandler("/", ui_pages.Index())
-	baseLayoutHandler("/live", ui_pages.Livestream())
-	baseLayoutHandler("/ausschreibung", ui_pages.Ausschreibung())
-	baseLayoutHandler("/zeitplan", ui_pages.Zeitplan())
-	baseLayoutHandler("/meldeergebnis", ui_pages.Meldeergebnis())
-	baseLayoutHandler("/ergebnisse", ui_pages.Ergebnisse())
-	baseLayoutHandler("/login", ui_pages.Login())
-	baseLayoutHandler("/datenschutz", ui_pages.Datenschutz())
+	baseLayoutHandler("/", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.Index(), nil
+	})
+	baseLayoutHandler("/live", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.Livestream(), nil
+	})
+	baseLayoutHandler("/ausschreibung", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.Ausschreibung(), nil
+	})
+	baseLayoutHandler("/zeitplan", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.Zeitplan(), nil
+	})
+	baseLayoutHandler("/meldeergebnis", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.Meldeergebnis(), nil
+	})
+	baseLayoutHandler("/ergebnisse", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.Ergebnisse(), nil
+	})
+	baseLayoutHandler("/login", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.Login(), nil
+	})
+	r.Handle("POST", "/login", wrapHandler(loginPostHandler, false))
+	r.Handle("GET", "/logout", logoutHandler)
+	baseLayoutHandler("/profil", func(c *handler.Context) (templ.Component, error) {
+		return getProfilePage(c)
+	})
+	baseLayoutHandler("/datenschutz", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.Datenschutz(), nil
+	})
 
 	// Pure HTMX UI Components
 	r.Handle("GET", "/comp/image", wrapUIHandler(imageComponentHandler))
@@ -359,6 +384,96 @@ func wrapUIHandler(h handler.Handler) func(http.ResponseWriter, *http.Request) {
 			}
 		}
 	}
+}
+
+func logoutHandler(w http.ResponseWriter, r *http.Request) {
+	secure := r.TLS != nil
+	http.SetCookie(w, &http.Cookie{
+		Name:     "auth_token",
+		Value:    "",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
+		Path:     "/",
+	})
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func getProfilePage(c *handler.Context) (templ.Component, error) {
+	userToken, ok := c.GetLocals("user").(*jwt.Token)
+	if !ok {
+		return nil, &handler.Error{StatusCode: 401, Message: "Nicht angemeldet"}
+	}
+
+	claims := userToken.Claims.(jwt.MapClaims)
+	username, ok := claims["username"].(string)
+	if !ok {
+		return nil, &handler.Error{StatusCode: 401, Message: "Invalid token"}
+	}
+
+	userGroup := ""
+	if ug, ok := claims["user_group_name"].(string); ok {
+		userGroup = ug
+	}
+
+	var capabilities []string
+	capFields := []string{"allowed_admin", "allowed_zeitnahme", "allowed_startlisten", "allowed_regattaleitung"}
+	for _, field := range capFields {
+		if val, exists := claims[field]; exists && val == true {
+			capabilities = append(capabilities, field)
+		}
+	}
+
+	data := ui_pages.ProfilData{
+		Username:     username,
+		UserGroup:    userGroup,
+		Capabilities: capabilities,
+	}
+
+	return ui_pages.Profil(data), nil
+}
+
+func loginPostHandler(c *handler.Context) error {
+	username := c.FormValue("username")
+	password := c.FormValue("password")
+
+	isHTMX := c.Headers().Get("HX-Request") == "true"
+
+	if username == "" || password == "" {
+		if isHTMX {
+			templ.Handler(ui_pages.LoginError("Benutzername und Passwort erforderlich")).ServeHTTP(c.Writer, c.Request)
+			return nil
+		}
+		return c.Redirect("/login", http.StatusSeeOther)
+	}
+
+	u, err := crud.AuthLogin(crud.LoginParams{Username: username, Password: password})
+	if err != nil {
+		if isHTMX {
+			templ.Handler(ui_pages.LoginError("Benutzername oder Passwort ist falsch")).ServeHTTP(c.Writer, c.Request)
+			return nil
+		}
+		return c.Redirect("/login", http.StatusSeeOther)
+	}
+
+	secure := c.Request.TLS != nil
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "auth_token",
+		Value:    u.Jwt.Token,
+		MaxAge:   72 * 60 * 60,
+		HttpOnly: true,
+		Secure:   secure,
+		Path:     "/",
+	})
+
+	if isHTMX {
+		c.Writer.Header().Set("HX-Redirect", "/")
+		c.Writer.WriteHeader(http.StatusOK)
+		return nil
+	}
+
+	return c.Redirect("/", http.StatusSeeOther)
 }
 
 func imageComponentHandler(c *handler.Context) error {

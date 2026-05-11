@@ -16,14 +16,20 @@ func Auth() Middleware {
 
 	return func(next handler.Handler) handler.Handler {
 		return func(c *handler.Context) error {
-			authHeader := c.Headers().Get("Authorization")
-			if authHeader == "" {
-				return &handler.Error{StatusCode: 401, Message: "Missing Authorization header"}
+			tokenString := c.Cookie("auth_token")
+			if tokenString == "" {
+				authHeader := c.Headers().Get("Authorization")
+				if authHeader != "" {
+					tokenString = strings.TrimPrefix(authHeader, "Bearer ")
+				}
 			}
 
-			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-			if tokenString == authHeader {
-				return &handler.Error{StatusCode: 401, Message: "Invalid Bearer token format"}
+			if tokenString == "" {
+				return &handler.Error{StatusCode: 401, Message: "Missing authentication token"}
+			}
+
+			if strings.HasPrefix(tokenString, "Bearer ") {
+				return &handler.Error{StatusCode: 401, Message: "Invalid token format"}
 			}
 
 			token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
@@ -48,22 +54,22 @@ func OptionalAuth() Middleware {
 
 	return func(next handler.Handler) handler.Handler {
 		return func(c *handler.Context) error {
-			authHeader := c.Headers().Get("Authorization")
-			if authHeader == "" {
-				return next(c)
+			tokenString := c.Cookie("auth_token")
+			if tokenString == "" {
+				authHeader := c.Headers().Get("Authorization")
+				if authHeader != "" {
+					tokenString = strings.TrimPrefix(authHeader, "Bearer ")
+				}
 			}
 
-			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-			if tokenString == authHeader {
-				return next(c)
-			}
+			if tokenString != "" && !strings.HasPrefix(tokenString, "Bearer ") {
+				token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+					return []byte(secret), nil
+				})
 
-			token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
-				return []byte(secret), nil
-			})
-
-			if err == nil && token.Valid {
-				extractAuthData(c, token)
+				if err == nil && token.Valid {
+					extractAuthData(c, token)
+				}
 			}
 
 			return next(c)
@@ -76,12 +82,10 @@ func extractAuthData(c *handler.Context, token *jwt.Token) {
 	c.Locals("logged_in", true)
 
 	var capabilities []string
-	if userGroup, ok := claims["user_group"].(map[string]interface{}); ok {
-		capFields := []string{"allowed_admin", "allowed_zeitnahme", "allowed_startlisten", "allowed_regattaleitung"}
-		for _, field := range capFields {
-			if val, exists := userGroup[field]; exists && val == true {
-				capabilities = append(capabilities, field)
-			}
+	capFields := []string{"allowed_logged_in", "allowed_admin", "allowed_zeitnahme", "allowed_startlisten", "allowed_regattaleitung"}
+	for _, field := range capFields {
+		if val, exists := claims[field]; exists && val == true {
+			capabilities = append(capabilities, field)
 		}
 	}
 	c.Locals("capabilities", capabilities)

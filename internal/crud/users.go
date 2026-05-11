@@ -2,6 +2,7 @@ package crud
 
 import (
 	"errors"
+	"os"
 	"time"
 
 	"github.com/bata94/RegattaApi/internal/db"
@@ -57,7 +58,12 @@ func checkPasswordHash(password, hash string) bool {
 	return err == nil
 }
 
-func genJWT(u sqlc.User) (string, time.Time, error) {
+func genJWT(u sqlc.User, ug *sqlc.UsersGroup) (string, time.Time, error) {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		secret = "DO_NOT_USE_IN_PROD"
+	}
+
 	token := jwt.New(jwt.SigningMethodHS256)
 	exp := time.Now().Add(time.Hour * 72)
 
@@ -66,8 +72,16 @@ func genJWT(u sqlc.User) (string, time.Time, error) {
 	claims["user_id"] = u.Uuid.String()
 	claims["exp"] = exp.Unix()
 
-	// TODO: RM this in Prod
-	jwtStr, err := token.SignedString([]byte("DO_NOT_USE_IN_PROD"))
+	if ug != nil {
+		claims["user_group_name"] = ug.Name
+		claims["allowed_admin"] = ug.AllowedAdmin
+		claims["allowed_zeitnahme"] = ug.AllowedZeitnahme
+		claims["allowed_startlisten"] = ug.AllowedStartlisten
+		claims["allowed_regattaleitung"] = ug.AllowedRegattaleitung
+	}
+	claims["allowed_logged_in"] = true
+
+	jwtStr, err := token.SignedString([]byte(secret))
 	return jwtStr, exp, err
 }
 
@@ -177,7 +191,7 @@ func AuthLogin(l LoginParams) (*ReturnUserWithJWT, error) {
 	tokenStr := ""
 	tokenExp := time.Now()
 	if checkPasswordHash(l.Password, u.HashedPassword) {
-		tokenStr, tokenExp, err = genJWT(u.User)
+		tokenStr, tokenExp, err = genJWT(u.User, u.UserGroup)
 		if err != nil {
 			retErr := &api.TOKEN_GENERATION_ERROR
 			retErr.Details = err.Error()

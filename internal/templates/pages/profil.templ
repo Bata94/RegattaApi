@@ -1,0 +1,34 @@
+package ui_pages
+
+type ProfilData struct {
+	Username     string
+	UserGroup    string
+	Capabilities []string
+}
+
+templ Profil(data ProfilData) {
+	<div class="max-w-md mx-auto mt-8">
+		<div class="card bg-base-200 shadow-xl">
+			<div class="card-body">
+				<h2 class="card-title text-2xl mb-4">Mein Profil</h2>
+				<div class="space-y-2">
+					<p><span class="font-bold">Benutzername:</span> {data.Username}</p>
+					if data.UserGroup != "" {
+						<p><span class="font-bold">Benutzergruppe:</span> {data.UserGroup}</p>
+					}
+					if len(data.Capabilities) > 0 {
+						<p><span class="font-bold">Berechtigungen:</span></p>
+						<ul class="list-disc list-inside">
+							for _, cap := range data.Capabilities {
+								<li>{cap}</li>
+							}
+						</ul>
+					}
+				</div>
+				<div class="card-actions justify-end mt-4">
+					<a href="/logout" class="btn btn-error">Abmelden</a>
+				</div>
+			</div>
+		</div>
+	</div>
+}

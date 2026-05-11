@@ -161,6 +161,28 @@ func (c *Context) Cookie(name string) string {
 	return cookie.Value
 }
 
+func (c *Context) SetCookie(name, value string, maxAge int) {
+	secure := c.Request.TLS != nil
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     name,
+		Value:    value,
+		MaxAge:   maxAge,
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
+		Path:     "/",
+	})
+}
+
+func (c *Context) DeleteCookie(name string) {
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:   name,
+		Value:  "",
+		MaxAge: -1,
+		Path:   "/",
+	})
+}
+
 func (c *Context) IP() string {
 	return c.Request.RemoteAddr
 }
