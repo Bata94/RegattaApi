@@ -288,6 +288,7 @@ type UsersGroup struct {
 	AllowedAdmin          bool      `json:"allowed_admin"`
 	AllowedZeitnahme      bool      `json:"allowed_zeitnahme"`
 	AllowedStartlisten    bool      `json:"allowed_startlisten"`
+	AllowedRegattabuero   bool      `json:"allowed_regattabuero"`
 	AllowedRegattaleitung bool      `json:"allowed_regattaleitung"`
 }
 

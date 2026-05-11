@@ -77,6 +77,7 @@ func genJWT(u sqlc.User, ug *sqlc.UsersGroup) (string, time.Time, error) {
 		claims["allowed_admin"] = ug.AllowedAdmin
 		claims["allowed_zeitnahme"] = ug.AllowedZeitnahme
 		claims["allowed_startlisten"] = ug.AllowedStartlisten
+		claims["allowed_regattabuero"] = ug.AllowedRegattabuero
 		claims["allowed_regattaleitung"] = ug.AllowedRegattaleitung
 	}
 	claims["allowed_logged_in"] = true

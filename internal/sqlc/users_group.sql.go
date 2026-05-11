@@ -19,7 +19,7 @@ INSERT INTO users_group (
 ) VALUES (
   $1, $2, uuidv7()
 )
-RETURNING uuid, name, allowed_admin, allowed_zeitnahme, allowed_startlisten, allowed_regattaleitung
+RETURNING uuid, name, allowed_admin, allowed_zeitnahme, allowed_startlisten, allowed_regattabuero, allowed_regattaleitung
 `
 
 type CreateUserGroupParams struct {
@@ -36,13 +36,14 @@ func (q *Queries) CreateUserGroup(ctx context.Context, arg CreateUserGroupParams
 		&i.AllowedAdmin,
 		&i.AllowedZeitnahme,
 		&i.AllowedStartlisten,
+		&i.AllowedRegattabuero,
 		&i.AllowedRegattaleitung,
 	)
 	return i, err
 }
 
 const getAllUserGroup = `-- name: GetAllUserGroup :many
-SELECT uuid, name, allowed_admin, allowed_zeitnahme, allowed_startlisten, allowed_regattaleitung FROM users_group
+SELECT uuid, name, allowed_admin, allowed_zeitnahme, allowed_startlisten, allowed_regattabuero, allowed_regattaleitung FROM users_group
 ORDER BY uuid
 `
 
@@ -61,6 +62,7 @@ func (q *Queries) GetAllUserGroup(ctx context.Context) ([]UsersGroup, error) {
 			&i.AllowedAdmin,
 			&i.AllowedZeitnahme,
 			&i.AllowedStartlisten,
+			&i.AllowedRegattabuero,
 			&i.AllowedRegattaleitung,
 		); err != nil {
 			return nil, err
@@ -74,7 +76,7 @@ func (q *Queries) GetAllUserGroup(ctx context.Context) ([]UsersGroup, error) {
 }
 
 const getUserGroup = `-- name: GetUserGroup :many
-SELECT users_group.uuid, users_group.name, users_group.allowed_admin, users_group.allowed_zeitnahme, users_group.allowed_startlisten, users_group.allowed_regattaleitung, users.uuid, users.username, users.hashed_password, users.is_active, users.group_uuid
+SELECT users_group.uuid, users_group.name, users_group.allowed_admin, users_group.allowed_zeitnahme, users_group.allowed_startlisten, users_group.allowed_regattabuero, users_group.allowed_regattaleitung, users.uuid, users.username, users.hashed_password, users.is_active, users.group_uuid
 FROM users_group
 JOIN users
 ON users_group.uuid = users.group_uuid
@@ -101,6 +103,7 @@ func (q *Queries) GetUserGroup(ctx context.Context, argUuid uuid.UUID) ([]GetUse
 			&i.UsersGroup.AllowedAdmin,
 			&i.UsersGroup.AllowedZeitnahme,
 			&i.UsersGroup.AllowedStartlisten,
+			&i.UsersGroup.AllowedRegattabuero,
 			&i.UsersGroup.AllowedRegattaleitung,
 			&i.User.Uuid,
 			&i.User.Username,
@@ -119,7 +122,7 @@ func (q *Queries) GetUserGroup(ctx context.Context, argUuid uuid.UUID) ([]GetUse
 }
 
 const getUserGroupMinimal = `-- name: GetUserGroupMinimal :one
-SELECT uuid, name, allowed_admin, allowed_zeitnahme, allowed_startlisten, allowed_regattaleitung
+SELECT uuid, name, allowed_admin, allowed_zeitnahme, allowed_startlisten, allowed_regattabuero, allowed_regattaleitung
 FROM users_group
 WHERE users_group.uuid = $1
 `
@@ -133,6 +136,7 @@ func (q *Queries) GetUserGroupMinimal(ctx context.Context, argUuid uuid.UUID) (U
 		&i.AllowedAdmin,
 		&i.AllowedZeitnahme,
 		&i.AllowedStartlisten,
+		&i.AllowedRegattabuero,
 		&i.AllowedRegattaleitung,
 	)
 	return i, err

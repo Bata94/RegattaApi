@@ -156,6 +156,7 @@ CREATE TABLE users_group (
   allowed_admin boolean DEFAULT false NOT NULL,
   allowed_zeitnahme boolean DEFAULT false NOT NULL,
   allowed_startlisten boolean DEFAULT false NOT NULL,
+  allowed_regattabuero boolean DEFAULT false NOT NULL,
   allowed_regattaleitung boolean DEFAULT false NOT NULL
 );
 
@@ -174,6 +175,7 @@ INSERT INTO users_group (
   allowed_admin,
   allowed_zeitnahme,
   allowed_startlisten,
+  allowed_regattabuero,
   allowed_regattaleitung
 ) VALUES (
   uuidv7(),
@@ -181,6 +183,16 @@ INSERT INTO users_group (
   true,
   true,
   true,
+  true,
+  true
+);
+INSERT INTO users_group (
+  uuid,
+  name,
+  allowed_regattabuero
+) VALUES (
+  uuidv7(),
+  'regattabuero',
   true
 );
 INSERT INTO users_group (

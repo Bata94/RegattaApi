@@ -152,7 +152,7 @@ func GetRouter() http.Handler {
 				{Name: "Profil", URL: "/internal/profil", RequiredCaps: []string{"allowed_logged_in"}},
 				{Name: "Zeitnahme", URL: "/internal/zeitnahme", RequiredCaps: []string{"allowed_zeitnahme"}},
 				{Name: "Startlisten", URL: "/internal/startlisten", RequiredCaps: []string{"allowed_startlisten"}},
-				{Name: "Regattabüro", URL: "/internal/regattabüro", RequiredCaps: []string{"allowed_regattaleitung"}},
+				{Name: "Regattabüro", URL: "/internal/regattabuero", RequiredCaps: []string{"allowed_regattabuero"}},
 				{Name: "Regattaleitung", URL: "/internal/regattaleitung", RequiredCaps: []string{"allowed_regattaleitung"}},
 				{Name: "Admin", URL: "/internal/admin", RequiredCaps: []string{"allowed_admin"}},
 			},
@@ -204,8 +204,23 @@ func GetRouter() http.Handler {
 		return ui_pages.Datenschutz(), nil
 	})
 
-	baseLayoutHandler("(internal)/profil", func(c *handler.Context) (templ.Component, error) {
+	baseLayoutHandler("/internal/profil", func(c *handler.Context) (templ.Component, error) {
 		return getProfilePage(c)
+	})
+	baseLayoutHandler("/internal/zeitnahme", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.InternalZeitnahme(), nil
+	})
+	baseLayoutHandler("/internal/startlisten", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.InternalStartlisten(), nil
+	})
+	baseLayoutHandler("/internal/regattabuero", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.InternalRegattabuero(), nil
+	})
+	baseLayoutHandler("/internal/regattaleitung", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.InternalRegattaleitung(), nil
+	})
+	baseLayoutHandler("/internal/admin", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.InternalAdmin(), nil
 	})
 
 	// Pure HTMX UI Components
