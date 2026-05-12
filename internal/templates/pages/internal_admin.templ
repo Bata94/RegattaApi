@@ -8,9 +8,9 @@ templ InternalAdmin() {
     <p>Hier kannst du die Admin-Funktionen nutzen.</p>
 
     @ui_components.InternalNavBtnGrid([]ui_components.InternalNavBtnParams{
-      {Name: "Metrics", Desc: "", URL: "/metrics"},
-      {Name: "Nutzer Verwaltung", Desc: "", URL: "#"},
-      {Name: "Nutzergruppen Verwaltung", Desc: "", URL: "#"},
+      {Name: "Monitor", Desc: "Server Metriken", URL: "/metrics"},
+      {Name: "Nutzer Verwaltung", Desc: "Nutzer bearbeiten, löschen und neuanlegen", URL: "#"},
+      {Name: "Nutzergruppen Verwaltung", Desc: "Nutzergruppen bearbeiten, löschen und neuanlegen", URL: "#"},
     })
   </div>
 }

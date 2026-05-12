@@ -10,26 +10,31 @@ type InternalNavBtnParams struct {
 
 templ InternalNavBtn(p InternalNavBtnParams) {
   <div
-    class="btn btn-primary w-full h-64 flex flex-col items-center justify-center gap-2"
+    class="btn btn-primary w-full h-64 flex flex-col p-4"
     hx-get={p.URL}
     hx-target="main"
     hx-push-url="true"
     hy-boost="true"
     href={p.URL}
-  >
-    <h2 class="text-2xl font-bold !m-0">
-      {p.Name}
-    </h2>
+>
+    <div class="h-16 flex justify-center items-center">
+      <h2 class="text-2xl font-semibold text-center">
+        {p.Name}
+      </h2>
+    </div>
     if p.Desc != "" {
-      <p class="text-sm text-center !m-0">
-        {p.Desc}
-      </p>
+      <div class="grow-0 divider"/>
+      <div class="grow">
+        <p class="text-sm text-center !m-0">
+          {p.Desc}
+        </p>
+      </div>
     }
   </div>
 }
 
 templ InternalNavBtnGrid(navBtnLst []InternalNavBtnParams) {
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mx-2 md:mx-4">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mx-2 md:mx-4 mb-4">
     for _, btn := range navBtnLst {
       @InternalNavBtn(btn)
     }

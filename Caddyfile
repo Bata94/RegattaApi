@@ -1,5 +1,17 @@
 dev.localhost {
-    reverse_proxy api-dev:8090
+    reverse_proxy api-dev:8090 {
+        # Force the browser to never cache by overwriting headers
+        header_up Cache-Control "no-cache, no-store, must-revalidate"
+        header_up Pragma "no-cache"
+        header_up Expires "0"
+
+        # Alternatively, manipulate the response headers sent back to the browser
+        header_down Cache-Control "no-cache, no-store, must-revalidate"
+    }
+}
+
+stag.localhost {
+    reverse_proxy api-dev:8080
     encode gzip
 }
 

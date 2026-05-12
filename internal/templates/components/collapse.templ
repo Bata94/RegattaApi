@@ -1,9 +1,15 @@
 package ui_components
 
+const (
+  collaspeClass = "collapse collapse-arrow bg-base-200 my-4"
+  collaspeTitleClass = "collapse-title text-2xl font-semibold"
+  collaspeContentClass = "collapse-content"
+)
+
 templ Collapse(title string, content templ.Component) {
-  <details class="collapse collapse-arrow bg-base-200 my-4">
-    <summary class="collapse-title text-2xl font-semibold">{title}</summary>
-    <div class="collapse-content">
+  <details class={collaspeClass}>
+    <summary class={collaspeTitleClass}>{title}</summary>
+    <div class={collaspeContentClass}>
       @content
     </div>
   </details>
@@ -13,9 +19,9 @@ templ CollapseWithLoading(title, reqUrl string) {
   {{
     loadingCompID := "loading-" + title
   }}
-  <details class="collapse collapse-arrow bg-base-200 my-4">
+  <details class={collaspeClass}>
     <summary
-      class="collapse-title text-2xl font-semibold"
+      class={collaspeTitleClass}
       hx-boost="true"
       hx-get={reqUrl}
       hx-trigger="click once"
@@ -23,7 +29,7 @@ templ CollapseWithLoading(title, reqUrl string) {
     >
       {title}
     </summary>
-    <div class="collapse-content">
+    <div class={collaspeContentClass}>
       <div id={loadingCompID} class="flex flex-col gap-4">
         <div class="skeleton h-4 w-128"></div>
         <div class="skeleton h-4 w-124"></div>

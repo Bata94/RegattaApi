@@ -2,19 +2,49 @@ package ui_pages
 
 import "github.com/bata94/RegattaApi/internal/templates/components"
 
-templ InternalRegattaleitung() {
-  <h2>Regattaleitung</h2>
-  <p>Hier kannst du die Regattaleitung-Funktionen nutzen.</p>
+templ meldeschlussHelpBody() {
+  <div class="">
+    <p class="m-0">Bei Meldeschluss ist der Ablauf wie folgt:</p>
+    <ol
+      type="1"
+      class="mx-6"
+    >
+      <li>Meldungen schließen & veröffentlichen im Meldeportal</li>
+      <li>Meldungen im Meldeportal exportieren (JSON Format)</li>
+      <li>DRV Datei hier hochladen</li>
+      <li>Setzung hier auslosen</li>
+      <li>Pausen hier nach Ausschreibung eintragen, Länge erstmal nicht so wichtig</li>
+      <li>Zeitplan hier erstellen, dabei werden Sa und So erster Startzeit festgelegt</li>
+      <li>Startnummern hier verteilen, ggf. Startnummerbereiche anpassen und nicht verfügbare Nummern eintragen</li>
+      <li>Setzungen überprüfen, ggf. PDF Meldeergebnis erstellen wenn einfacher zu bearbeiten</li>
+      <li>Setzungen hier anpassen</li>
+      <li>Wenn Setzung korrekt ist, erneut Startnummern verteilen</li>
+      <li>Zeitplan inkl. Rennabstände überprüfen, ggf. Pausen bzw. Sa/So erster Startzeit anpassen</li>
+      <li>PDF Meldeergebnis erstellen</li>
+      <li>eMail an Vereine senden, mit Meldeergebnis als PDF und den anderen Dokumenten</li>
+    </ol>
+  </div>
+}
 
-  @ui_components.InternalNavBtnGrid([]ui_components.InternalNavBtnParams{
-      {Name: "DRV File Upload", Desc: "", URL: "#"},
-      {Name: "Setzungslossung", Desc: "", URL: "#"},
-      {Name: "Setzungsänderung", Desc: "", URL: "#"},
-      {Name: "Pausen verwalten", Desc: "", URL: "#"},
-      {Name: "Zeitplan erstellen", Desc: "", URL: "#"},
-      {Name: "Startnummern verwalten", Desc: "", URL: "#"},
-      {Name: "PDF Meldeergebnis erstellen", Desc: "", URL: "#"},
-      {Name: "Vereine verwalten", Desc: "", URL: "#"},
-      {Name: "eMail senden", Desc: "", URL: "#"},
+templ InternalRegattaleitung() {
+  <div class="w-full flex flex-col">
+    <h2>Regattaleitung</h2>
+    <p>Hier kannst du die Regattaleitung-Funktionen nutzen.</p>
+
+    <div class="mb-4">
+      @ui_components.Collapse("Meldeschluss, was tun?", meldeschlussHelpBody())
+    </div>
+
+    @ui_components.InternalNavBtnGrid([]ui_components.InternalNavBtnParams{
+      {Name: "DRV Datei Upload", Desc: "Upload der aus dem DRV-Meldeportal exportierten Dateien", URL: "#"},
+      {Name: "Setzungslosung", Desc: "Auslosung der Abteilungen nach dem Meldeschluss", URL: "#"},
+      {Name: "Setzungsänderung", Desc: "Zum anpassen von Rennsetzungen indem z.B. mehrfach der gleiche Verein gegeneinander fährt", URL: "#"},
+      {Name: "Pausen verwalten", Desc: "Pausen müssen leider händisch hier eingetragen werden", URL: "#"},
+      {Name: "Zeitplan erstellen", Desc: "Regattazeitplan erstellen und Beginn für Samstag und Sonntag festlegen", URL: "#"},
+      {Name: "Startnummern verwalten", Desc: "Startnummern verteilen und Nummerbereiche anpassen, sowie nicht verfügbare Nummern eintragen", URL: "#"},
+      {Name: "PDF Meldeergebnis erstellen", Desc: "PDF Meldeergebnis erstellen. Die Datei kann dann von Usern auf der Website heruntergeladen werden", URL: "#"},
+      {Name: "Vereine verwalten", Desc: "Vereine bearbeiten und neuanlegen, sowie Obleute bearbeiten und neuanlegen", URL: "#"},
+      {Name: "eMail senden", Desc: "eMail über das System an Vereine bzw. Obleute versenden", URL: "#"},
     })
+  </div>
 }

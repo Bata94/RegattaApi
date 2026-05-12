@@ -46,6 +46,7 @@ assets/css/output.css
 .env.dev
 .env.prod
 .direnv/
+caddy/
 
 # Project build
 bin/
