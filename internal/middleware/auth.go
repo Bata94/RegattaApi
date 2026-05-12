@@ -82,7 +82,7 @@ func extractAuthData(c *handler.Context, token *jwt.Token) {
 	c.Locals("logged_in", true)
 
 	var capabilities []string
-	capFields := []string{"allowed_logged_in", "allowed_admin", "allowed_zeitnahme", "allowed_startlisten", "allowed_regattaleitung"}
+	capFields := []string{"allowed_logged_in", "allowed_admin", "allowed_zeitnahme", "allowed_startlisten", "allowed_regattabuero", "allowed_regattaleitung"}
 	for _, field := range capFields {
 		if val, exists := claims[field]; exists && val == true {
 			capabilities = append(capabilities, field)

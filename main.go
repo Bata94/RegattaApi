@@ -26,6 +26,7 @@ func main() {
 	defer DB.ShutdownConnection()
 
 	utils.InitEmail()
+	os.MkdirAll("./public", os.ModePerm)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

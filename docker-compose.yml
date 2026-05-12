@@ -1,30 +1,16 @@
 volumes:
-  # api-dev-files:
   postgres-data:
   postgres-config:
   pgadmin:
-  # tailscale-state:
+  api-dev-files:
+  caddy-config:
+  caddy-data:
 
 services:
-  # tailscale:
-  #   image: tailscale/tailscale:latest
-  #   hostname: docker-xps
-  #   environment:
-  #     - TS_AUTHKEY=${TS_AUTHKEY}
-  #     - TS_STATE_DIR=/var/lib/tailscale
-  #   volumes:
-  #     - tailscale-state:/var/lib/tailscale
-  #     - /dev/net/tun:/dev/net/tun
-  #   cap_add:
-  #     - net_admin
-  #     - sys_module
-  #   restart: unless-stopped
-
-
   gotenberg:
     image: gotenberg/gotenberg:8
-    ports:
-      - "3000:3000"
+    # ports:
+    #   - "3000:3000"
     command:
       - "gotenberg"
       - "--chromium-clear-cache=true"
@@ -33,16 +19,17 @@ services:
   db:
     platform: linux/amd64
     image: postgres:latest
-    ports:
-      - 5432:5432
+    # ports:
+    #   - 5432:5432
     volumes:
       - postgres-data:/var/lib/postgresql
       - postgres-config:/etc/postgresql/postgresql.conf
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     environment:
-      PGUSER: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    command: ["postgres", "-c", "log_statement=all", "-c", "log_destination=stderr"] # For Dev only!
+      PGUSER: ${DB_USER}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    # command: ["postgres", "-c", "log_statement=all", "-c", "log_destination=stderr"] # For Dev only!
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready", "-d", "postgres" ]
       interval: 30s
@@ -56,54 +43,70 @@ services:
     image: dpage/pgadmin4:latest
     depends_on:
       - db
-    ports:
-      # - "5431:53603"
-      - "5430:80"
+    # ports:
+    #   - "5430:80"
     volumes:
       - pgadmin:/var/lib/pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@sits.ruhr
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: ${PG_MAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PG_PW}
+      PGADMIN_CONFIG_CHECK_EMAIL_DELIVERABILITY: "False"
     restart: unless-stopped
 
-  # api-dev:
-  #   build:
-  #     dockerfile: Dockerfile
-  #     context: ./
-  #     target: dev
-  #   tty: true
-  #   stdin_open: true
-  #   volumes:
-  #     - ./assets:/opt/app/assets
-  #     - ./docs:/opt/app/docs
-  #     - ./internal:/opt/app/internal
-  #     - ./sqlc:/opt/app/sqlc
-  #     - api-dev-files:/opt/app/files
-  #     - ./main.go:/opt/app/main.go
-  #   ports:
-  #     - 8081:8080
-  #   env_file: "dev.env"
-  #   depends_on:
-  #     - gotenberg
-  #     - db
-  #
-  # api:
-  #   build:
-  #     dockerfile: Dockerfile
-  #     context: ./
-  #     target: prod
-  #   # ports:
-  #   #   - 8080:8080
-  #   env_file: "prod.env"
-  #   network_mode: service:tailscale
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         cpus: '4'
-  #         memory: 2048M
-  #   volumes:
-  #     - api-dev-files:/opt/app/files
-  #   depends_on:
-  #     - tailscale
-  #     - gotenberg
-  #     - db
+  api-dev:
+    build:
+      dockerfile: Dockerfile
+      context: ./
+      target: dev
+    tty: true
+    stdin_open: true
+    volumes:
+      - ./assets:/opt/app/assets
+      - ./docs:/opt/app/docs
+      - ./internal:/opt/app/internal
+      - ./sqlc:/opt/app/sqlc
+      - api-dev-files:/opt/app/files
+      - ./main.go:/opt/app/main.go
+    # ports:
+    #   - 8081:8080
+    #   - 8090:8090
+    env_file: ".env"
+    depends_on:
+      gotenberg:
+        condition: service_started
+      db:
+        condition: service_healthy
+
+  api:
+    build:
+      dockerfile: Dockerfile
+      context: ./
+      target: prod
+    env_file: ".env"
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 2048M
+    volumes:
+      - api-dev-files:/opt/app/files
+    depends_on:
+      gotenberg:
+        condition: service_started
+      db:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "9090:9090"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy-config:/config
+      - caddy-data:/data
+    depends_on:
+      - api-dev
+      - api
+    restart: unless-stopped

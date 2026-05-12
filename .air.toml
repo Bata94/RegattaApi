@@ -5,7 +5,7 @@ tmp_dir = "tmp"
 [build]
   args_bin = []
   bin = "./tmp/main"
-  cmd = "templ generate && npx @tailwindcss/cli -i ./assets/css/input.css -o ./public/css_global.css && go build -o ./tmp/main ."
+  cmd = "just build-air"
   delay = 100
   exclude_dir = ["assets", "tmp", "vendor", "testdata", "docs", "sqlc", "node_modules", "files", "internal/sqlc"]
   exclude_file = ["assets/css/global.css"]

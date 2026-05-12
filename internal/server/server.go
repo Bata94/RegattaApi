@@ -434,7 +434,7 @@ func getProfilePage(c *handler.Context) (templ.Component, error) {
 	}
 
 	var capabilities []string
-	capFields := []string{"allowed_admin", "allowed_zeitnahme", "allowed_startlisten", "allowed_regattaleitung"}
+	capFields := []string{"allowed_admin", "allowed_zeitnahme", "allowed_startlisten", "allowed_regattabuero", "allowed_regattaleitung"}
 	for _, field := range capFields {
 		if val, exists := claims[field]; exists && val == true {
 			capabilities = append(capabilities, field)
