@@ -1,6 +1,20 @@
 package ui_pages
 
+import "github.com/bata94/RegattaApi/internal/templates/components"
+
 templ InternalRegattaleitung() {
   <h2>Regattaleitung</h2>
   <p>Hier kannst du die Regattaleitung-Funktionen nutzen.</p>
+
+  @ui_components.InternalNavBtnGrid([]ui_components.InternalNavBtnParams{
+      {Name: "DRV File Upload", Desc: "", URL: "#"},
+      {Name: "Setzungslossung", Desc: "", URL: "#"},
+      {Name: "Setzungsänderung", Desc: "", URL: "#"},
+      {Name: "Pausen verwalten", Desc: "", URL: "#"},
+      {Name: "Zeitplan erstellen", Desc: "", URL: "#"},
+      {Name: "Startnummern verwalten", Desc: "", URL: "#"},
+      {Name: "PDF Meldeergebnis erstellen", Desc: "", URL: "#"},
+      {Name: "Vereine verwalten", Desc: "", URL: "#"},
+      {Name: "eMail senden", Desc: "", URL: "#"},
+    })
 }

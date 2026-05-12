@@ -1,15 +1,16 @@
 package ui_pages
 
+import "github.com/bata94/RegattaApi/internal/templates/components"
+
 templ InternalAdmin() {
-  <h2>Admin</h2>
-  <p>Hier kannst du die Admin-Funktionen nutzen.</p>
-  <button
-    hx-get="/metrics"
-    hx-target="main"
-    hx-push-url="true"
-    href="/metrics"
-    class="btn btn-primary"
-  >
-    Admin-Metriken
-  </button>
+  <div class="w-full flex flex-col">
+    <h2>Admin</h2>
+    <p>Hier kannst du die Admin-Funktionen nutzen.</p>
+
+    @ui_components.InternalNavBtnGrid([]ui_components.InternalNavBtnParams{
+      {Name: "Metrics", Desc: "", URL: "/metrics"},
+      {Name: "Nutzer Verwaltung", Desc: "", URL: "#"},
+      {Name: "Nutzergruppen Verwaltung", Desc: "", URL: "#"},
+    })
+  </div>
 }

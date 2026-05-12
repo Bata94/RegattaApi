@@ -1,6 +1,16 @@
 package ui_pages
 
+import "github.com/bata94/RegattaApi/internal/templates/components"
+
 templ InternalStartlisten() {
   <h2>Startlisten</h2>
   <p>Hier kannst du die Startlisten-Funktionen nutzen.</p>
+
+  @ui_components.InternalNavBtnGrid([]ui_components.InternalNavBtnParams{
+    {Name: "Langstrecke", Desc: "", URL: "#"},
+    {Name: "Slalom", Desc: "", URL: "#"},
+    {Name: "Kurzstrecke", Desc: "", URL: "#"},
+    {Name: "Staffel", Desc: "", URL: "#"},
+    {Name: "Aktuelles Rennen", Desc: "Moderations Dashboard", URL: "#"},
+  })
 }
