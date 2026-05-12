@@ -1,70 +1,44 @@
 package ui_pages
 
-templ Login() {
+templ userNameInp() {
+  <div class="form-control mb-6">
+    <label class="input w-full">
+      <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <input type="text" name="username" class="grow" placeholder="Benutzername" required />
+    </label>
+  </div>
+}
+
+templ passwordInp() {
+  <div class="form-control mb-6">
+    <label class="input w-full">
+      <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+      <input type="password" name="password" class="grow" placeholder="Passwort" required />
+    </label>
+  </div>
+}
+
+templ submitBtn() {
+  <div class="form-control mt-6 w-full card-actions">
+    <button type="submit" class="btn btn-primary mx-auto">Abschicken</button>
+  </div>
+}
+
+templ Login(msg string) {
 	<div class="max-w-md mx-auto mt-8" id="login-container">
 		<div class="card bg-base-200 shadow-xl">
 			<div class="card-body">
 				<h2 class="card-title text-2xl mb-4 !mt-2 !pt-0">Anmelden</h2>
+        if msg != "" {
+          <div class="alert alert-error mb-4">
+            <span>{msg}</span>
+          </div>
+        }
 				<form hx-post="/login" hx-target="#login-container" hx-swap="outerHTML">
-					<div class="form-control mb-4 w-full">
-            <label class="input w-full">
-              <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              <input type="text" name="username" class="grow" placeholder="Benutzername" required />
-            </label>
-					</div>
+          @userNameInp()
+          @passwordInp()
 
-					<div class="form-control mb-6">
-            <label class="input w-full">
-              <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-              <input type="password" name="password" class="grow" placeholder="Passwort" required />
-            </label>
-					</div>
-
-					<div class="form-control mt-6 w-full card-actions">
-						<button type="submit" class="btn btn-primary mx-auto">Abschicken</button>
-					</div>
-				</form>
-			</div>
-		</div>
-	</div>
-}
-
-templ LoginError(message string) {
-	<div class="max-w-md mx-auto mt-8" id="login-container">
-		<div class="card bg-base-200 shadow-xl">
-			<div class="card-body">
-				<h2 class="card-title text-2xl mb-4">Anmelden</h2>
-				<div class="alert alert-error mb-4">
-					<span>{message}</span>
-				</div>
-				<form hx-post="/login" hx-target="#login-container" hx-swap="outerHTML">
-					<div class="form-control mb-4">
-						<label class="label">
-							<span class="label-text">Benutzername</span>
-						</label>
-						<input
-							type="text"
-							name="username"
-							placeholder="Benutzername"
-							class="input input-bordered"
-							required
-						/>
-					</div>
-					<div class="form-control mb-6">
-						<label class="label">
-							<span class="label-text">Passwort</span>
-						</label>
-						<input
-							type="password"
-							name="password"
-							placeholder="Passwort"
-							class="input input-bordered"
-							required
-						/>
-					</div>
-					<div class="form-control mt-6">
-						<button type="submit" class="btn btn-primary">Anmelden</button>
-					</div>
+					@submitBtn()
 				</form>
 			</div>
 		</div>

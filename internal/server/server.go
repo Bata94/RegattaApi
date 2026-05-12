@@ -195,7 +195,7 @@ func GetRouter() http.Handler {
 		return ui_pages.Ergebnisse(), nil
 	})
 	baseLayoutHandler("/login", func(c *handler.Context) (templ.Component, error) {
-		return ui_pages.Login(), nil
+		return ui_pages.Login(""), nil
 	})
 	r.Handle("POST", "/login", wrapHandler(loginPostHandler, false))
 	r.Handle("GET", "/logout", logoutHandler)
@@ -485,7 +485,7 @@ func loginPostHandler(c *handler.Context) error {
 
 	if username == "" || password == "" {
 		if isHTMX {
-			templ.Handler(ui_pages.LoginError("Benutzername und Passwort erforderlich")).ServeHTTP(c.Writer, c.Request)
+			templ.Handler(ui_pages.Login("Benutzername und Passwort erforderlich")).ServeHTTP(c.Writer, c.Request)
 			return nil
 		}
 		return c.Redirect("/login", http.StatusSeeOther)
@@ -494,7 +494,7 @@ func loginPostHandler(c *handler.Context) error {
 	u, err := crud.AuthLogin(crud.LoginParams{Username: username, Password: password})
 	if err != nil {
 		if isHTMX {
-			templ.Handler(ui_pages.LoginError("Benutzername oder Passwort ist falsch")).ServeHTTP(c.Writer, c.Request)
+			templ.Handler(ui_pages.Login("Benutzername oder Passwort ist falsch")).ServeHTTP(c.Writer, c.Request)
 			return nil
 		}
 		return c.Redirect("/login", http.StatusSeeOther)
