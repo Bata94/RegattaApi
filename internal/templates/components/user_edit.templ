@@ -1,0 +1,77 @@
+package ui_components
+
+import (
+  "github.com/google/uuid"
+	"github.com/bata94/RegattaApi/internal/crud"
+)
+
+templ UserEdit(u crud.User, msg string) {
+  {{
+    var title, uuidStr string
+    if u.Uuid != uuid.Nil {
+      title = "Nutzer bearbeiten"
+      uuidStr = u.Uuid.String()
+    } else {
+      title = "Neuer Nutzer"
+      uuidStr = "new"
+    }
+
+    userGroups, errUserGroups := crud.GetAllUsersGroups()
+  }}
+  if errUserGroups != nil {
+    @ErrorBody(500, errUserGroups.Error())
+    {{return}}
+  }
+
+  <div id="user_edit_dialog" class="w-full flex flex-col">
+    <h2>{title}</h2>
+
+    <form
+      hx-post={"/internal/admin/user/" + uuidStr}
+      hx-target="#user_edit_dialog"
+      hx-on::response="if (event.detail.xhr.getResponseHeader('HX-Redirect')) { table_dialog.close(); htmx.ajax('GET', '/internal/admin/users', {target: 'main', swap: 'innerHTML'}); }"
+    >
+      if msg != "" {
+        <div class="alert alert-error mb-4">
+          <span>{msg}</span>
+        </div>
+      }
+
+      <div class="flex flex-col gap-4">
+        <div class="form-control mb-6">
+          <label class="input w-full">
+            <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <input type="text" name="username" class="grow" placeholder="Benutzername" value={u.Username} required />
+          </label>
+        </div>
+
+        <div class="form-control mb-6">
+          <label class="input w-full">
+            <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+            <input type="password" name="password" class="grow" placeholder="Passwort" required />
+          </label>
+        </div>
+
+        <div class="form-control mb-6">
+          <select class="select" name="user_group_uuid" required>
+            if u.Uuid != uuid.Nil {
+              <option disabled >Nutzergruppe</option>
+            } else {
+              <option disabled selected>Nutzergruppe</option>
+            }
+            for _, ug := range userGroups {
+              if ug.Uuid == u.UserGroup.Uuid {
+                <option value={ug.Uuid.String()} selected>{ug.Name}</option>
+              } else {
+                <option value={ug.Uuid.String()}>{ug.Name}</option>
+              }
+            }
+          </select>
+        </div>
+      </div>
+      <div class="form-control mt-6 w-full">
+        <button type="submit" class="btn btn-primary mx-auto">Speichern</button>
+      </div>
+    </form>
+  </div>
+}

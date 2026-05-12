@@ -1,0 +1,55 @@
+package ui_pages
+
+import (
+  "github.com/bata94/RegattaApi/internal/templates/components"
+  "github.com/bata94/RegattaApi/internal/crud"
+	"github.com/bata94/RegattaApi/internal/utils"
+	"time"
+)
+
+templ InternalAdminUserGroups() {
+  {{
+    userGroups, err:= crud.GetAllUsersGroups()
+    groupRows := []ui_components.TableRowParams{}
+  }}
+  if err != nil {
+    @ui_components.ErrorBody(500, err.Error())
+    {{return}}
+  }
+
+  {{
+    for _, g := range userGroups {
+      groupRows = append(groupRows, ui_components.TableRowParams{
+        ID: g.Uuid.String(),
+        Content: []string{
+          g.Name,
+          utils.BoolToJaNein(g.AllowedAdmin),
+          utils.BoolToJaNein(g.AllowedZeitnahme),
+          utils.BoolToJaNein(g.AllowedStartlisten),
+          utils.BoolToJaNein(g.AllowedRegattabuero),
+          utils.BoolToJaNein(g.AllowedRegattaleitung),
+          time.Unix(g.Uuid.Time().UnixTime()).Format("02.01.2006 15:04"),
+        },
+        OnClickDialogSrc: "/",
+      })
+    }
+  }}
+
+  <div class="w-full flex flex-col">
+    <h2>Nutzergruppen</h2>
+
+    @ui_components.Table(ui_components.TableParams{
+      Zebra: true,
+      Columns: []ui_components.TableColumnParams{
+        {Title: "Gruppenname", WidthClass: ""},
+        {Title: "Admin Berechtigung", WidthClass: ""},
+        {Title: "Zeitnahme Berechtigung", WidthClass: ""},
+        {Title: "Startlisten Berechtigung", WidthClass: ""},
+        {Title: "Büro Berechtigung", WidthClass: ""},
+        {Title: "Leitungs Berechtigung", WidthClass: ""},
+        {Title: "Erstellt am", WidthClass: ""},
+      },
+      Rows: groupRows,
+    })
+  </div>
+}

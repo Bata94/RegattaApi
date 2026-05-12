@@ -16,9 +16,10 @@ INSERT INTO users (
   group_uuid,
   username,
   hashed_password,
+  is_active,
   uuid
 ) VALUES (
-  $1, $2, $3, uuidv7()
+  $1, $2, $3, true, uuidv7()
 )
 RETURNING uuid, username, hashed_password, is_active, group_uuid
 `

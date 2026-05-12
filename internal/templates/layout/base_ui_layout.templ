@@ -87,9 +87,14 @@ templ MinimalLayout(body templ.Component) {
 
   <link href="/public/css_global.css" rel="stylesheet">
   <script src="/assets/js/htmx.min.js"></script>
+  <script src="/assets/js/htmx-ext-response-target.js"></script>
   <script src="/assets/js/theming.js"></script>
 </head>
-<body class="max-w-screen prose antialiased" hx-on:click="if (!event.target.closest('details')) document.querySelectorAll('details[open]').forEach(d => d.removeAttribute('open'))">
+<body
+  class="max-w-screen prose antialiased"
+  hx-on:click="if (!event.target.closest('details')) document.querySelectorAll('details[open]').forEach(d => d.removeAttribute('open'))"
+  hx-ext="response-targets"
+>
   @body
 </body>
 </html>

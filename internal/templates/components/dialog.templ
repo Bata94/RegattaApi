@@ -1,0 +1,22 @@
+package ui_components
+
+// Default Dialog for editing data.
+// Big Size, "X" btn top right, and a spinner while loading.
+// To target content with HTMX set it like that:
+// hx-target="#{id}_content" hx-swap="innerHTML"
+templ DialogDataEdit(id string) {
+  <dialog id={id} class="modal modal-bottom sm:modal-middle">
+    <div class="modal-box w-11/12 max-w-5xl h-8/12 max-h-4xl !p-6">
+      <form method="dialog">
+        <button class="btn btn-md btn-circle btn-ghost absolute right-4 top-4">✕</button>
+      </form>
+      <h2 class="text-2xl font-bold !m-0">Zeile bearbeiten:</h2>
+      <div class="divider"/>
+      <div id={id + "_content"}>
+        <div class="flex h-9/10 items-center justify-center">
+          <span class="loading loading-spinner loading-xl"></span>
+        </div>
+      </div>
+    </div>
+  </dialog>
+}

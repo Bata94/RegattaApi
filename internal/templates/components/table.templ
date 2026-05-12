@@ -1,0 +1,79 @@
+package ui_components
+
+import "fmt"
+
+type TableParams struct {
+  Zebra   bool
+  Columns []TableColumnParams
+  Rows    []TableRowParams
+}
+
+type TableColumnParams struct {
+  Title string
+  WidthClass string
+}
+
+type TableRowParams struct {
+  ID string
+  Content []string
+  OnClickDialogSrc string
+}
+
+templ TableRow(p TableRowParams) {
+  if p.OnClickDialogSrc != "" {
+    <tr
+      id={p.ID}
+      class="hover:bg-base-300 hover:cursor-pointer"
+      hx-target="#table_dialog_content"
+      hx-swap="innerHTML"
+      hx-get={p.OnClickDialogSrc}
+      hx-trigger="click"
+      hx-boost="true"
+      onclick="table_dialog.showModal()"
+    >
+      for _, c := range p.Content {
+        <td>{c}</td>
+      }
+    </tr>
+  } else {
+    <tr
+      id={p.ID}
+      class=""
+    >
+      for _, c := range p.Content {
+        <td>{c}</td>
+      }
+    </tr>
+  }
+}
+
+templ Table(p TableParams) {
+  {{
+    tableClass := "table-auto"
+    if p.Zebra {
+      tableClass = fmt.Sprintf("%s zebra-table", tableClass)
+    }
+  }}
+  <div class="overflow-x-auto">
+    <table class={tableClass}>
+      <thead>
+        <tr>
+          for _, col := range p.Columns {
+            <th
+              class={fmt.Sprintf("%s", col.WidthClass)}
+            >
+              {col.Title}
+            </th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        for _, row := range p.Rows {
+          @TableRow(row)
+        }
+      </tbody>
+    </table>
+
+    @DialogDataEdit("table_dialog")
+  </div>
+}

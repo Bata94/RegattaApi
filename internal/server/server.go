@@ -15,9 +15,11 @@ import (
 	"github.com/bata94/RegattaApi/internal/handlers"
 	"github.com/bata94/RegattaApi/internal/handlers/api/v1"
 	"github.com/bata94/RegattaApi/internal/middleware"
+	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/bata94/RegattaApi/internal/templates/components"
 	"github.com/bata94/RegattaApi/internal/templates/pages"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 var (
@@ -221,6 +223,14 @@ func GetRouter() http.Handler {
 	})
 	baseLayoutHandler("/internal/admin", func(c *handler.Context) (templ.Component, error) {
 		return ui_pages.InternalAdmin(), nil
+	})
+	baseLayoutHandler("/internal/admin/users", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.InternalAdminUsers(), nil
+	})
+	r.Handle("GET", "/internal/admin/user/{uuid}", wrapHandler(userEditNewHandler, true))
+	r.Handle("POST", "/internal/admin/user/{uuid}", wrapHandler(userEditNewHandlerPost, true))
+	baseLayoutHandler("/internal/admin/usergroups", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.InternalAdminUserGroups(), nil
 	})
 
 	// Pure HTMX UI Components
@@ -556,5 +566,81 @@ func imageComponentHandler(c *handler.Context) error {
 	}
 
 	templ.Handler(ui_components.RawImageComponent(src, alt, imgOpt)).ServeHTTP(c.Writer, c.Request)
+	return nil
+}
+
+func userEditNewHandler(c *handler.Context) error {
+	var u *crud.User
+	if c.Param("uuid") == "" {
+		return &handler.Error{StatusCode: 404, Message: "User not found"}
+	} else if c.Param("uuid") == "new" {
+		u = &crud.User{
+			User:      sqlc.User{},
+			UserGroup: &sqlc.UsersGroup{},
+		}
+	} else {
+		uuid, err := uuid.Parse(c.Param("uuid"))
+		if err != nil {
+			return &handler.Error{StatusCode: 406, Message: "Invalid UUID"}
+		}
+		u, err = crud.GetUser(uuid)
+		if err != nil {
+			return &handler.Error{StatusCode: 404, Message: "User not found"}
+		}
+	}
+
+	templ.Handler(ui_components.UserEdit(*u, "")).ServeHTTP(c.Writer, c.Request)
+	return nil
+}
+
+func userEditNewHandlerPost(c *handler.Context) error {
+	var (
+		u *crud.User
+		userUuid uuid.UUID
+		err error
+	)
+
+	uuidStr := c.Param("uuid")
+	if uuidStr == "new" {
+		userUuid, err = uuid.NewV7()
+	} else {
+		userUuid, err = uuid.Parse(uuidStr)
+	}
+
+	groupUuidStr := c.FormValue("user_group_uuid")
+	groupUuid, errGroupUuid := uuid.Parse(groupUuidStr)
+
+	if err != nil || errGroupUuid != nil {
+		return &handler.Error{StatusCode: 406, Message: "Invalid UUID"}
+	}
+
+	u = &crud.User{
+		User:      sqlc.User{
+			Uuid: userUuid,
+			Username: c.FormValue("username"),
+		},
+		UserGroup: &sqlc.UsersGroup{
+			Uuid:  groupUuid,
+		},
+	}
+
+	if uuidStr == "new" {
+		_, err = crud.CreateUser(crud.CreateUserParams{
+			GroupUuid: groupUuid,
+			Username:  c.FormValue("username"),
+			Password:  c.FormValue("password"),
+		})
+		if err != nil {
+			// return &handler.Error{StatusCode: 500, Message: "Error while creating user"}
+			templ.Handler(ui_components.UserEdit(*u, "Error while creating user, Err: " + err.Error())).ServeHTTP(c.Writer, c.Request)
+			return nil
+		}
+
+		c.Writer.Header().Set("HX-Redirect", "/internal/admin/users")
+		c.Writer.WriteHeader(http.StatusOK)
+		return nil
+	}
+
+	templ.Handler(ui_components.UserEdit(*u, "Editing not yet implemented")).ServeHTTP(c.Writer, c.Request)
 	return nil
 }
