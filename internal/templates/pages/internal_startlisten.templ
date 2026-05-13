@@ -3,14 +3,34 @@ package ui_pages
 import "github.com/bata94/RegattaApi/internal/templates/components"
 
 templ InternalStartlisten() {
-  <h2>Startlisten</h2>
-  <p>Hier kannst du die Startlisten-Funktionen nutzen.</p>
+  {{
+    breadcrumbs := []ui_components.BreadcrumbsEntries{
+      ui_components.BreadcrumbsEntries{
+        Title: "Home",
+        Paths: "/",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Internes",
+        Paths: "/internal",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Startlisten",
+        Paths: "/internal/startlisten",
+      },
+    }
+  }}
+  @ui_components.Breadcrumbs(breadcrumbs)
+  @ui_components.InternalPageDivCol() {
 
-  @ui_components.InternalNavBtnGrid([]ui_components.InternalNavBtnParams{
-    {Name: "Langstrecke", Desc: "Startlisten für Langstrecke, filterbar ob gestartet oder nicht", URL: "#"},
-    {Name: "Slalom", Desc: "Startlisten für Slalom, filterbar ob gestartet oder nicht", URL: "#"},
-    {Name: "Kurzstrecke", Desc: "Startlisten für Kurzstrecke, filterbar ob gestartet oder nicht", URL: "#"},
-    {Name: "Staffel", Desc: "Startlisten für Staffel, filterbar ob gestartet oder nicht", URL: "#"},
-    {Name: "Aktuelles Rennen", Desc: "Dashboard aktuelle Rennen, primär für Moderation", URL: "#"},
-  })
+    @ui_components.PageHeader("Startlisten")
+    @ui_components.PageHeaderSubtext("Hier kannst du die Startlisten-Funktionen nutzen.")
+
+    @ui_components.InternalNavBtnGrid([]ui_components.InternalNavBtnParams{
+      {Name: "Langstrecke", Desc: "Startlisten für Langstrecke, filterbar ob gestartet oder nicht", URL: "#"},
+      {Name: "Slalom", Desc: "Startlisten für Slalom, filterbar ob gestartet oder nicht", URL: "#"},
+      {Name: "Kurzstrecke", Desc: "Startlisten für Kurzstrecke, filterbar ob gestartet oder nicht", URL: "#"},
+      {Name: "Staffel", Desc: "Startlisten für Staffel, filterbar ob gestartet oder nicht", URL: "#"},
+      {Name: "Aktuelles Rennen", Desc: "Dashboard aktuelle Rennen, primär für Moderation", URL: "#"},
+    })
+  }
 }

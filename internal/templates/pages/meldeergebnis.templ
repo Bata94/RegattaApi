@@ -128,10 +128,7 @@ templ MeldeergebnisCollapseBody(w sqlc.Wettkampf) {
   }
 }
 
-templ Meldeergebnis() {
-  <h2>
-    Meldeergebnis
-  </h2>
+templ meldeergebnisHeader() {
   <p class="">
     Das eingebundene Meldeergebnis ist live und hat dadurch die aktuellsten
     Änderungen. Die
@@ -143,28 +140,38 @@ templ Meldeergebnis() {
     </a>
     . Diese enthält alle Änderungen zu dem angeben Zeitpunkt.
   </p>
-  <div id="wettkampfNav" class="flex flex-col md:flex-row mx-auto w-fit gap-4 md:gap-8">
-    <a class="btn btn-primary m-2" href="#Langstrecke">Langstrecke</a>
-    <a class="btn btn-primary m-2" href="#Slalom">Slalom</a>
-    <a class="btn btn-primary m-2" href="#Kurzstrecke">Kurzstrecke</a>
-    <a class="btn btn-primary m-2" href="#Staffel">Staffel</a>
-  </div>
+}
 
-  <h3 class="text-2xl text-mrgblau">Samstag</h3>
-  <div id="Langstrecke">
-    @ui_components.CollapseWithLoading("Langstrecke", "/comp/meldeergebnis/langstrecke")
-  </div>
-  <div id="Slalom">
-    @ui_components.CollapseWithLoading("Slalom", "/comp/meldeergebnis/slalom")
-  </div>
+templ Meldeergebnis() {
+  @ui_components.LandingPageDivCol() {
+    @ui_components.PageHeader(
+      "Meldeergebnis",
+    )
+    @ui_components.PageHeaderSubtextComp(meldeergebnisHeader())
 
-  <div class="divider pt-6"></div>
+    <div id="wettkampfNav" class="flex flex-col md:flex-row mx-auto w-fit gap-4 md:gap-8">
+      <a class="btn btn-primary m-2" href="#Langstrecke">Langstrecke</a>
+      <a class="btn btn-primary m-2" href="#Slalom">Slalom</a>
+      <a class="btn btn-primary m-2" href="#Kurzstrecke">Kurzstrecke</a>
+      <a class="btn btn-primary m-2" href="#Staffel">Staffel</a>
+    </div>
 
-  <h3 class="text-2xl text-mrgblau">Sonntag</h3>
-  <div id="Kurzstrecke">
-    @ui_components.CollapseWithLoading("Kurzstrecke", "/comp/meldeergebnis/kurzstrecke")
-  </div>
-  <div id="Staffel">
-    @ui_components.CollapseWithLoading("Staffel", "/comp/meldeergebnis/staffel")
-  </div>
+    <h3 class="text-2xl text-mrgblau">Samstag</h3>
+    <div id="Langstrecke">
+      @ui_components.CollapseWithLoading("Langstrecke", "/comp/meldeergebnis/langstrecke")
+    </div>
+    <div id="Slalom">
+      @ui_components.CollapseWithLoading("Slalom", "/comp/meldeergebnis/slalom")
+    </div>
+
+    <div class="divider pt-6"></div>
+
+    <h3 class="text-2xl text-mrgblau">Sonntag</h3>
+    <div id="Kurzstrecke">
+      @ui_components.CollapseWithLoading("Kurzstrecke", "/comp/meldeergebnis/kurzstrecke")
+    </div>
+    <div id="Staffel">
+      @ui_components.CollapseWithLoading("Staffel", "/comp/meldeergebnis/staffel")
+    </div>
+  }
 }

@@ -3,14 +3,31 @@ package ui_pages
 import "github.com/bata94/RegattaApi/internal/templates/components"
 
 templ InternalAdmin() {
-  <div class="w-full flex flex-col">
-    <h2>Admin</h2>
-    <p>Hier kannst du die Admin-Funktionen nutzen.</p>
+  {{
+    breadcrumbs := []ui_components.BreadcrumbsEntries{
+      ui_components.BreadcrumbsEntries{
+        Title: "Home",
+        Paths: "/",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Internes",
+        Paths: "/internal",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Admin",
+        Paths: "/internal/admin",
+      },
+    }
+  }}
+  @ui_components.Breadcrumbs(breadcrumbs)
+  @ui_components.InternalPageDivCol() {
 
+    @ui_components.PageHeader("Admin")
+    @ui_components.PageHeaderSubtext("Hier kannst du die Admin-Funktionen nutzen.")
     @ui_components.InternalNavBtnGrid([]ui_components.InternalNavBtnParams{
       {Name: "Monitor", Desc: "Server Metriken", URL: "/metrics"},
       {Name: "Nutzer Verwaltung", Desc: "Nutzer bearbeiten, löschen und neuanlegen", URL: "/internal/admin/users"},
       {Name: "Nutzergruppen Verwaltung", Desc: "Nutzergruppen bearbeiten, löschen und neuanlegen", URL: "/internal/admin/usergroups"},
     })
-  </div>
+  }
 }

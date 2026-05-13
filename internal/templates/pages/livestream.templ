@@ -1,12 +1,18 @@
 package ui_pages
 
-templ Livestream() {
-  <h2>
-    Livestream
-  </h2>
-  <p class="mb-16">Für alle Daheimgebliebenen, besser ist es nur Vorort!</p>
+import "github.com/bata94/RegattaApi/internal/templates/components"
 
-  <h4>Aktuell ist kein LiveStream verfügbar!</h4>
-  <h4>Komme bitte an den Regattatagen (23. & 24.09.2023) wieder :)</h4>
-  <!-- <YouTube class="w-full mx-auto" id={ytVideoId} params={ytParams} /> -->
+templ Livestream() {
+  @ui_components.LandingPageDivCol() {
+    @ui_components.PageHeader(
+      "Livestream",
+    )
+    @ui_components.PageHeaderSubtext(
+      `Für alle Daheimgebliebenen, besser ist es nur Vorort!`,
+    )
+    <h4>Aktuell ist kein LiveStream verfügbar!</h4>
+    <h4>Komme bitte an den Regattatagen (23. & 24.09.2023) wieder :)</h4>
+    <!-- <YouTube class="w-full mx-auto" id={ytVideoId} params={ytParams} /> -->
+  }
+
 }

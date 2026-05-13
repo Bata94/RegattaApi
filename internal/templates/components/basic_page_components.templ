@@ -1,0 +1,50 @@
+package ui_components
+
+type BreadcrumbsEntries struct {
+  Title string
+  Paths string
+}
+
+templ Breadcrumbs(entries []BreadcrumbsEntries) {
+  <div class="breadcrumbs text-sm !m-0 !p-4">
+    <ul class="!m-0 !p-0">
+      for _, e := range entries {
+        <li>
+          <a
+            hx-boost="true"
+            hx-get={e.Paths}
+            hx-target="main"
+            hx-push-url="true"
+            href={e.Paths}
+          >{e.Title}</a>
+        </li>
+      }
+    </ul>
+  </div>
+}
+
+templ PageHeader(title string) {
+  <h2 class="!m-0 !p-0">{title}</h2>
+}
+
+templ PageHeaderSubtext(subtext string) {
+  <p class="!m-0 !px-0 !py-4">{subtext}</p>
+}
+
+templ PageHeaderSubtextComp(comp templ.Component) {
+  <div class="!m-0 !px-0 !py-4">
+    @comp
+  </div>
+}
+
+templ InternalPageDivCol() {
+  <div class="w-full flex flex-col py-4 px-2 md:px-6 lg:px-12">
+    { children... }
+  </div>
+}
+
+templ LandingPageDivCol() {
+  <div class="w-full flex flex-col pt-10 pb-4 px-2 md:px-6 lg:px-12">
+    { children... }
+  </div>
+}

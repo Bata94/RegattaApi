@@ -206,6 +206,25 @@ func GetRouter() http.Handler {
 		return ui_pages.Datenschutz(), nil
 	})
 
+	baseLayoutHandler("/internal", func(c *handler.Context) (templ.Component, error) {
+		userToken, ok := c.GetLocals("user").(*jwt.Token)
+		if !ok {
+			return nil, &handler.Error{StatusCode: 401, Message: "Nicht angemeldet"}
+		}
+
+		claims := userToken.Claims.(jwt.MapClaims)
+		var capabilities []string
+
+		capFields := []string{"allowed_admin", "allowed_zeitnahme", "allowed_startlisten", "allowed_regattabuero", "allowed_regattaleitung"}
+
+		for _, field := range capFields {
+			if val, exists := claims[field]; exists && val == true {
+				capabilities = append(capabilities, field)
+			}
+		}
+
+		return ui_pages.InternalIndex(capabilities), nil
+	})
 	baseLayoutHandler("/internal/profil", func(c *handler.Context) (templ.Component, error) {
 		return getProfilePage(c)
 	})
@@ -444,7 +463,14 @@ func getProfilePage(c *handler.Context) (templ.Component, error) {
 	}
 
 	var capabilities []string
-	capFields := []string{"allowed_admin", "allowed_zeitnahme", "allowed_startlisten", "allowed_regattabuero", "allowed_regattaleitung"}
+	capFields := []string{
+		"allowed_zeitnahme",
+		"allowed_startlisten",
+		"allowed_regattabuero",
+		"allowed_regattaleitung",
+		"allowed_admin",
+	}
+
 	for _, field := range capFields {
 		if val, exists := claims[field]; exists && val == true {
 			capabilities = append(capabilities, field)

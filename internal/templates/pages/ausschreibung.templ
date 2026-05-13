@@ -183,25 +183,21 @@ templ ausschreibungRennen(w sqlc.Wettkampf) {
   @ui_components.CollapseWithLoading(fmt.Sprintf("%s", w), fmt.Sprintf("/comp/ausschreibung/%s", w))
 }
 
-templ Ausschreibung() {
-  <h2>
-    Ausschreibung
-  </h2>
-    <p class="mb-8">
+templ ausschreibunHeaderSubtext() {
+  <p class="mb-8">
     Hier findet man die offizielle Ausschreibung für das Jahr 2023, sowie die
     Allgemeinen Bestimmungen. Diese können ebenfalls im <a href="https://meldeportal.rudern.de/regattas/01871580-4218-71ae-a993-278ad14423f3" target="_blank">DRV Meldeportal</a>
     eingesehen werden. Dort gibst du auch bitte deine Meldungen zum
     Meldeschluss ab! Weitere Information für die teilnehmenden Vereine werden
     nach Meldeschluss an die jeweiligen Obleute per Mail verschickt. Solltest du
-    diese nicht erhalten haben, schreib uns gerne eine Mail (
-    <a
+    diese nicht erhalten haben, schreib uns gerne eine Mail
+    (<a
       class=""
       target="_blank"
       href="mailto:regattaleiter@muelheimer-rg.de"
     >
       regattaleiter@muelheimer-rg.de
-    </a>
-    ). Das Anschreiben findest du auch
+    </a>). Das Anschreiben findest du auch
     <a
       href="/obleute_anschreiben_2023.pdf"
       target="_blank"
@@ -209,17 +205,26 @@ templ Ausschreibung() {
       hier
     </a>.
   </p>
+}
 
-  @ui_components.Collapse("Allgemeine Bestimmungen", allgBestimmung())
+templ Ausschreibung() {
+  @ui_components.LandingPageDivCol() {
+    @ui_components.PageHeader(
+      "Ausschreibung",
+    )
+    @ui_components.PageHeaderSubtextComp(ausschreibunHeaderSubtext())
 
-  <h2>Ausschreibung</h2>
-  <div class="md:px-4 py-2">
-    <h3 class="text-2xl px-2 text-mrgblau">Samstag</h3>
-    @ausschreibungRennen(sqlc.WettkampfLangstrecke)
-    @ausschreibungRennen(sqlc.WettkampfSlalom)
-    <div class="divider pt-6"></div>
-    <h3 class="text-2xl px-2 text-mrgblau">Sonntag</h3>
-    @ausschreibungRennen(sqlc.WettkampfKurzstrecke)
-    @ausschreibungRennen(sqlc.WettkampfStaffel)
-  </div>
+    @ui_components.Collapse("Allgemeine Bestimmungen", allgBestimmung())
+
+    <h2>Ausschreibung</h2>
+    <div class="md:px-4 py-2">
+      <h3 class="text-2xl px-2 text-mrgblau">Samstag</h3>
+      @ausschreibungRennen(sqlc.WettkampfLangstrecke)
+      @ausschreibungRennen(sqlc.WettkampfSlalom)
+      <div class="divider pt-6"></div>
+      <h3 class="text-2xl px-2 text-mrgblau">Sonntag</h3>
+      @ausschreibungRennen(sqlc.WettkampfKurzstrecke)
+      @ausschreibungRennen(sqlc.WettkampfStaffel)
+    </div>
+  }
 }

@@ -27,9 +27,27 @@ templ meldeschlussHelpBody() {
 }
 
 templ InternalRegattaleitung() {
-  <div class="w-full flex flex-col">
-    <h2>Regattaleitung</h2>
-    <p>Hier kannst du die Regattaleitung-Funktionen nutzen.</p>
+  {{
+    breadcrumbs := []ui_components.BreadcrumbsEntries{
+      ui_components.BreadcrumbsEntries{
+        Title: "Home",
+        Paths: "/",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Internes",
+        Paths: "/internal",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Regattaleitung",
+        Paths: "/internal/regattaleitung",
+      },
+    }
+  }}
+  @ui_components.Breadcrumbs(breadcrumbs)
+  @ui_components.InternalPageDivCol() {
+
+    @ui_components.PageHeader("Regattaleitung")
+    @ui_components.PageHeaderSubtext("Hier kannst du die Regattaleitung-Funktionen nutzen.")
 
     <div class="mb-4">
       @ui_components.Collapse("Meldeschluss, was tun?", meldeschlussHelpBody())
@@ -46,5 +64,5 @@ templ InternalRegattaleitung() {
       {Name: "Vereine verwalten", Desc: "Vereine bearbeiten und neuanlegen, sowie Obleute bearbeiten und neuanlegen", URL: "#"},
       {Name: "eMail senden", Desc: "eMail über das System an Vereine bzw. Obleute versenden", URL: "#"},
     })
-  </div>
+  }
 }

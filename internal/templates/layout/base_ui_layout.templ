@@ -12,6 +12,42 @@ templ MinimalLayout(body templ.Component) {
   <title>MRG Regatta</title>
   <meta name="description" content="Homepage der MRG Regatta" />
 
+  @favicons()
+
+  <link href="/public/css_global.css" rel="stylesheet">
+  <script src="/assets/js/htmx.min.js"></script>
+  <script src="/assets/js/htmx-ext-response-target.js"></script>
+  <script src="/assets/js/theming.js"></script>
+</head>
+<body
+  class="max-w-screen prose antialiased"
+  hx-on:click="if (!event.target.closest('details')) document.querySelectorAll('details[open]').forEach(d => d.removeAttribute('open'))"
+  hx-ext="response-targets"
+>
+  @body
+</body>
+</html>
+}
+
+templ baseLayoutBody(body templ.Component, navbarConfig ui_components.NavBarConfig) {
+  <div class="min-h-screen max-w-none">
+    <nav class="w-full">
+      @ui_components.Navbar(navbarConfig)
+    </nav>
+
+    <main class="max-w-screen">
+      @body
+    </main>
+  </div>
+
+  @ui_components.Footer()
+}
+
+templ BaseLayout(body templ.Component, navbarConfig ui_components.NavBarConfig) {
+  @MinimalLayout(baseLayoutBody(body, navbarConfig))
+}
+
+templ favicons() {
   <link
     rel="apple-touch-icon"
     sizes="57x57"
@@ -84,36 +120,4 @@ templ MinimalLayout(body templ.Component) {
   <link rel="manifest" href="/assets/icons/ws-icons/manifest.json" />
   <meta name="msapplication-TileColor" content="#ffffff" />
   <meta name="msapplication-TileImage" content="/ms-icon-144x144.png" />
-
-  <link href="/public/css_global.css" rel="stylesheet">
-  <script src="/assets/js/htmx.min.js"></script>
-  <script src="/assets/js/htmx-ext-response-target.js"></script>
-  <script src="/assets/js/theming.js"></script>
-</head>
-<body
-  class="max-w-screen prose antialiased"
-  hx-on:click="if (!event.target.closest('details')) document.querySelectorAll('details[open]').forEach(d => d.removeAttribute('open'))"
-  hx-ext="response-targets"
->
-  @body
-</body>
-</html>
-}
-
-templ baseLayoutBody(body templ.Component, navbarConfig ui_components.NavBarConfig) {
-  <div class="min-h-screen max-w-none">
-    <nav class="w-full">
-      @ui_components.Navbar(navbarConfig)
-    </nav>
-
-    <main class="w-full px-4 py-4">
-      @body
-    </main>
-  </div>
-
-  @ui_components.Footer()
-}
-
-templ BaseLayout(body templ.Component, navbarConfig ui_components.NavBarConfig) {
-  @MinimalLayout(baseLayoutBody(body, navbarConfig))
 }

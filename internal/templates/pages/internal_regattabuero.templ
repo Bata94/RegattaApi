@@ -3,10 +3,27 @@ package ui_pages
 import "github.com/bata94/RegattaApi/internal/templates/components"
 
 templ InternalRegattabuero() {
-  <div class="w-full flex flex-col">
-    <h2>Regattabüro</h2>
-    <p>Hier kannst du die Regattabüro-Funktionen nutzen.</p>
+  {{
+    breadcrumbs := []ui_components.BreadcrumbsEntries{
+      ui_components.BreadcrumbsEntries{
+        Title: "Home",
+        Paths: "/",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Internes",
+        Paths: "/internal",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Regattabüro",
+        Paths: "/internal/regattabuero",
+      },
+    }
+  }}
+  @ui_components.Breadcrumbs(breadcrumbs)
+  @ui_components.InternalPageDivCol() {
 
+    @ui_components.PageHeader("Regattabüro")
+    @ui_components.PageHeaderSubtext("Hier kannst du die Regattabüro-Funktionen nutzen.")
     <div
       class="btn btn-outline min-w-64 w-1/2 h-20 mx-auto mb-8"
       hx-get="/internal/regattabuero"
@@ -33,5 +50,5 @@ templ InternalRegattabuero() {
       {Name: "Setzungsänderung", Desc: "Setzung eines Rennens ändern", URL: "#"},
       {Name: "Änderungen von Obleuten", Desc: "Ab-, Um- und Nachmeldungen von Vereins Obleuten akzeptieren bzw. ablehnen", URL: "#"},
     })
-  </div>
+  }
 }

@@ -43,11 +43,32 @@ templ InternalAdminUsers() {
         OnClickDialogSrc: "/internal/admin/user/" + u.Uuid.String(),
       })
     }
+
+    breadcrumbs := []ui_components.BreadcrumbsEntries{
+      ui_components.BreadcrumbsEntries{
+        Title: "Home",
+        Paths: "/",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Internes",
+        Paths: "/internal",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Admin",
+        Paths: "/internal/admin",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Nutzerverwaltung",
+        Paths: "/internal/admin/users",
+      },
+    }
   }}
 
-  <div class="w-full flex flex-col">
+  @ui_components.Breadcrumbs(breadcrumbs)
+  @ui_components.InternalPageDivCol() {
+
     <div class="flex flex-row justify-between items-center">
-      <h2 class="!m-0">Nutzer</h2>
+      @ui_components.PageHeader("Nutzer")
       <button
         class="btn btn-primary ml-auto"
         hx-target="#table_dialog_content"
@@ -71,5 +92,5 @@ templ InternalAdminUsers() {
       },
       Rows: userRows,
     })
-  </div>
+  }
 }
