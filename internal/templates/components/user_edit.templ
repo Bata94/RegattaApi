@@ -3,6 +3,7 @@ package ui_components
 import (
   "github.com/google/uuid"
 	"github.com/bata94/RegattaApi/internal/crud"
+	"github.com/bata94/RegattaApi/internal/sqlc"
 )
 
 templ UserEdit(u crud.User, msg string) {
@@ -24,9 +25,10 @@ templ UserEdit(u crud.User, msg string) {
   }
 
   <div id="user_edit_dialog" class="w-full flex flex-col">
-    <h2>{title}</h2>
+    @PageHeader(title)
 
     <form
+      class="w-full mt-4"
       hx-post={"/internal/admin/user/" + uuidStr}
       hx-target="#user_edit_dialog"
       hx-on::response="if (event.detail.xhr.getResponseHeader('HX-Redirect')) { table_dialog.close(); htmx.ajax('GET', '/internal/admin/users', {target: 'main', swap: 'innerHTML'}); }"
@@ -53,8 +55,10 @@ templ UserEdit(u crud.User, msg string) {
               name="password"
               class="grow"
               placeholder="Passwort"
-              if uuidStr  == "New" {
+              if uuidStr  == "new" {
                 required
+              } else {
+                disabled
               }
             />
           </label>
@@ -65,9 +69,10 @@ templ UserEdit(u crud.User, msg string) {
             Nutzer gesperrt?
           </label>
           <input
+            name="is_not_active"
             type="checkbox"
             class="toggle"
-            if !u.IsActive {
+            if uuidStr  != "new" && !u.IsActive {
               checked
             }
           />
@@ -91,7 +96,132 @@ templ UserEdit(u crud.User, msg string) {
         </div>
       </div>
       <div class="form-control mt-6 w-full">
-        <button type="submit" class="btn btn-primary mx-auto">Speichern</button>
+        <button type="submit" class="btn btn-primary mx-auto">
+          Speichern
+          <span class="htmx-indicator loading loading-spinner loading-md"></span>
+        </button>
+      </div>
+    </form>
+  </div>
+}
+
+templ UserGroupEdit(ug sqlc.UsersGroup, msg string) {
+  {{
+    var title, uuidStr string
+    if ug.Uuid != uuid.Nil {
+      title = "Nutzergruppe bearbeiten"
+      uuidStr = ug.Uuid.String()
+    } else {
+      title = "Neue Nutzergruppe"
+      uuidStr = "new"
+    }
+  }}
+
+  <div id="user_edit_dialog" class="w-full flex flex-col">
+    @PageHeader(title)
+
+    <form
+      class="w-full mt-4"
+      hx-post={"/internal/admin/usergroups/" + uuidStr}
+      hx-target="#user_edit_dialog"
+      hx-on::response="if (event.detail.xhr.getResponseHeader('HX-Redirect')) { table_dialog.close(); htmx.ajax('GET', '/internal/admin/users', {target: 'main', swap: 'innerHTML'}); }"
+    >
+      if msg != "" {
+        <div class="alert alert-error mb-4">
+          <span>{msg}</span>
+        </div>
+      }
+      <div class="flex flex-col gap-4">
+        <div class="form-control mb-6">
+          Gruppenname:
+          <label class="input w-full">
+            <input
+              type="text"
+              name="name"
+              class="grow"
+              placeholder="Gruppenname"
+              value={ug.Name}
+              required
+            />
+          </label>
+        </div>
+      </div>
+
+      <div class="mb-6 flex flex-row justify-between">
+        <label class="">
+          Admin Berechtigung?
+        </label>
+        <input
+          name="allowed_admin"
+          type="checkbox"
+          class="toggle"
+          if uuidStr  != "new" && ug.AllowedAdmin{
+            checked
+          }
+        />
+      </div>
+
+      <div class="mb-6 flex flex-row justify-between">
+        <label class="">
+          Zeitnahme Berechtigung?
+        </label>
+        <input
+          name="allowed_zeitnahme"
+          type="checkbox"
+          class="toggle"
+          if uuidStr  != "new" && ug.AllowedZeitnahme{
+            checked
+          }
+        />
+      </div>
+
+      <div class="mb-6 flex flex-row justify-between">
+        <label class="">
+          Startlisten Berechtigung?
+        </label>
+        <input
+          name="allowed_startlisten"
+          type="checkbox"
+          class="toggle"
+          if uuidStr  != "new" && ug.AllowedStartlisten{
+            checked
+          }
+        />
+      </div>
+
+      <div class="mb-6 flex flex-row justify-between">
+        <label class="">
+          Regattabüro Berechtigung?
+        </label>
+        <input
+          name="allowed_regattabuero"
+          type="checkbox"
+          class="toggle"
+          if uuidStr  != "new" && ug.AllowedRegattabuero{
+            checked
+          }
+        />
+      </div>
+
+      <div class="mb-6 flex flex-row justify-between">
+        <label class="">
+          Regattaleitung Berechtigung?
+        </label>
+        <input
+          name="allowed_regattaleitung"
+          type="checkbox"
+          class="toggle"
+          if uuidStr  != "new" && ug.AllowedRegattaleitung{
+            checked
+          }
+        />
+      </div>
+
+      <div class="form-control mt-6 w-full">
+        <button type="submit" class="btn btn-primary mx-auto">
+          Speichern
+          <span class="htmx-indicator loading loading-spinner loading-md"></span>
+        </button>
       </div>
     </form>
   </div>

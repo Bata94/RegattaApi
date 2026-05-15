@@ -53,7 +53,13 @@ type CreateUserParams struct {
 	Password  string    `json:"password"`
 }
 
-func checkPasswordHash(password, hash string) bool {
+type UpdateUserParams struct {
+	Username  string    `json:"username"`
+	IsActive  bool      `json:"is_active"`
+	GroupUuid uuid.UUID `json:"group_uuid"`
+}
+
+func CheckPasswordHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
 }
@@ -100,7 +106,7 @@ func validUser(id uuid.UUID, p string) bool {
 	if err != nil {
 		return false
 	}
-	if !checkPasswordHash(p, user.HashedPassword) {
+	if !CheckPasswordHash(p, user.HashedPassword) {
 		return false
 	}
 	return true
@@ -183,15 +189,56 @@ func CreateUser(uInp CreateUserParams) (User, error) {
 	return User{User: u}, nil
 }
 
+func UpdateUser(u uuid.UUID, uParams UpdateUserParams) error {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	err := DB.Queries.UpdateUser(ctx, sqlc.UpdateUserParams{
+		Uuid:      u,
+		Username:  uParams.Username,
+		IsActive:  uParams.IsActive,
+		GroupUuid: uParams.GroupUuid,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func UpdatePassword(u uuid.UUID, p string) error {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	hp, err := hashPassword(p)
+	if err != nil {
+		return err
+	}
+
+	err = DB.Queries.UpdatePassword(ctx,  sqlc.UpdatePasswordParams{
+		Uuid: u,
+		HashedPassword: hp,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func AuthLogin(l LoginParams) (*ReturnUserWithJWT, error) {
 	u, err := GetUserByUsername(l.Username)
 	if err != nil {
 		return nil, err
 	}
 
+	if u.IsActive == false {
+		return nil, &api.AUTH_LOGIN_USER_NOT_ACTIVE
+	}
+
 	tokenStr := ""
 	tokenExp := time.Now()
-	if checkPasswordHash(l.Password, u.HashedPassword) {
+	if CheckPasswordHash(l.Password, u.HashedPassword) {
 		tokenStr, tokenExp, err = genJWT(u.User, u.UserGroup)
 		if err != nil {
 			retErr := &api.TOKEN_GENERATION_ERROR

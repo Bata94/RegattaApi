@@ -228,6 +228,8 @@ func GetRouter() http.Handler {
 	baseLayoutHandler("/internal/profil", func(c *handler.Context) (templ.Component, error) {
 		return getProfilePage(c)
 	})
+	r.Handle("GET", "/internal/profil/password/{uuid}", wrapHandler(changePasswordGetHandler, true))
+	r.Handle("PUT", "/internal/profil/password/{uuid}", wrapHandler(changePasswordPostHandler, true))
 	baseLayoutHandler("/internal/zeitnahme", func(c *handler.Context) (templ.Component, error) {
 		return ui_pages.InternalZeitnahme(), nil
 	})
@@ -251,6 +253,8 @@ func GetRouter() http.Handler {
 	baseLayoutHandler("/internal/admin/usergroups", func(c *handler.Context) (templ.Component, error) {
 		return ui_pages.InternalAdminUserGroups(), nil
 	})
+	r.Handle("GET", "/internal/admin/usergroups/{uuid}", wrapHandler(userGroupEditNewHandler, true))
+	r.Handle("POST", "/internal/admin/usergroups/{uuid}", wrapHandler(userGroupEditNewHandlerPost, true))
 
 	// Pure HTMX UI Components
 	r.Handle("GET", "/comp/image", wrapUIHandler(imageComponentHandler))
@@ -452,6 +456,10 @@ func getProfilePage(c *handler.Context) (templ.Component, error) {
 	}
 
 	claims := userToken.Claims.(jwt.MapClaims)
+	userUuidStr, ok := claims["user_id"].(string)
+	if !ok {
+		return nil, &handler.Error{StatusCode: 401, Message: "Invalid token"}
+	}
 	username, ok := claims["username"].(string)
 	if !ok {
 		return nil, &handler.Error{StatusCode: 401, Message: "Invalid token"}
@@ -477,7 +485,13 @@ func getProfilePage(c *handler.Context) (templ.Component, error) {
 		}
 	}
 
+	userUuid, err := uuid.Parse(userUuidStr)
+	if err != nil {
+		return nil, &handler.Error{StatusCode: 401, Message: "Invalid token"}
+	}
+
 	data := ui_pages.ProfilData{
+		Uuid:         userUuid,
 		Username:     username,
 		UserGroup:    userGroup,
 		Capabilities: capabilities,
@@ -640,17 +654,16 @@ func userEditNewHandlerPost(c *handler.Context) error {
 		return &handler.Error{StatusCode: 406, Message: "Invalid UUID"}
 	}
 
-	u = &crud.User{
-		User:      sqlc.User{
-			Uuid: userUuid,
-			Username: c.FormValue("username"),
-		},
-		UserGroup: &sqlc.UsersGroup{
-			Uuid:  groupUuid,
-		},
-	}
-
 	if uuidStr == "new" {
+		u = &crud.User{
+			User:      sqlc.User{
+				Uuid: userUuid,
+				Username: c.FormValue("username"),
+			},
+			UserGroup: &sqlc.UsersGroup{
+				Uuid:  groupUuid,
+			},
+		}
 		_, err = crud.CreateUser(crud.CreateUserParams{
 			GroupUuid: groupUuid,
 			Username:  c.FormValue("username"),
@@ -667,6 +680,141 @@ func userEditNewHandlerPost(c *handler.Context) error {
 		return nil
 	}
 
-	templ.Handler(ui_components.UserEdit(*u, "Editing not yet implemented")).ServeHTTP(c.Writer, c.Request)
+	u, err = crud.GetUser(userUuid)
+	if err != nil {
+		// return &handler.Error{StatusCode: 500, Message: "Error while creating user"}
+		templ.Handler(ui_components.UserEdit(*u, "Error while updating user, Err: " + err.Error())).ServeHTTP(c.Writer, c.Request)
+		return nil
+	}
+
+	err = crud.UpdateUser(u.Uuid, crud.UpdateUserParams{
+		Username:  c.FormValue("username"),
+		IsActive:  c.FormValue("is_not_active") != "on",
+		GroupUuid: groupUuid,
+	})
+	if err != nil {
+		// return &handler.Error{StatusCode: 500, Message: "Error while creating user"}
+		templ.Handler(ui_components.UserEdit(*u, "Error while updating user, Err: " + err.Error())).ServeHTTP(c.Writer, c.Request)
+		return nil
+	}
+
+		c.Writer.Header().Set("HX-Redirect", "/internal/admin/users")
+		c.Writer.WriteHeader(http.StatusOK)
+		return nil
+}
+
+func userGroupEditNewHandler(c *handler.Context) error {
+	var ug sqlc.UsersGroup
+	if c.Param("uuid") == "" {
+		return &handler.Error{StatusCode: 404, Message: "UserGroup not found"}
+	} else if c.Param("uuid") == "new" {
+		ug = sqlc.UsersGroup{}
+	} else {
+		uuid, err := uuid.Parse(c.Param("uuid"))
+		if err != nil {
+			return &handler.Error{StatusCode: 406, Message: "Invalid UUID"}
+		}
+		ug, err = crud.GetUsersGroupsMinimal(uuid)
+		if err != nil {
+			return &handler.Error{StatusCode: 404, Message: "UserGroup not found"}
+		}
+	}
+
+	templ.Handler(ui_components.UserGroupEdit(ug, "")).ServeHTTP(c.Writer, c.Request)
+	return nil
+}
+
+func userGroupEditNewHandlerPost(c *handler.Context) error {
+	var (
+		groupUuid uuid.UUID
+		err error
+	)
+
+	uuidStr := c.Param("uuid")
+	if uuidStr == "new" {
+		groupUuid, err = uuid.NewV7()
+		if err != nil {
+			return &handler.Error{StatusCode: 406, Message: "Bad Request"}
+		}
+		_, err = crud.CreateUserGroup(sqlc.CreateUserGroupParams{
+			Name: c.FormValue("name"),
+			AllowedAdmin: c.FormValue("allowed_admin") == "on",
+			AllowedZeitnahme: c.FormValue("allowed_zeitnahme") == "on",
+			AllowedStartlisten: c.FormValue("allowed_startlisten") == "on",
+			AllowedRegattabuero: c.FormValue("allowed_regattabuero") == "on",
+			AllowedRegattaleitung: c.FormValue("allowed_regattaleitung") == "on",
+		})
+		if err != nil {
+			return &handler.Error{StatusCode: 500, Message: "Error while updating user group"}
+		}
+	} else {
+		groupUuid, err = uuid.Parse(uuidStr)
+		if err != nil {
+			return &handler.Error{StatusCode: 406, Message: "Bad Request"}
+		}
+		err = crud.UpdateUserGroup(groupUuid, sqlc.UpdateUserGroupParams{
+			Name: c.FormValue("name"),
+			AllowedAdmin: c.FormValue("allowed_admin") == "on",
+			AllowedZeitnahme: c.FormValue("allowed_zeitnahme") == "on",
+			AllowedStartlisten: c.FormValue("allowed_startlisten") == "on",
+			AllowedRegattabuero: c.FormValue("allowed_regattabuero") == "on",
+			AllowedRegattaleitung: c.FormValue("allowed_regattaleitung") == "on",
+		})
+		if err != nil {
+			return &handler.Error{StatusCode: 500, Message: "Error while updating user group"}
+		}
+	}
+
+	c.Writer.Header().Set("HX-Redirect", "/internal/admin/usergroups")
+	c.Writer.WriteHeader(http.StatusOK)
+	return nil
+}
+
+func changePasswordGetHandler(c *handler.Context) error {
+	userUuidStr := c.Param("uuid")
+	userUuid, err := uuid.Parse(userUuidStr)
+	user, err := crud.GetUser(userUuid)
+	if err != nil {
+		return &handler.Error{StatusCode: 404, Message: "User not found"}
+	}
+
+	templ.Handler(ui_pages.ChangePasswordDialogBody(*user, "")).ServeHTTP(c.Writer, c.Request)
+	return nil
+}
+
+func changePasswordPostHandler(c *handler.Context) error {
+	userUuidStr := c.Param("uuid")
+	userUuid, err := uuid.Parse(userUuidStr)
+	user, err := crud.GetUser(userUuid)
+	if err != nil {
+		return &handler.Error{StatusCode: 404, Message: "User not found"}
+	}
+
+	currentPassword := c.FormValue("current_password")
+	newPassword1 := c.FormValue("new_password_1")
+	newPassword2 := c.FormValue("new_password_2")
+
+	if currentPassword == "" || newPassword1 == "" || newPassword2 == "" {
+		templ.Handler(ui_pages.ChangePasswordDialogBody(*user, "Alle Felder müssen ausgefüllt werden")).ServeHTTP(c.Writer, c.Request)
+		return nil
+	}
+
+	if newPassword1 != newPassword2 {
+		templ.Handler(ui_pages.ChangePasswordDialogBody(*user, "Passwörter stimmen nicht überein")).ServeHTTP(c.Writer, c.Request)
+		return nil
+	}
+
+	if crud.CheckPasswordHash(currentPassword, user.HashedPassword) == false {
+		templ.Handler(ui_pages.ChangePasswordDialogBody(*user, "Aktuelles Passwort ist falsch")).ServeHTTP(c.Writer, c.Request)
+		return nil
+	}
+
+	err = crud.UpdatePassword(userUuid, newPassword1)
+	if err != nil {
+		return &handler.Error{StatusCode: 500, Message: "Error while updating password"}
+	}
+
+	c.Writer.Header().Set("HX-Redirect", "/internal/profil")
+	c.Writer.WriteHeader(http.StatusOK)
 	return nil
 }

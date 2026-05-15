@@ -137,3 +137,46 @@ func (q *Queries) GetUserUuidByName(ctx context.Context, username string) (uuid.
 	err := row.Scan(&uuid)
 	return uuid, err
 }
+
+const updatePassword = `-- name: UpdatePassword :exec
+UPDATE users
+SET
+  hashed_password = $2
+WHERE uuid = $1
+`
+
+type UpdatePasswordParams struct {
+	Uuid           uuid.UUID `json:"uuid"`
+	HashedPassword string    `json:"hashed_password"`
+}
+
+func (q *Queries) UpdatePassword(ctx context.Context, arg UpdatePasswordParams) error {
+	_, err := q.db.Exec(ctx, updatePassword, arg.Uuid, arg.HashedPassword)
+	return err
+}
+
+const updateUser = `-- name: UpdateUser :exec
+UPDATE users
+SET
+  username = $2,
+  is_active = $3,
+  group_uuid = $4
+WHERE uuid = $1
+`
+
+type UpdateUserParams struct {
+	Uuid      uuid.UUID `json:"uuid"`
+	Username  string    `json:"username"`
+	IsActive  bool      `json:"is_active"`
+	GroupUuid uuid.UUID `json:"group_uuid"`
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
+	_, err := q.db.Exec(ctx, updateUser,
+		arg.Uuid,
+		arg.Username,
+		arg.IsActive,
+		arg.GroupUuid,
+	)
+	return err
+}

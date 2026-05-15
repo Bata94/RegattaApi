@@ -1,8 +1,16 @@
 package ui_pages
 
-import "github.com/bata94/RegattaApi/internal/templates/components"
+import (
+  "fmt"
+
+  "github.com/google/uuid"
+
+  "github.com/bata94/RegattaApi/internal/templates/components"
+  "github.com/bata94/RegattaApi/internal/crud"
+)
 
 type ProfilData struct {
+  Uuid         uuid.UUID
 	Username     string
 	UserGroup    string
 	Capabilities []string
@@ -27,7 +35,6 @@ templ Profil(data ProfilData) {
   }}
   @ui_components.Breadcrumbs(breadcrumbs)
     @ui_components.InternalPageDivCol() {
-
       @ui_components.PageHeader("Profil")
       @ui_components.PageHeaderSubtext("Hier kannst du dein Profil verwalten.")
 
@@ -49,11 +56,90 @@ templ Profil(data ProfilData) {
               }
             </div>
             <div class="card-actions justify-between mt-4">
-              <a href="#" class="btn btn-success">Bearbeiten</a>
+              <a
+                href={fmt.Sprintf("/internal/profil/password/%s", data.Uuid)}
+                class="btn btn-warning"
+                hx-target="#password_dialog_content"
+                hx-swap="innerHTML"
+                hx-get={fmt.Sprintf("/internal/profil/password/%s", data.Uuid)}
+                hx-trigger="click"
+                hx-boost="true"
+                onclick="password_dialog.showModal()"
+              >
+                Passwort ändern
+              </a>
               <a href="/logout" class="btn btn-error">Abmelden</a>
             </div>
           </div>
       </div>
     </div>
+
+    @ui_components.DialogDataEdit("Passwort ändern", "password_dialog")
   }
+}
+
+templ ChangePasswordDialogBody(u crud.User, msg string) {
+  <div
+    class="w-full flex flex-col"
+    id="password_dialog_content"
+  >
+    <form
+      hx-put={"/internal/profil/password/" + u.Uuid.String()}
+      hx-target="#password_dialog_content"
+      hx-on::response="if (event.detail.xhr.getResponseHeader('HX-Redirect')) { password_dialog.close(); htmx.ajax('GET', '/internal/admin/users', {target: 'main', swap: 'innerHTML'}); }"
+    >
+      if msg != "" {
+        <div class="alert alert-error mb-4">
+          <span>{msg}</span>
+        </div>
+      }
+
+      <div class="form-control mb-6">
+        <label class="input w-full">
+          <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+          <input
+            type="password"
+            name="current_password"
+            class="grow"
+            placeholder="Aktuelles Passwort"
+            required
+          />
+        </label>
+      </div>
+
+      <div class="divider"/>
+
+      <div class="form-control mb-6">
+        <label class="input w-full">
+          <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+          <input
+            type="password"
+            name="new_password_1"
+            class="grow"
+            placeholder="Neues Passwort"
+            required
+          />
+        </label>
+      </div>
+      <div class="form-control mb-6">
+        <label class="input w-full">
+          <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+          <input
+            type="password"
+            name="new_password_2"
+            class="grow"
+            placeholder="Neues Passwort erneut"
+            required
+          />
+        </label>
+      </div>
+
+      <div class="form-control mt-6 w-full">
+        <button type="submit" class="btn btn-primary mx-auto">
+          Speichern
+          <span class="htmx-indicator loading loading-spinner loading-md"></span>
+        </button>
+      </div>
+      </form>
+  </div>
 }

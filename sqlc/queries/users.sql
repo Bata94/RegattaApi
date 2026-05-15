@@ -29,3 +29,17 @@ INSERT INTO users (
   $1, $2, $3, true, uuidv7()
 )
 RETURNING *;
+
+-- name: UpdateUser :exec
+UPDATE users
+SET
+  username = $2,
+  is_active = $3,
+  group_uuid = $4
+WHERE uuid = $1;
+
+-- name: UpdatePassword :exec
+UPDATE users
+SET
+  hashed_password = $2
+WHERE uuid = $1;

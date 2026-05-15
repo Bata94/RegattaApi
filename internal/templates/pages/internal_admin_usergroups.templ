@@ -30,7 +30,7 @@ templ InternalAdminUserGroups() {
           utils.BoolToJaNein(g.AllowedRegattaleitung),
           time.Unix(g.Uuid.Time().UnixTime()).Format("02.01.2006 15:04"),
         },
-        OnClickDialogSrc: "/",
+        OnClickDialogSrc: "/internal/admin/usergroups/" + g.Uuid.String(),
       })
     }
 
@@ -62,7 +62,7 @@ templ InternalAdminUserGroups() {
         class="btn btn-primary ml-auto"
         hx-target="#table_dialog_content"
         hx-swap="innerHTML"
-        hx-get="/internal/admin/user/new"
+        hx-get="/internal/admin/usergroups/new"
         hx-trigger="click"
         hx-boost="true"
         onclick="table_dialog.showModal()"

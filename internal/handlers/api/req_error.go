@@ -47,6 +47,7 @@ var (
 	WRONG_REFRESH_TOKEN       = ReqError{Code: 1051, StatusCode: http.StatusUnauthorized, Title: "Wrong refresh token"}
 	TOKEN_GENERATION_ERROR    = ReqError{Code: 1052, StatusCode: http.StatusInternalServerError, Title: "Failed to generate token"}
 	TOKEN_INVALID             = ReqError{Code: 1053, StatusCode: http.StatusUnauthorized, Title: "Failed to validate token"}
+	AUTH_LOGIN_USER_NOT_ACTIVE= ReqError{Code: 1054, StatusCode: http.StatusUnauthorized, Title: "User Account is disabled, please contact the Admin!"}
 
 	ACCOUNT_WITH_EMAIL_ALREADY_EXISTS = ReqError{Code: 1100, StatusCode: http.StatusBadRequest, Title: "An account with this email already exists"}
 )

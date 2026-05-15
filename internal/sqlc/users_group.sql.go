@@ -15,20 +15,35 @@ const createUserGroup = `-- name: CreateUserGroup :one
 INSERT INTO users_group (
   name,
   allowed_admin,
+  allowed_zeitnahme,
+  allowed_startlisten,
+  allowed_regattabuero,
+  allowed_regattaleitung,
   uuid
 ) VALUES (
-  $1, $2, uuidv7()
+  $1, $2, $3, $4, $5, $6, uuidv7()
 )
 RETURNING uuid, name, allowed_admin, allowed_zeitnahme, allowed_startlisten, allowed_regattabuero, allowed_regattaleitung
 `
 
 type CreateUserGroupParams struct {
-	Name         string `json:"name"`
-	AllowedAdmin bool   `json:"allowed_admin"`
+	Name                  string `json:"name"`
+	AllowedAdmin          bool   `json:"allowed_admin"`
+	AllowedZeitnahme      bool   `json:"allowed_zeitnahme"`
+	AllowedStartlisten    bool   `json:"allowed_startlisten"`
+	AllowedRegattabuero   bool   `json:"allowed_regattabuero"`
+	AllowedRegattaleitung bool   `json:"allowed_regattaleitung"`
 }
 
 func (q *Queries) CreateUserGroup(ctx context.Context, arg CreateUserGroupParams) (UsersGroup, error) {
-	row := q.db.QueryRow(ctx, createUserGroup, arg.Name, arg.AllowedAdmin)
+	row := q.db.QueryRow(ctx, createUserGroup,
+		arg.Name,
+		arg.AllowedAdmin,
+		arg.AllowedZeitnahme,
+		arg.AllowedStartlisten,
+		arg.AllowedRegattabuero,
+		arg.AllowedRegattaleitung,
+	)
 	var i UsersGroup
 	err := row.Scan(
 		&i.Uuid,
@@ -153,4 +168,39 @@ func (q *Queries) GetUserGroupUuidByName(ctx context.Context, name string) (uuid
 	var uuid uuid.UUID
 	err := row.Scan(&uuid)
 	return uuid, err
+}
+
+const updateUserGroup = `-- name: UpdateUserGroup :exec
+UPDATE users_group
+SET
+  name = $2,
+  allowed_admin = $3,
+  allowed_zeitnahme = $4,
+  allowed_startlisten = $5,
+  allowed_regattabuero = $6,
+  allowed_regattaleitung = $7
+WHERE uuid = $1
+`
+
+type UpdateUserGroupParams struct {
+	Uuid                  uuid.UUID `json:"uuid"`
+	Name                  string    `json:"name"`
+	AllowedAdmin          bool      `json:"allowed_admin"`
+	AllowedZeitnahme      bool      `json:"allowed_zeitnahme"`
+	AllowedStartlisten    bool      `json:"allowed_startlisten"`
+	AllowedRegattabuero   bool      `json:"allowed_regattabuero"`
+	AllowedRegattaleitung bool      `json:"allowed_regattaleitung"`
+}
+
+func (q *Queries) UpdateUserGroup(ctx context.Context, arg UpdateUserGroupParams) error {
+	_, err := q.db.Exec(ctx, updateUserGroup,
+		arg.Uuid,
+		arg.Name,
+		arg.AllowedAdmin,
+		arg.AllowedZeitnahme,
+		arg.AllowedStartlisten,
+		arg.AllowedRegattabuero,
+		arg.AllowedRegattaleitung,
+	)
+	return err
 }

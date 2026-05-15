@@ -7,6 +7,10 @@ import (
 	"github.com/google/uuid"
 )
 
+type UsersGroup struct {
+	sqlc.UsersGroup
+}
+
 type UsersGroupWithUsers struct {
 	sqlc.UsersGroup
 	Users []ReturnUserMinimal
@@ -95,4 +99,36 @@ func GetUsersGroupByName(name string) (UsersGroupWithUsers, error) {
 	}
 
 	return GetUsersGroup(id)
+}
+
+func CreateUserGroup(ugParams sqlc.CreateUserGroupParams) (sqlc.UsersGroup, error) {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	ug, err := DB.Queries.CreateUserGroup(ctx, ugParams)
+	if err != nil {
+		return sqlc.UsersGroup{}, err
+	}
+
+	return ug, nil
+}
+
+func UpdateUserGroup(uuid uuid.UUID, uParams sqlc.UpdateUserGroupParams) error {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	err := DB.Queries.UpdateUserGroup(ctx, sqlc.UpdateUserGroupParams{
+		Uuid: uuid,
+		Name: uParams.Name,
+		AllowedAdmin: uParams.AllowedAdmin,
+		AllowedZeitnahme: uParams.AllowedZeitnahme,
+		AllowedStartlisten: uParams.AllowedStartlisten,
+		AllowedRegattabuero: uParams.AllowedRegattabuero,
+		AllowedRegattaleitung: uParams.AllowedRegattaleitung,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
