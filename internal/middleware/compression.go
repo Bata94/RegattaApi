@@ -127,6 +127,9 @@ func (g *gzipResponseWriter) Write(p []byte) (int, error) {
 }
 
 func (g *gzipResponseWriter) WriteHeader(statusCode int) {
+	if g.written {
+		return
+	}
 	g.written = true
 	g.ResponseWriter.WriteHeader(statusCode)
 }

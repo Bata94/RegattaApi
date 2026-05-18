@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -91,7 +92,7 @@ func matchPath(pattern, path string) (map[string]string, bool) {
 
 	params := make(map[string]string)
 
-	for i := 0; i < len(patParts); i++ {
+	for i := range patParts {
 		if i >= len(pathParts) {
 			return nil, false
 		}
@@ -249,13 +250,45 @@ func GetRouter() http.Handler {
 	})
 	baseLayoutHandler("/internal/regattaleitung/drvupload", func(c *handler.Context) (templ.Component, error) {
 		return ui_pages.InternalRegattaleitungDrvFileUpload(""), nil
-  })
-	r.Handle("POST", "/internal/regattaleitung/drvupload", wrapHandler(drvUploadPostHandler, true))
-	baseLayoutHandler("/internal/regattaleitung/setzungslosung", func(c *handler.Context) (templ.Component, error) {
-		return ui_pages.InternalRegattaleitung(), nil
 	})
-	baseLayoutHandler("/internal/regattaleitung/setzungsaenderung", func(c *handler.Context) (templ.Component, error) {
-		return ui_pages.InternalRegattaleitung(), nil
+	r.Handle("POST", "/internal/regattaleitung/drvupload", wrapHandler(drvUploadPostHandler, true))
+	baseLayoutHandler("/internal/regattaleitung/setzungsverwaltung", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.InternalRegattaleitungSetzung(), nil
+	})
+	baseLayoutHandler("/internal/regattaleitung/setzungsverwaltung/losung", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.InternalRegattaleitungSetzungLosung(""), nil
+	})
+	r.Handle("POST", "/internal/regattaleitung/setzungsverwaltung/losung", wrapHandler(setzungsVerwaltungLosungPostHandler, true))
+	r.Handle("DELETE", "/internal/regattaleitung/setzungsverwaltung/losung", wrapHandler(setzungsVerwaltungLosungDeleteHandler, true))
+	baseLayoutHandler("/internal/regattaleitung/setzungsverwaltung/aenderung", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.InternalRegattaleitungSetzungAenderung(), nil
+	})
+	r.Handle("POST", "/internal/regattaleitung/setzungsverwaltung/aenderung/rennen/{param}", wrapHandler(setzungsVerwaltungAenderungRennenPostHandler, true))
+	baseLayoutHandler("/internal/regattaleitung/setzungsverwaltung/aenderung/rennen/{param}", func(c *handler.Context) (templ.Component, error) {
+		paramStr := c.Param("param")
+		log.Println("Param: ", paramStr)
+
+		if strings.Contains(paramStr, "-") {
+			log.Println("Param is a Rennen UUID")
+			rUuid, err := uuid.Parse(paramStr)
+			if err != nil {
+				log.Println("Error: ", err)
+				templ.Handler(ui_pages.Error(404, "Rennen nicht gefunden")).ServeHTTP(c.Writer, c.Request)
+				return nil, nil
+			}
+			return ui_pages.InternalRegattaleitungSetzungAenderungRennen(rUuid), nil
+		} else {
+			log.Println("Param should be a Wettkampf String")
+			wettkampf, err := crud.WettkampfFromString(paramStr)
+			if err != nil {
+				templ.Handler(ui_pages.Error(404, "Wettkampf nicht gefunden")).ServeHTTP(c.Writer, c.Request)
+				return nil, nil
+			}
+			return ui_pages.InternalRegattaleitungSetzungAenderungRennenWahl(wettkampf), nil
+		}
+	})
+	baseLayoutHandler("/internal/regattaleitung/setzungsverwaltung/aenderung", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.InternalRegattaleitungSetzungAenderung(), nil
 	})
 	baseLayoutHandler("/internal/regattaleitung/pausen", func(c *handler.Context) (templ.Component, error) {
 		return ui_pages.InternalRegattaleitung(), nil
@@ -385,7 +418,7 @@ func wrapHandler(h handler.Handler, needAuth bool) func(http.ResponseWriter, *ht
 		middleware.Logging(),
 		middleware.CORS(),
 		middleware.RateLimit(),
-		middleware.Timeout(30 * time.Second, "Request timeout"),
+		middleware.Timeout(30*time.Second, "Request timeout"),
 	}
 
 	stack := defaultStack
@@ -554,7 +587,7 @@ func metricsPageHandler(c *handler.Context) (templ.Component, error) {
 		return nil, &handler.Error{StatusCode: 401, Message: "Nicht angemeldet"}
 	}
 
-	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (any, error) {
 		return []byte(secret), nil
 	})
 	if err != nil || !token.Valid {
@@ -678,9 +711,9 @@ func userEditNewHandler(c *handler.Context) error {
 
 func userEditNewHandlerPost(c *handler.Context) error {
 	var (
-		u *crud.User
+		u        *crud.User
 		userUuid uuid.UUID
-		err error
+		err      error
 	)
 
 	uuidStr := c.Param("uuid")
@@ -699,12 +732,12 @@ func userEditNewHandlerPost(c *handler.Context) error {
 
 	if uuidStr == "new" {
 		u = &crud.User{
-			User:      sqlc.User{
-				Uuid: userUuid,
+			User: sqlc.User{
+				Uuid:     userUuid,
 				Username: c.FormValue("username"),
 			},
 			UserGroup: &sqlc.UsersGroup{
-				Uuid:  groupUuid,
+				Uuid: groupUuid,
 			},
 		}
 		_, err = crud.CreateUser(crud.CreateUserParams{
@@ -714,7 +747,7 @@ func userEditNewHandlerPost(c *handler.Context) error {
 		})
 		if err != nil {
 			// return &handler.Error{StatusCode: 500, Message: "Error while creating user"}
-			templ.Handler(ui_components.UserEdit(*u, "Error while creating user, Err: " + err.Error())).ServeHTTP(c.Writer, c.Request)
+			templ.Handler(ui_components.UserEdit(*u, "Error while creating user, Err: "+err.Error())).ServeHTTP(c.Writer, c.Request)
 			return nil
 		}
 
@@ -726,7 +759,7 @@ func userEditNewHandlerPost(c *handler.Context) error {
 	u, err = crud.GetUser(userUuid)
 	if err != nil {
 		// return &handler.Error{StatusCode: 500, Message: "Error while creating user"}
-		templ.Handler(ui_components.UserEdit(*u, "Error while updating user, Err: " + err.Error())).ServeHTTP(c.Writer, c.Request)
+		templ.Handler(ui_components.UserEdit(*u, "Error while updating user, Err: "+err.Error())).ServeHTTP(c.Writer, c.Request)
 		return nil
 	}
 
@@ -737,13 +770,13 @@ func userEditNewHandlerPost(c *handler.Context) error {
 	})
 	if err != nil {
 		// return &handler.Error{StatusCode: 500, Message: "Error while creating user"}
-		templ.Handler(ui_components.UserEdit(*u, "Error while updating user, Err: " + err.Error())).ServeHTTP(c.Writer, c.Request)
+		templ.Handler(ui_components.UserEdit(*u, "Error while updating user, Err: "+err.Error())).ServeHTTP(c.Writer, c.Request)
 		return nil
 	}
 
-		c.Writer.Header().Set("HX-Redirect", "/internal/admin/users")
-		c.Writer.WriteHeader(http.StatusOK)
-		return nil
+	c.Writer.Header().Set("HX-Redirect", "/internal/admin/users")
+	c.Writer.WriteHeader(http.StatusOK)
+	return nil
 }
 
 func userGroupEditNewHandler(c *handler.Context) error {
@@ -770,7 +803,7 @@ func userGroupEditNewHandler(c *handler.Context) error {
 func userGroupEditNewHandlerPost(c *handler.Context) error {
 	var (
 		groupUuid uuid.UUID
-		err error
+		err       error
 	)
 
 	uuidStr := c.Param("uuid")
@@ -780,11 +813,11 @@ func userGroupEditNewHandlerPost(c *handler.Context) error {
 			return &handler.Error{StatusCode: 406, Message: "Bad Request"}
 		}
 		_, err = crud.CreateUserGroup(sqlc.CreateUserGroupParams{
-			Name: c.FormValue("name"),
-			AllowedAdmin: c.FormValue("allowed_admin") == "on",
-			AllowedZeitnahme: c.FormValue("allowed_zeitnahme") == "on",
-			AllowedStartlisten: c.FormValue("allowed_startlisten") == "on",
-			AllowedRegattabuero: c.FormValue("allowed_regattabuero") == "on",
+			Name:                  c.FormValue("name"),
+			AllowedAdmin:          c.FormValue("allowed_admin") == "on",
+			AllowedZeitnahme:      c.FormValue("allowed_zeitnahme") == "on",
+			AllowedStartlisten:    c.FormValue("allowed_startlisten") == "on",
+			AllowedRegattabuero:   c.FormValue("allowed_regattabuero") == "on",
 			AllowedRegattaleitung: c.FormValue("allowed_regattaleitung") == "on",
 		})
 		if err != nil {
@@ -796,11 +829,11 @@ func userGroupEditNewHandlerPost(c *handler.Context) error {
 			return &handler.Error{StatusCode: 406, Message: "Bad Request"}
 		}
 		err = crud.UpdateUserGroup(groupUuid, sqlc.UpdateUserGroupParams{
-			Name: c.FormValue("name"),
-			AllowedAdmin: c.FormValue("allowed_admin") == "on",
-			AllowedZeitnahme: c.FormValue("allowed_zeitnahme") == "on",
-			AllowedStartlisten: c.FormValue("allowed_startlisten") == "on",
-			AllowedRegattabuero: c.FormValue("allowed_regattabuero") == "on",
+			Name:                  c.FormValue("name"),
+			AllowedAdmin:          c.FormValue("allowed_admin") == "on",
+			AllowedZeitnahme:      c.FormValue("allowed_zeitnahme") == "on",
+			AllowedStartlisten:    c.FormValue("allowed_startlisten") == "on",
+			AllowedRegattabuero:   c.FormValue("allowed_regattabuero") == "on",
 			AllowedRegattaleitung: c.FormValue("allowed_regattaleitung") == "on",
 		})
 		if err != nil {
@@ -870,5 +903,103 @@ func drvUploadPostHandler(c *handler.Context) error {
 	}
 
 	templ.Handler(ui_pages.InternalRegattaleitungDrvFileUpload("Upload erfolgreich!")).ServeHTTP(c.Writer, c.Request)
+	return nil
+}
+
+func setzungsVerwaltungLosungPostHandler(c *handler.Context) error {
+	err := api_v1.SetzungsLosung(c)
+	if err != nil {
+		templ.Handler(ui_pages.InternalRegattaleitungSetzungLosung(fmt.Sprintf("Ein Fehler ist aufgetreten: %s", err.Error()))).ServeHTTP(c.Writer, c.Request)
+		return nil
+	}
+	templ.Handler(ui_pages.InternalRegattaleitungSetzungLosung("Losung erfolgreich!")).ServeHTTP(c.Writer, c.Request)
+	return nil
+}
+
+func setzungsVerwaltungLosungDeleteHandler(c *handler.Context) error {
+	err := api_v1.ResetSetzung(c)
+	if err != nil {
+		templ.Handler(ui_pages.InternalRegattaleitungSetzungLosung(fmt.Sprintf("Ein Fehler ist aufgetreten: %s", err.Error()))).ServeHTTP(c.Writer, c.Request)
+		return nil
+	}
+	templ.Handler(ui_pages.InternalRegattaleitungSetzungLosung("Setzung erfolgreich zurückgesetzt!")).ServeHTTP(c.Writer, c.Request)
+	return nil
+}
+
+func setzungsVerwaltungAenderungRennenPostHandler(c *handler.Context) error {
+	var (
+		err   error
+		rUuid uuid.UUID
+		rennen crud.Rennen
+	)
+
+	rUuid, err = uuid.Parse(c.Param("param"))
+	if err != nil {
+		c.Writer.Header().Set("HX-Retarget", "#toast-container")
+		c.Writer.Header().Set("HX-Swap", "beforeend")
+		templ.Handler(ui_components.Toast("404 - Rennen nicht gefunden", ui_components.Error)).ServeHTTP(c.Writer, c.Request)
+		return nil
+	}
+
+	rennen, err = crud.GetRennen(rUuid)
+	if err != nil {
+		c.Writer.Header().Set("HX-Retarget", "#toast-container")
+		c.Writer.Header().Set("HX-Swap", "beforeend")
+		templ.Handler(ui_components.Toast("404 - Rennen nicht gefunden", ui_components.Error)).ServeHTTP(c.Writer, c.Request)
+		return nil
+	}
+
+	payloadStr := c.FormValue("params")
+	payload := make(map[string]any)
+	err = json.Unmarshal([]byte(payloadStr), &payload)
+	if err != nil {
+		c.Writer.Header().Set("HX-Retarget", "#toast-container")
+		c.Writer.Header().Set("HX-Swap", "beforeend")
+		templ.Handler(ui_components.Toast("406 - Invalid JSON", ui_components.Error)).ServeHTTP(c.Writer, c.Request)
+		return nil
+	}
+
+	meldOrderLs := payload["order"].([]any)
+	abteilungParam := payload["abteilung"]
+	if abteilungParam == nil {
+		c.Writer.Header().Set("HX-Retarget", "#toast-container")
+		c.Writer.Header().Set("HX-Swap", "beforeend")
+		templ.Handler(ui_components.Toast("406 - Abteilung nicht gefunden", ui_components.Error)).ServeHTTP(c.Writer, c.Request)
+		return nil
+	}
+	targetAbteilung := int32(abteilungParam.(float64))
+
+	for i, m := range meldOrderLs {
+		mUuid, err := uuid.Parse(m.(string))
+		if err != nil {
+			c.Writer.Header().Set("HX-Retarget", "#toast-container")
+			c.Writer.Header().Set("HX-Swap", "beforeend")
+			templ.Handler(ui_components.Toast("406 - Invalid UUID", ui_components.Error)).ServeHTTP(c.Writer, c.Request)
+			return nil
+		}
+
+		for _, meldung := range rennen.Meldungen {
+			if meldung.Uuid == mUuid {
+				bahn := int32(i) + 1
+
+				err = crud.UpdateMeldungSetzung(sqlc.UpdateMeldungSetzungParams{
+					Uuid:      meldung.Uuid,
+					Abteilung: targetAbteilung,
+					Bahn:      bahn,
+				})
+				if err != nil {
+					c.Writer.Header().Set("HX-Retarget", "#toast-container")
+					c.Writer.Header().Set("HX-Swap", "beforeend")
+					templ.Handler(ui_components.Toast("500 - Error while updating meldung setzung", ui_components.Error)).ServeHTTP(c.Writer, c.Request)
+					return nil
+				}
+				continue
+			}
+		}
+	}
+
+	c.Writer.Header().Set("HX-Retarget", "#toast-container")
+	c.Writer.Header().Set("HX-Swap", "beforeend")
+	templ.Handler(ui_components.Toast("Setzung erfolgreich!", ui_components.Success)).ServeHTTP(c.Writer, c.Request)
 	return nil
 }

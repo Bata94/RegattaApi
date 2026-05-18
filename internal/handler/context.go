@@ -30,8 +30,19 @@ type statusResponseWriter struct {
 }
 
 func (s *statusResponseWriter) WriteHeader(code int) {
+	if s.headersWritten {
+		return
+	}
 	s.headersWritten = true
 	s.ResponseWriter.WriteHeader(code)
+}
+
+// Write marks headersWritten and delegates to underlying writer
+func (s *statusResponseWriter) Write(b []byte) (int, error) {
+	if !s.headersWritten {
+		s.headersWritten = true
+	}
+	return s.ResponseWriter.Write(b)
 }
 
 func (s *statusResponseWriter) HeadersWritten() bool {
@@ -122,13 +133,11 @@ func (c *Context) JSON(data any) error {
 
 func (c *Context) JSONOk(data any) error {
 	c.Writer.Header().Set("Content-Type", "application/json")
-	c.Writer.WriteHeader(http.StatusOK)
 	return json.NewEncoder(c.Writer).Encode(data)
 }
 
 func (c *Context) Status(code int) *Context {
 	c.statusCode = code
-	c.Writer.WriteHeader(code)
 	return c
 }
 

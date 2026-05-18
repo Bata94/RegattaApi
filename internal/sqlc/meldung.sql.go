@@ -464,9 +464,12 @@ func (q *Queries) GetMeldungMinimal(ctx context.Context, argUuid uuid.UUID) (Mel
 }
 
 const setMeldungRechnungsNummer = `-- name: SetMeldungRechnungsNummer :exec
-UPDATE meldung
-SET rechnungs_nummer = $2
-WHERE uuid = $1
+UPDATE
+  meldung
+SET
+  rechnungs_nummer = $2
+WHERE
+  uuid = $1
 `
 
 type SetMeldungRechnungsNummerParams struct {
@@ -480,7 +483,7 @@ func (q *Queries) SetMeldungRechnungsNummer(ctx context.Context, arg SetMeldungR
 }
 
 const ummeldung = `-- name: Ummeldung :exec
-UPDATE 
+UPDATE
   link_meldung_athlet
 SET
   athlet_uuid = $4
@@ -508,9 +511,13 @@ func (q *Queries) Ummeldung(ctx context.Context, arg UmmeldungParams) error {
 }
 
 const updateMeldungSetzung = `-- name: UpdateMeldungSetzung :exec
-UPDATE meldung
-SET abteilung = $2, bahn = $3
-WHERE uuid = $1
+UPDATE
+  meldung
+SET
+  abteilung = $2,
+  bahn = $3
+WHERE
+  uuid = $1
 `
 
 type UpdateMeldungSetzungParams struct {

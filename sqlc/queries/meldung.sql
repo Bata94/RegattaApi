@@ -86,7 +86,7 @@ SELECT uuid, abteilung, bahn FROM meldung
 WHERE abteilung != 0 AND bahn != 0 LIMIT 1;
 
 -- name: Ummeldung :exec
-UPDATE 
+UPDATE
   link_meldung_athlet
 SET
   athlet_uuid = $4
@@ -106,14 +106,21 @@ WHERE
   uuid = $1;
 
 -- name: SetMeldungRechnungsNummer :exec
-UPDATE meldung
-SET rechnungs_nummer = $2
-WHERE uuid = $1;
+UPDATE
+  meldung
+SET
+  rechnungs_nummer = $2
+WHERE
+  uuid = $1;
 
 -- name: UpdateMeldungSetzung :exec
-UPDATE meldung
-SET abteilung = $2, bahn = $3
-WHERE uuid = $1;
+UPDATE
+  meldung
+SET
+  abteilung = $2,
+  bahn = $3
+WHERE
+  uuid = $1;
 
 -- name: UpdateStartNummer :exec
 UPDATE meldung

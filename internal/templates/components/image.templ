@@ -199,5 +199,8 @@ templ RawImageComponent(src, alt string, c ImageOptions) {
     class={c.ClassImage}
     width={c.Width}
     height={c.Height}
+    if c.LazyLoading {
+      loading="lazy"
+    }
   />
 }

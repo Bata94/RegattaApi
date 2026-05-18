@@ -1,0 +1,525 @@
+package ui_pages
+
+import "github.com/bata94/RegattaApi/internal/templates/components"
+import "github.com/bata94/RegattaApi/internal/crud"
+import "github.com/bata94/RegattaApi/internal/sqlc"
+import "github.com/google/uuid"
+import "fmt"
+
+script setzungDragDropCreateNewColumn() {
+  var container = document.getElementById('sortable-container');
+  var num = parseInt(container.getAttribute('data-next-abteilung'), 10) || 2;
+  var col = document.createElement('div');
+  col.className = 'flex flex-col gap-2 min-w-[250px] flex-shrink-0';
+  col.innerHTML = '<div class="font-bold text-center bg-base-200 rounded py-1">Abteilung ' + num + '</div>';
+  var ul = document.createElement('ul');
+  ul.id = 'sortable-list-' + num;
+  ul.setAttribute('data-abteilung', num);
+  ul.className = 'flex flex-col gap-2 min-h-[300px] border border-gray-300 rounded p-2 bg-base-100';
+  var ph = document.createElement('li');
+  ph.className = 'h-14 border-2 border-dashed border-gray-300 rounded bg-base-200/30 list-none';
+  ul.appendChild(ph);
+  col.appendChild(ul);
+  container.appendChild(col);
+  container.setAttribute('data-next-abteilung', num + 1);
+}
+
+script setzungDragDropInit() {
+  var container = document.getElementById('sortable-container');
+  var url = container.getAttribute('data-update-url');
+  var draggingEl = null;
+  var sourceUl = null;
+  var placeholder = document.createElement('li');
+  placeholder.className = 'draggable-item placeholder-item border border-dashed border-base-content/30 bg-base-300/50';
+  placeholder.style.height = '2.5em';
+  placeholder.style.listStyle = 'none';
+
+  function getTargetList(evt) {
+    return evt.target.closest('ul[data-abteilung]');
+  }
+
+  function getDraggableItem(evt) {
+    return evt.target.closest('.draggable-item:not(.placeholder-item)');
+  }
+
+  function createNewColumn(num) {
+    var col = document.createElement('div');
+    col.className = 'flex flex-col gap-2 min-w-[250px] flex-shrink-0';
+    col.innerHTML = '<div class="font-bold text-center bg-base-200 rounded py-1">Abteilung ' + num + '</div>';
+    var ul = document.createElement('ul');
+    ul.id = 'sortable-list-' + num;
+    ul.setAttribute('data-abteilung', num);
+    ul.className = 'flex flex-col gap-2 min-h-[300px] border border-gray-300 rounded p-2 bg-base-100';
+    var ph = document.createElement('li');
+    ph.className = 'h-14 border-2 border-dashed border-gray-300 rounded bg-base-200/30 list-none';
+    ul.appendChild(ph);
+    col.appendChild(ul);
+    container.appendChild(col);
+  }
+
+  container.addEventListener('dragstart', function(e) {
+    var item = getDraggableItem(e);
+    if (!item) return;
+    draggingEl = item;
+    sourceUl = item.closest('ul[data-abteilung]');
+    placeholderIndex = -1;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(function() { item.style.display = 'none'; }, 0);
+  });
+
+  container.addEventListener('dragend', function(e) {
+    if (draggingEl) draggingEl.style.display = '';
+    draggingEl = null;
+    sourceUl = null;
+    var ph = container.querySelector('.placeholder-item');
+    if (ph && ph.parentNode) ph.remove();
+  });
+
+  var placeholderIndex = -1;
+
+  container.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    if (!draggingEl) return;
+    var targetUl = getTargetList(e);
+    if (!targetUl) return;
+    var targetItem = getDraggableItem(e);
+    if (targetItem && targetItem !== draggingEl) {
+      var rect = targetItem.getBoundingClientRect();
+      var mouseY = e.clientY - rect.top;
+      if (mouseY < rect.height / 2) {
+        targetUl.insertBefore(placeholder, targetItem);
+        placeholderIndex = Array.from(targetUl.children).indexOf(placeholder);
+      } else {
+        var next = targetItem.nextSibling;
+        if (next && next !== placeholder) {
+          targetUl.insertBefore(placeholder, next);
+        } else {
+          targetUl.appendChild(placeholder);
+        }
+        placeholderIndex = Array.from(targetUl.children).indexOf(placeholder);
+      }
+    } else if (!targetItem) {
+      var hasItems = targetUl.querySelectorAll('.draggable-item:not(.placeholder-item)').length > 0;
+      if (!hasItems || targetUl.children.length === 0) {
+        if (placeholder.parentNode !== targetUl) targetUl.appendChild(placeholder);
+        placeholderIndex = Array.from(targetUl.children).indexOf(placeholder);
+      }
+    }
+  });
+
+  container.addEventListener('drop', function(e) {
+    e.preventDefault();
+    if (!draggingEl) return;
+    var targetUl = getTargetList(e);
+    if (!targetUl) return;
+    var dashed = targetUl.querySelector('.border-dashed');
+    if (dashed) dashed.remove();
+    if (placeholder.parentNode) placeholder.parentNode.removeChild(placeholder);
+    if (sourceUl && sourceUl !== targetUl) {
+      var parent = draggingEl.parentElement;
+      if (parent) parent.removeChild(draggingEl);
+    }
+    if (placeholderIndex >= 0 && placeholderIndex < targetUl.children.length) {
+      targetUl.insertBefore(draggingEl, targetUl.children[placeholderIndex]);
+    } else {
+      targetUl.appendChild(draggingEl);
+    }
+    if (draggingEl.style.display === 'none') draggingEl.style.display = '';
+    var order = Array.from(targetUl.querySelectorAll('.draggable-item:not(.placeholder-item)')).map(function(li) {
+      return li.getAttribute('data-id');
+    });
+    var abteilung = targetUl.getAttribute('data-abteilung');
+    var form = document.createElement('form');
+    form.style.display = 'none';
+    form.setAttribute('hx-post', url);
+    form.setAttribute('hx-target', '#toast-container');
+    form.setAttribute('hx-swap', 'beforeend');
+    form.setAttribute('hx-vals', JSON.stringify({'params':{'order': order, 'abteilung': parseInt(abteilung, 10)}}));
+    document.body.appendChild(form);
+    htmx.process(form);
+    htmx.trigger(form, 'submit');
+    setTimeout(function() {
+      document.body.removeChild(form);
+      var nextNum = parseInt(abteilung, 10) + 1;
+      if (!document.querySelector('ul[data-abteilung="' + nextNum + '"]')) createNewColumn(nextNum);
+    }, 100);
+  });
+}
+
+templ InternalRegattaleitungSetzung() {
+  {{
+    breadcrumbs := []ui_components.BreadcrumbsEntries{
+      ui_components.BreadcrumbsEntries{
+        Title: "Home",
+        Paths: "/",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Internes",
+        Paths: "/internal",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Regattaleitung",
+        Paths: "/internal/regattaleitung",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Setzungsverwaltung",
+        Paths: "/internal/regattaleitung/setzungsverwaltung",
+      },
+    }
+  }}
+  @ui_components.Breadcrumbs(breadcrumbs)
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Setzungsverwaltung")
+    @ui_components.PageHeaderSubtext("")
+
+    @ui_components.InternalNavBtnGrid([]ui_components.InternalNavBtnParams{
+      {Name: "Setzungslosung", Desc: "Auslosung der Abteilungen nach dem Meldeschluss", URL: "/internal/regattaleitung/setzungsverwaltung/losung"},
+      {Name: "Setzungsänderung", Desc: "Anpassen von Rennsetzungen indem z.B. mehrfach der gleiche Verein gegeneinander fährt", URL: "/internal/regattaleitung/setzungsverwaltung/aenderung"},
+    })
+  }
+}
+
+templ InternalRegattaleitungSetzungLosung(msg string) {
+  {{
+    breadcrumbs := []ui_components.BreadcrumbsEntries{
+      ui_components.BreadcrumbsEntries{
+        Title: "Home",
+        Paths: "/",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Internes",
+        Paths: "/internal",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Regattaleitung",
+        Paths: "/internal/regattaleitung",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Setzungsverwaltung",
+        Paths: "/internal/regattaleitung/setzungsverwaltung",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Setzungslosung",
+        Paths: "/internal/regattaleitung/setzungsverwaltung/losung",
+      },
+    }
+  }}
+  @ui_components.Breadcrumbs(breadcrumbs)
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Setzungslosung")
+    @ui_components.PageHeaderSubtext("Hier kannst du die Setzungslosung durchführen.")
+
+    if msg != "" {
+      <div class="w-full mb-4">
+        <h4 class="text-error !m-0 !p-0">{msg}</h4>
+      </div>
+    }
+
+    <div
+      class="bg-red-500/70 text-white font-bold text-lg p-4 rounded-md w-fit mx-auto"
+    >
+       Achtung!!! <br />
+       Diese Funktion kann nur einmal ausgeführt werden. Sollte eine erneute Losung nötig sein, muss die alte zunächst zurückgesetzt werden! <br />
+       Nach dem Zurücksetzen sind alle bisherigen Setzungsänderungen unwiderruflich verloren!
+    </div>
+
+    <div class="md:w-4/5 mx-auto flex flex-col md:flex-row md:justify-between">
+      <form
+        class="w-fit"
+        hx-post="/internal/regattaleitung/setzungsverwaltung/losung"
+        hx-target="main"
+      >
+        <div class="w-fit mx-auto">
+          @ui_components.SubmitButton("Losung durchführen", ui_components.Warning)
+        </div>
+      </form>
+
+      <form
+        class="w-fit"
+        hx-delete="/internal/regattaleitung/setzungsverwaltung/losung"
+        hx-target="main"
+      >
+        <div class="w-fit mx-auto">
+          @ui_components.SubmitButton("Losung zurücksetzen", ui_components.Error)
+        </div>
+      </form>
+    </div>
+  }
+}
+
+templ InternalRegattaleitungSetzungAenderung() {
+  {{
+    breadcrumbs := []ui_components.BreadcrumbsEntries{
+      ui_components.BreadcrumbsEntries{
+        Title: "Home",
+        Paths: "/",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Internes",
+        Paths: "/internal",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Regattaleitung",
+        Paths: "/internal/regattaleitung",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Setzungsverwaltung",
+        Paths: "/internal/regattaleitung/setzungsverwaltung",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Setzungsänderung",
+        Paths: "/internal/regattaleitung/setzungsverwaltung/aenderung",
+      },
+    }
+  }}
+  @ui_components.Breadcrumbs(breadcrumbs)
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Setzungsänderung")
+    @ui_components.PageHeaderSubtext("Ein Rennenwählen um Setzung zu ändern. Es werden nur Rennen mit mindestens einer Meldung angezeigt.")
+
+    <div
+      id="rennen-wahl"
+      class="w-full h-full "
+    >
+      <!-- name of each tab group should be unique -->
+      <div class="tabs tabs-box w-full">
+        <input type="radio" name="my_tabs_6" class="tab" aria-label="Langstrecke" checked="checked" />
+        <div
+          class="tab-content bg-base-100 border-base-300 !px-2 !py-0 !m-0"
+          hx-get="/internal/regattaleitung/setzungsverwaltung/aenderung/rennen/langstrecke"
+          hx-trigger="intersect once"
+          hx-target="#tab-content-langstrecke"
+          hx-swap="outerHTML"
+        >
+          <div id="tab-content-langstrecke" class="w-full h-full flex flex-row justify-center items-center">
+            <span class="loading loading-spinner loading-xl"/>
+          </div>
+        </div>
+
+        <input type="radio" name="my_tabs_6" class="tab" aria-label="Slalom" />
+        <div
+          class="tab-content bg-base-100 border-base-300 !px-2 !py-0 !m-0"
+          hx-get="/internal/regattaleitung/setzungsverwaltung/aenderung/rennen/slalom"
+          hx-trigger="intersect once"
+          hx-target="#tab-content-slalom"
+          hx-swap="outerHTML"
+        >
+          <div id="tab-content-slalom" class="w-full h-full flex flex-row justify-center items-center">
+            <span class="loading loading-spinner loading-xl"/>
+          </div>
+        </div>
+
+        <input type="radio" name="my_tabs_6" class="tab" aria-label="Kurzstrecke" />
+        <div
+          class="tab-content bg-base-100 border-base-300 !px-2 !py-0 !m-0"
+          hx-get="/internal/regattaleitung/setzungsverwaltung/aenderung/rennen/kurzstrecke"
+          hx-trigger="intersect once"
+          hx-target="#tab-content-kurzstrecke"
+          hx-swap="outerHTML"
+        >
+          <div id="tab-content-kurzstrecke" class="w-full h-full flex flex-row justify-center items-center">
+            <span class="loading loading-spinner loading-xl"/>
+          </div>
+        </div>
+
+        <input type="radio" name="my_tabs_6" class="tab" aria-label="Staffel" />
+        <div
+          class="tab-content bg-base-100 border-base-300 !px-2 !py-0 !m-0"
+          hx-get="/internal/regattaleitung/setzungsverwaltung/aenderung/rennen/staffel"
+          hx-trigger="intersect once"
+          hx-target="#tab-content-staffel"
+          hx-swap="outerHTML"
+        >
+          <div id="tab-content-staffel" class="w-full h-full flex flex-row justify-center items-center">
+            <span class="loading loading-spinner loading-xl"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+}
+
+templ InternalRegattaleitungSetzungAenderungRennenWahl(wettkampf sqlc.Wettkampf) {
+  {{
+    rennen, err := crud.GetAllRennen(crud.GetAllRennenParams{
+      GetMeldungen:  false,
+      ShowEmpty:     false,
+      ShowStarted:   true,
+      ShowWettkampf: sqlc.NullWettkampf{Wettkampf: wettkampf, Valid: true},
+    })
+  }}
+  if err != nil {
+    @ui_components.ErrorBody(404, err.Error())
+    {{return}}
+  }
+
+  <div
+    class=""
+  >
+    for _, r := range rennen {
+      if *r.NumMeldungen != 0 {
+        <div
+          class="card w-full bg-base-100 card-sm shadow-sm !m-0 !p-0 !my-4 cursor-pointer"
+          hx-get={fmt.Sprintf("/internal/regattaleitung/setzungsverwaltung/aenderung/rennen/%s", r.Uuid)}
+          hx-target="main"
+          hx-swap="innerHTML"
+          hx-push-url="true"
+        >
+          <div class="card-body !px-4 !m-0">
+            <h2 class="card-title !m-0 !mt-1 !p-0">{r.Nummer} - {r.BezeichnungLang}</h2>
+            <p class="card-text !m-0 !p-0">
+              {*r.NumMeldungen}
+              if *r.NumMeldungen > 1 {
+                Meldungen
+              } else {
+                Meldung
+              }
+               in
+              {*r.NumAbteilungen}
+              if *r.NumAbteilungen > 1 {
+                Abteilungen
+              } else {
+                Abteilung
+              }
+            </p>
+          </div>
+        </div>
+      } else {
+        <div class="card w-full bg-base-100 card-sm shadow-sm !m-0 !p-0 !my-4 cursor-not-allowed">
+          <div class="card-body !px-4 !m-0">
+            <h2 class="card-title !m-0 !mt-1 !p-0 line-through decoration-1">{r.Nummer} - {r.BezeichnungLang}</h2>
+          </div>
+        </div>
+      }
+    }
+  </div>
+}
+
+templ InternalRegattaleitungSetzungAenderungRennen(rennId uuid.UUID) {
+  {{
+    rennen, err := crud.GetRennen(rennId)
+    dragDropUpdateUrl := fmt.Sprintf("/internal/regattaleitung/setzungsverwaltung/aenderung/rennen/%s", rennId)
+
+    breadcrumbs := []ui_components.BreadcrumbsEntries{
+      ui_components.BreadcrumbsEntries{
+        Title: "Home",
+        Paths: "/",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Internes",
+        Paths: "/internal",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Regattaleitung",
+        Paths: "/internal/regattaleitung",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Setzungsverwaltung",
+        Paths: "/internal/regattaleitung/setzungsverwaltung",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Setzungsänderung",
+        Paths: "/internal/regattaleitung/setzungsverwaltung/aenderung",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Rennen anpassen",
+        Paths: "",
+      },
+    }
+  }}
+  if err != nil {
+    @ui_components.ErrorBody(404, err.Error())
+    {{return}}
+  }
+
+  @ui_components.Breadcrumbs(breadcrumbs)
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader(fmt.Sprintf("Setzung für %s - %s", rennen.Nummer, rennen.BezeichnungLang))
+
+    {{
+      numAbteilungen := *rennen.NumAbteilungen + 1
+      type abteilungData struct {
+        nummer    int
+        meldungen []crud.Meldung
+        isLast    bool
+      }
+      abteilungen := make([]abteilungData, numAbteilungen)
+      for i := range abteilungen {
+        abteilungen[i].nummer = i + 1
+        abteilungen[i].isLast = i == numAbteilungen-1
+        for _, m := range rennen.Meldungen {
+          if m.Abteilung == int32(i+1) {
+            abteilungen[i].meldungen = append(abteilungen[i].meldungen, m)
+          }
+        }
+      }
+    }}
+
+    <div id="sortable-container" data-update-url={dragDropUpdateUrl} data-next-abteilung={numAbteilungen + 1} class="flex flex-row gap-4 overflow-x-auto py-4 mt-2">
+      for _, abt := range abteilungen {
+        <div class="flex flex-col gap-2 w-3/5 md:w-100 xl:w-3/10 flex-shrink-0">
+          <div class="font-bold text-center bg-base-200 rounded py-1">Abteilung {abt.nummer}</div>
+          <ul
+            id={fmt.Sprintf("sortable-list-%d", abt.nummer)}
+            data-abteilung={abt.nummer}
+            class="flex flex-col gap-2 min-h-[300px] border border-gray-300 rounded p-2 bg-base-100"
+          >
+            for _, m := range abt.meldungen {
+              @meldungDragDropEntry(m)
+            }
+            if abt.isLast {
+              <li class="h-14 border-2 border-dashed border-gray-300 rounded bg-base-200/30 list-none"></li>
+            }
+          </ul>
+        </div>
+      }
+    </div>
+    @setzungDragDropInit()
+  }
+}
+
+templ meldungDragDropEntry(m crud.Meldung) {
+  {{
+    teilnehmerStr := ""
+    for _, a := range m.Athleten {
+      if *a.Rolle == sqlc.RolleTrainer {
+        continue
+      }
+
+      if teilnehmerStr != "" {
+        teilnehmerStr += ", "
+      }
+
+      if *a.Rolle == sqlc.RolleStm {
+        teilnehmerStr += fmt.Sprintf("Stm.: %s %s (%s)", a.Vorname, a.Name, a.Jahrgang)
+      } else {
+        teilnehmerStr += fmt.Sprintf("%s %s (%s)", a.Vorname, a.Name, a.Jahrgang)
+      }
+    }
+  }}
+
+  <li
+    class="draggable-item list-none border border-mrgblau rounded-md shadow-md !mx-0 !my-2 !p-2 cursor-grab hover:bg-neutral-focus transition-colors duration-150"
+    draggable="true"
+    data-id={m.Uuid.String()}
+    hx-post={fmt.Sprintf("/internal/regattaleitung/setzungsverwaltung/aenderung/rennen/%s", m.RennenUuid)}
+    hx-target="#toast-container"
+    hx-swap="beforeend"
+  >
+    <span
+      class="icon"
+    >
+      <i
+        class="fas fa-grip-vertical"
+      >
+      </i>
+    </span>
+
+    <h4 class="!m-0 !p-0">
+      {m.StartNummer} - {m.Verein.Name}
+    </h4>
+    <p class="text-sm !p-0 !m-0">
+      {teilnehmerStr}
+    </p>
+  </li>
+}

@@ -1,5 +1,7 @@
 package ui_components
 
+import "fmt"
+
 type BreadcrumbsEntries struct {
   Title string
   Paths string
@@ -9,15 +11,19 @@ templ Breadcrumbs(entries []BreadcrumbsEntries) {
   <div class="breadcrumbs text-sm !m-0 !p-4">
     <ul class="!m-0 !p-0">
       for _, e := range entries {
-        <li>
-          <a
-            hx-boost="true"
-            hx-get={e.Paths}
-            hx-target="main"
-            hx-push-url="true"
-            href={e.Paths}
-          >{e.Title}</a>
-        </li>
+        if e.Paths == "" {
+          <li>{e.Title}</li>
+        } else {
+          <li>
+            <a
+              hx-boost="true"
+              hx-get={e.Paths}
+              hx-target="main"
+              hx-push-url="true"
+              href={e.Paths}
+            >{e.Title}</a>
+          </li>
+        }
       }
     </ul>
   </div>
@@ -46,5 +52,45 @@ templ InternalPageDivCol() {
 templ LandingPageDivCol() {
   <div class="w-full flex flex-col pt-10 pb-4 px-2 md:px-6 lg:px-12">
     { children... }
+  </div>
+}
+
+script toastRemove(id string) {
+  var el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+templ Toast(msg string, color InputColor) {
+  {{
+    var alertColor string
+
+    switch color {
+    case Primary:
+      alertColor = "alert-primary"
+    case Secondary:
+      alertColor = "alert-secondary"
+    case Success:
+      alertColor = "alert-success"
+    case Error:
+      alertColor = "alert-error"
+    case Warning:
+      alertColor = "alert-warning"
+    case Info:
+      alertColor = "alert-info"
+    case Mrgblau:
+      alertColor = "alert-mrgblau"
+    default:
+      alertColor = "alert-ghost"
+    }
+
+    alertColor = fmt.Sprintf("alert %s", alertColor)
+  }}
+
+  <div class={"alert " + alertColor + " flex flex-row justify-between items-center gap-2"}>
+    <span>{msg}</span>
+    <button
+      class="btn btn-sm btn-circle btn-ghost"
+      onclick="this.parentElement.remove()"
+    >✕</button>
   </div>
 }

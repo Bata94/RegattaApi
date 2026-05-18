@@ -787,7 +787,10 @@ func shuffle(array []crud.Meldung) []crud.Meldung {
 }
 
 func SetzungsLosung(c *handler.Context) error {
+	fmt.Println("Setzungslosung!")
 	check, err := crud.CheckMeldungSetzung()
+	fmt.Println("Check:", check)
+	fmt.Println("Err:", err)
 	if err != nil {
 		return err
 	}
@@ -802,6 +805,7 @@ func SetzungsLosung(c *handler.Context) error {
 		ShowWettkampf: sqlc.NullWettkampf{},
 	})
 	if err != nil {
+		fmt.Println("GetAllRennen Error:", err)
 		return err
 	}
 
@@ -816,12 +820,17 @@ func SetzungsLosung(c *handler.Context) error {
 				Bahn:      m.Bahn,
 			})
 			if err != nil {
+				fmt.Println("UpdateMeldungSetzung Error:", err)
 				return err
 			}
 		}
 	}
 
-	return c.JSON("Setzung erfolgreich!")
+	if c.Request.Header.Get("HX-Request") == "true" {
+		return nil
+	} else {
+		return c.JSON("Setzung erfolgreich!")
+	}
 }
 
 func ResetSetzung(c *handler.Context) error {
@@ -841,7 +850,11 @@ func ResetSetzung(c *handler.Context) error {
 		}
 	}
 
-	return c.JSON("Reset erfolgreich!")
+	if c.Request.Header.Get("HX-Request") == "true" {
+		return nil
+	} else {
+		return c.JSON("Losung erfolgreich!")
+	}
 }
 
 func SetStartnummern(c *handler.Context) error {

@@ -8,7 +8,7 @@ const (
   Primary InputColor = iota
   Secondary
   Success
-  Danger
+  Error
   Warning
   Info
   Mrgblau
@@ -25,8 +25,8 @@ templ SubmitButton(text string, color InputColor) {
       btnColor = "btn-secondary"
     case Success:
       btnColor = "btn-success"
-    case Danger:
-      btnColor = "btn-danger"
+    case Error:
+      btnColor = "btn-error"
     case Warning:
       btnColor = "btn-warning"
     case Info:
@@ -37,7 +37,7 @@ templ SubmitButton(text string, color InputColor) {
       btnColor = "btn-ghost"
     }
   }}
-  <div class="form-control mt-6 w-full">
+  <div class="form-control mt-6 !w-fit">
     <button type="submit" class={fmt.Sprintf("btn %s", btnColor)}>
       {text}
       <span class="htmx-indicator loading loading-spinner loading-md"></span>

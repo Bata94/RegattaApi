@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log"
 	"os"
 	"strings"
 
@@ -25,6 +26,7 @@ func Auth() Middleware {
 			}
 
 			if tokenString == "" {
+				log.Printf("Auth middleware: missing token for %s %s", c.Method(), c.Path())
 				return &handler.Error{StatusCode: 401, Message: "Missing authentication token"}
 			}
 
@@ -37,6 +39,7 @@ func Auth() Middleware {
 			})
 
 			if err != nil || !token.Valid {
+				log.Printf("Auth middleware: invalid token for %s %s: %v", c.Method(), c.Path(), err)
 				return &handler.Error{StatusCode: 401, Message: "Invalid or expired token"}
 			}
 
