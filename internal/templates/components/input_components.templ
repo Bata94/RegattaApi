@@ -1,0 +1,62 @@
+package ui_components
+
+import "fmt"
+
+type InputColor int
+
+const (
+  Primary InputColor = iota
+  Secondary
+  Success
+  Danger
+  Warning
+  Info
+  Mrgblau
+)
+
+templ SubmitButton(text string, color InputColor) {
+  {{
+    var btnColor string
+
+    switch color {
+    case Primary:
+      btnColor = "btn-primary"
+    case Secondary:
+      btnColor = "btn-secondary"
+    case Success:
+      btnColor = "btn-success"
+    case Danger:
+      btnColor = "btn-danger"
+    case Warning:
+      btnColor = "btn-warning"
+    case Info:
+      btnColor = "btn-info"
+    case Mrgblau:
+      btnColor = "btn-mrgblau"
+    default:
+      btnColor = "btn-ghost"
+    }
+  }}
+  <div class="form-control mt-6 w-full">
+    <button type="submit" class={fmt.Sprintf("btn %s", btnColor)}>
+      {text}
+      <span class="htmx-indicator loading loading-spinner loading-md"></span>
+    </button>
+  </div>
+}
+
+templ FileUpload(name, label string, required bool) {
+  <div class="form-control mb-6 w-full">
+    <label class="label">
+      <span class="label-text">{label}</span>
+    </label>
+    <input
+      type="file"
+      name={name}
+      class="file-input file-input-bordered w-full"
+      if required {
+        required
+      }
+    />
+  </div>
+}

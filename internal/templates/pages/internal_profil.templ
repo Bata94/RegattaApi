@@ -134,12 +134,7 @@ templ ChangePasswordDialogBody(u crud.User, msg string) {
         </label>
       </div>
 
-      <div class="form-control mt-6 w-full">
-        <button type="submit" class="btn btn-primary mx-auto">
-          Speichern
-          <span class="htmx-indicator loading loading-spinner loading-md"></span>
-        </button>
-      </div>
-      </form>
+      @ui_components.SubmitButton("Speichern", ui_components.Success)
+    </form>
   </div>
 }

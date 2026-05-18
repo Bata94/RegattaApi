@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -225,6 +226,7 @@ func GetRouter() http.Handler {
 
 		return ui_pages.InternalIndex(capabilities), nil
 	})
+
 	baseLayoutHandler("/internal/profil", func(c *handler.Context) (templ.Component, error) {
 		return getProfilePage(c)
 	})
@@ -233,18 +235,51 @@ func GetRouter() http.Handler {
 	baseLayoutHandler("/internal/zeitnahme", func(c *handler.Context) (templ.Component, error) {
 		return ui_pages.InternalZeitnahme(), nil
 	})
+
 	baseLayoutHandler("/internal/startlisten", func(c *handler.Context) (templ.Component, error) {
 		return ui_pages.InternalStartlisten(), nil
 	})
+
 	baseLayoutHandler("/internal/regattabuero", func(c *handler.Context) (templ.Component, error) {
 		return ui_pages.InternalRegattabuero(), nil
 	})
+
 	baseLayoutHandler("/internal/regattaleitung", func(c *handler.Context) (templ.Component, error) {
 		return ui_pages.InternalRegattaleitung(), nil
 	})
+	baseLayoutHandler("/internal/regattaleitung/drvupload", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.InternalRegattaleitungDrvFileUpload(""), nil
+  })
+	r.Handle("POST", "/internal/regattaleitung/drvupload", wrapHandler(drvUploadPostHandler, true))
+	baseLayoutHandler("/internal/regattaleitung/setzungslosung", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.InternalRegattaleitung(), nil
+	})
+	baseLayoutHandler("/internal/regattaleitung/setzungsaenderung", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.InternalRegattaleitung(), nil
+	})
+	baseLayoutHandler("/internal/regattaleitung/pausen", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.InternalRegattaleitung(), nil
+	})
+	baseLayoutHandler("/internal/regattaleitung/zeitplan", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.InternalRegattaleitung(), nil
+	})
+	baseLayoutHandler("/internal/regattaleitung/startnummern", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.InternalRegattaleitung(), nil
+	})
+	baseLayoutHandler("/internal/regattaleitung/pdf_meldeergebnis", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.InternalRegattaleitung(), nil
+	})
+	baseLayoutHandler("/internal/regattaleitung/vereine", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.InternalRegattaleitung(), nil
+	})
+	baseLayoutHandler("/internal/regattaleitung/email", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.InternalRegattaleitung(), nil
+	})
+
 	baseLayoutHandler("/internal/admin", func(c *handler.Context) (templ.Component, error) {
 		return ui_pages.InternalAdmin(), nil
 	})
+
 	baseLayoutHandler("/internal/admin/users", func(c *handler.Context) (templ.Component, error) {
 		return ui_pages.InternalAdminUsers(), nil
 	})
@@ -366,12 +401,20 @@ func wrapHandler(h handler.Handler, needAuth bool) func(http.ResponseWriter, *ht
 			ctx.SetPathParams(p.(map[string]string))
 		}
 		if err := wrapped(ctx); err != nil {
+			headersWritten := false
+			if ht, ok := ctx.Writer.(handler.HeaderTracker); ok {
+				headersWritten = ht.HeadersWritten()
+			}
 			if he, ok := err.(*handler.Error); ok {
-				w.WriteHeader(he.StatusCode)
-				w.Write([]byte(he.Message))
+				if !headersWritten {
+					ctx.Writer.WriteHeader(he.StatusCode)
+				}
+				ctx.Writer.Write([]byte(he.Message))
 			} else {
-				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(err.Error()))
+				if !headersWritten {
+					ctx.Writer.WriteHeader(http.StatusInternalServerError)
+				}
+				ctx.Writer.Write([]byte(err.Error()))
 			}
 		}
 	}
@@ -816,5 +859,16 @@ func changePasswordPostHandler(c *handler.Context) error {
 
 	c.Writer.Header().Set("HX-Redirect", "/internal/profil")
 	c.Writer.WriteHeader(http.StatusOK)
+	return nil
+}
+
+func drvUploadPostHandler(c *handler.Context) error {
+	err := api_v1.DrvMeldungUpload(c)
+	if err != nil {
+		templ.Handler(ui_pages.InternalRegattaleitungDrvFileUpload(fmt.Sprintf("Ein Fehler ist aufgetreten! Bitte versuche es erneut. %s", err.Error()))).ServeHTTP(c.Writer, c.Request)
+		return nil
+	}
+
+	templ.Handler(ui_pages.InternalRegattaleitungDrvFileUpload("Upload erfolgreich!")).ServeHTTP(c.Writer, c.Request)
 	return nil
 }

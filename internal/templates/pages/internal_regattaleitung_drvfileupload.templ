@@ -1,0 +1,51 @@
+package ui_pages
+
+import "github.com/bata94/RegattaApi/internal/templates/components"
+
+// TODO: Add functionality to upload multiple files
+
+templ InternalRegattaleitungDrvFileUpload(msg string) {
+  {{
+    breadcrumbs := []ui_components.BreadcrumbsEntries{
+      ui_components.BreadcrumbsEntries{
+        Title: "Home",
+        Paths: "/",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Internes",
+        Paths: "/internal",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Regattaleitung",
+        Paths: "/internal/regattaleitung",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "DRV-Datei Upload",
+        Paths: "/internal/regattaleitung/drv_upload",
+      },
+    }
+  }}
+  @ui_components.Breadcrumbs(breadcrumbs)
+  @ui_components.InternalPageDivCol() {
+
+    @ui_components.PageHeader("DRV-Datei Upload")
+    @ui_components.PageHeaderSubtext("Hier kannst du die exportierte Meldungsdatei aus dem DRV-Meldeportal hochladen.")
+
+    if msg != "" {
+      <div class="w-full">
+        <h4 class="text-error !m-0 !p-0" id="upload_error">{msg}</h4>
+      </div>
+    }
+
+    <form
+      class="w-full mt-4"
+      hx-post="/internal/regattaleitung/drvupload"
+      hx-target="main"
+      enctype="multipart/form-data"
+    >
+      @ui_components.FileUpload("file", "DRV-Meldungsdatei", true)
+
+      @ui_components.SubmitButton("Hochladen", ui_components.Success)
+    </form>
+  }
+}

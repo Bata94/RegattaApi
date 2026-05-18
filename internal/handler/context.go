@@ -24,6 +24,24 @@ func (e *Error) Error() string {
 	return e.Message
 }
 
+type statusResponseWriter struct {
+	http.ResponseWriter
+	headersWritten bool
+}
+
+func (s *statusResponseWriter) WriteHeader(code int) {
+	s.headersWritten = true
+	s.ResponseWriter.WriteHeader(code)
+}
+
+func (s *statusResponseWriter) HeadersWritten() bool {
+	return s.headersWritten
+}
+
+type HeaderTracker interface {
+	HeadersWritten() bool
+}
+
 type Context struct {
 	Writer     http.ResponseWriter
 	Request    *http.Request
@@ -34,7 +52,7 @@ type Context struct {
 
 func NewContext(w http.ResponseWriter, r *http.Request) *Context {
 	return &Context{
-		Writer:     w,
+		Writer:     &statusResponseWriter{ResponseWriter: w},
 		Request:    r,
 		pathParams: make(map[string]string),
 		locals:     make(map[string]any),

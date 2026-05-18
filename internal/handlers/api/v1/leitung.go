@@ -154,6 +154,11 @@ func DrvMeldungUpload(c *handler.Context) error {
 	fmt.Println("Uploaded:", filename)
 	uploadsDir := "./tmp/uploads/"
 
+	err = os.MkdirAll(uploadsDir, os.ModePerm)
+	if err != nil {
+		return &handler.Error{StatusCode: 500, Message: "Error while creating uploads directory"}
+	}
+
 	dest := fmt.Sprintf("%s%s_%s.json", uploadsDir, "DrvMeldung", time.Now().Format("2006-01-02_15-04-05"))
 	err = c.SaveFile(dest, content)
 	if err != nil {
@@ -165,7 +170,11 @@ func DrvMeldungUpload(c *handler.Context) error {
 		return &handler.Error{StatusCode: 500, Message: "An Error occurred while importing the JSON File! If you directly downloaded the File from DRV and uploaded it, without modifying it, please contact the Admin! Details: " + err.Error()}
 	}
 
-	return c.JSON("File uploaded successfully!")
+	if c.Request.Header.Get("HX-Request") == "true" {
+		return nil
+	} else {
+		return c.JSON("File uploaded successfully!")
+	}
 }
 
 func GenerateErgebnisHtml(c *handler.Context) error {

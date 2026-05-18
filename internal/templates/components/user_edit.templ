@@ -95,12 +95,7 @@ templ UserEdit(u crud.User, msg string) {
           </select>
         </div>
       </div>
-      <div class="form-control mt-6 w-full">
-        <button type="submit" class="btn btn-primary mx-auto">
-          Speichern
-          <span class="htmx-indicator loading loading-spinner loading-md"></span>
-        </button>
-      </div>
+      @SubmitButton("Speichern", Success)
     </form>
   </div>
 }
@@ -217,12 +212,7 @@ templ UserGroupEdit(ug sqlc.UsersGroup, msg string) {
         />
       </div>
 
-      <div class="form-control mt-6 w-full">
-        <button type="submit" class="btn btn-primary mx-auto">
-          Speichern
-          <span class="htmx-indicator loading loading-spinner loading-md"></span>
-        </button>
-      </div>
+      @SubmitButton("Speichern", Success)
     </form>
   </div>
 }

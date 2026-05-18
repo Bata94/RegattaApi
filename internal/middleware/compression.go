@@ -131,6 +131,10 @@ func (g *gzipResponseWriter) WriteHeader(statusCode int) {
 	g.ResponseWriter.WriteHeader(statusCode)
 }
 
+func (g *gzipResponseWriter) HeadersWritten() bool {
+	return g.written
+}
+
 func (g *gzipResponseWriter) Flush() {
 	g.gw.Flush()
 	if flusher, ok := g.ResponseWriter.(http.Flusher); ok {
