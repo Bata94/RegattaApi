@@ -290,9 +290,14 @@ func GetRouter() http.Handler {
 	baseLayoutHandler("/internal/regattaleitung/setzungsverwaltung/aenderung", func(c *handler.Context) (templ.Component, error) {
 		return ui_pages.InternalRegattaleitungSetzungAenderung(), nil
 	})
+
 	baseLayoutHandler("/internal/regattaleitung/pausen", func(c *handler.Context) (templ.Component, error) {
-		return ui_pages.InternalRegattaleitung(), nil
+		return ui_pages.InternalRegattaleitungPausen(), nil
 	})
+	r.Handle("GET", "/internal/regattaleitung/pausen/new/{nach_rennen_uuid}", wrapHandler(pausenNewHandler, true))
+	r.Handle("POST", "/internal/regattaleitung/pausen", wrapHandler(pausenPostHandler, true))
+	r.Handle("DELETE", "/internal/regattaleitung/pausen/{id}", wrapHandler(pausenDeleteHandler, true))
+
 	baseLayoutHandler("/internal/regattaleitung/zeitplan", func(c *handler.Context) (templ.Component, error) {
 		return ui_pages.InternalRegattaleitung(), nil
 	})
@@ -480,6 +485,13 @@ func templHandler(h handler.Handler) http.HandlerFunc {
 			http.Error(w, err.Error(), 500)
 		}
 	}
+}
+
+func toastReturn(c *handler.Context, msg string, color ui_components.InputColor) error {
+	c.Writer.Header().Set("HX-Retarget", "#toast-container")
+	c.Writer.Header().Set("HX-Swap", "beforeend")
+	templ.Handler(ui_components.Toast(msg, color)).ServeHTTP(c.Writer, c.Request)
+	return nil
 }
 
 func wrapUIHandler(h handler.Handler) func(http.ResponseWriter, *http.Request) {
@@ -935,47 +947,32 @@ func setzungsVerwaltungAenderungRennenPostHandler(c *handler.Context) error {
 
 	rUuid, err = uuid.Parse(c.Param("param"))
 	if err != nil {
-		c.Writer.Header().Set("HX-Retarget", "#toast-container")
-		c.Writer.Header().Set("HX-Swap", "beforeend")
-		templ.Handler(ui_components.Toast("404 - Rennen nicht gefunden", ui_components.Error)).ServeHTTP(c.Writer, c.Request)
-		return nil
+		return toastReturn(c, "406 - Invalid UUID", ui_components.Error)
 	}
 
 	rennen, err = crud.GetRennen(rUuid)
 	if err != nil {
-		c.Writer.Header().Set("HX-Retarget", "#toast-container")
-		c.Writer.Header().Set("HX-Swap", "beforeend")
-		templ.Handler(ui_components.Toast("404 - Rennen nicht gefunden", ui_components.Error)).ServeHTTP(c.Writer, c.Request)
-		return nil
+		return toastReturn(c, "404 - Rennen nicht gefunden", ui_components.Error)
 	}
 
 	payloadStr := c.FormValue("params")
 	payload := make(map[string]any)
 	err = json.Unmarshal([]byte(payloadStr), &payload)
 	if err != nil {
-		c.Writer.Header().Set("HX-Retarget", "#toast-container")
-		c.Writer.Header().Set("HX-Swap", "beforeend")
-		templ.Handler(ui_components.Toast("406 - Invalid JSON", ui_components.Error)).ServeHTTP(c.Writer, c.Request)
-		return nil
+		return toastReturn(c, "406 - Invalid JSON", ui_components.Error)
 	}
 
 	meldOrderLs := payload["order"].([]any)
 	abteilungParam := payload["abteilung"]
 	if abteilungParam == nil {
-		c.Writer.Header().Set("HX-Retarget", "#toast-container")
-		c.Writer.Header().Set("HX-Swap", "beforeend")
-		templ.Handler(ui_components.Toast("406 - Abteilung nicht gefunden", ui_components.Error)).ServeHTTP(c.Writer, c.Request)
-		return nil
+		return toastReturn(c, "406 - Abteilung nicht gefunden", ui_components.Error)
 	}
 	targetAbteilung := int32(abteilungParam.(float64))
 
 	for i, m := range meldOrderLs {
 		mUuid, err := uuid.Parse(m.(string))
 		if err != nil {
-			c.Writer.Header().Set("HX-Retarget", "#toast-container")
-			c.Writer.Header().Set("HX-Swap", "beforeend")
-			templ.Handler(ui_components.Toast("406 - Invalid UUID", ui_components.Error)).ServeHTTP(c.Writer, c.Request)
-			return nil
+			return toastReturn(c, "406 - Invalid UUID", ui_components.Error)
 		}
 
 		for _, meldung := range rennen.Meldungen {
@@ -988,18 +985,86 @@ func setzungsVerwaltungAenderungRennenPostHandler(c *handler.Context) error {
 					Bahn:      bahn,
 				})
 				if err != nil {
-					c.Writer.Header().Set("HX-Retarget", "#toast-container")
-					c.Writer.Header().Set("HX-Swap", "beforeend")
-					templ.Handler(ui_components.Toast("500 - Error while updating meldung setzung", ui_components.Error)).ServeHTTP(c.Writer, c.Request)
-					return nil
+					return toastReturn(c, "500 - Error while updating meldung setzung", ui_components.Error)
 				}
 				continue
 			}
 		}
 	}
 
-	c.Writer.Header().Set("HX-Retarget", "#toast-container")
-	c.Writer.Header().Set("HX-Swap", "beforeend")
-	templ.Handler(ui_components.Toast("Setzung erfolgreich!", ui_components.Success)).ServeHTTP(c.Writer, c.Request)
+	return toastReturn(c, "Setzung erfolgreich!", ui_components.Success)
+}
+
+func pausenNewHandler(c *handler.Context) error {
+	nachRennenUuidStr := c.Param("nach_rennen_uuid")
+	nachRennenUuid, err := uuid.Parse(nachRennenUuidStr)
+	if err != nil {
+		return toastReturn(c, "406 - Invalid UUID", ui_components.Error)
+	}
+	p := crud.Pause{Pause: sqlc.Pause{ID: int32(-2), NachRennenUuid: nachRennenUuid, Laenge: 45}}
+
+	templ.Handler(ui_pages.PausenPausenEntry(p)).ServeHTTP(c.Writer, c.Request)
+	return nil
+}
+
+func pausenPostHandler(c *handler.Context) error {
+	idStr := c.FormValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		log.Printf("ID: %s - Error: %s", idStr, err.Error())
+		return toastReturn(c, "406 - Invalid ID", ui_components.Error)
+	}
+	laengeStr := c.FormValue("laenge")
+	laenge, err := strconv.Atoi(laengeStr)
+	if err != nil || laenge < 0 || laenge > 120 {
+		log.Printf("Laenge: %s - Error: %s", laengeStr, err.Error())
+		return toastReturn(c, "406 - Invalid laenge", ui_components.Error)
+	}
+	nachRennenUuidStr := c.FormValue("nach_rennen_uuid")
+	nachRennenUuid, err := uuid.Parse(nachRennenUuidStr)
+	if err != nil {
+		log.Printf("UUID: %s - Error: %s", nachRennenUuidStr, err.Error())
+		return toastReturn(c, "406 - Invalid UUID", ui_components.Error)
+	}
+
+	if id == -2 {
+		_, err = crud.CreatePause(sqlc.CreatePauseParams{
+			NachRennenUuid: nachRennenUuid,
+			Laenge:         int32(laenge),
+		})
+		if err != nil {
+			return toastReturn(c, "500 - Error while creating pause", ui_components.Error)
+		}
+
+		templ.Handler(ui_pages.InternalRegattaleitungPausen()).ServeHTTP(c.Writer, c.Request)
+		return nil
+	} else {
+		_, err = crud.UpdatePause(sqlc.UpdatePauseParams{
+			ID:             int32(id),
+			Laenge:         int32(laenge),
+		})
+		if err != nil {
+			return toastReturn(c, "500 - Error while updating pause", ui_components.Error)
+		}
+
+		templ.Handler(ui_pages.InternalRegattaleitungPausen()).ServeHTTP(c.Writer, c.Request)
+		return nil
+	}
+}
+
+func pausenDeleteHandler(c *handler.Context) error {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		log.Printf("ID: %s - Error: %s", idStr, err.Error())
+		return toastReturn(c, "406 - Invalid ID", ui_components.Error)
+	}
+
+	err = crud.DeletePause(int32(id))
+	if err != nil {
+		return toastReturn(c, "500 - Error while deleting pause", ui_components.Error)
+	}
+
+	templ.Handler(ui_pages.InternalRegattaleitungPausen()).ServeHTTP(c.Writer, c.Request)
 	return nil
 }

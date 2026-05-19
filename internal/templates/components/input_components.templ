@@ -60,3 +60,32 @@ templ FileUpload(name, label string, required bool) {
     />
   </div>
 }
+
+templ RangeStepInput(name, label string, value, min, max, step int, required bool) {
+  {{
+    stepCount := (max - min) / step + 1
+  }}
+  <div
+    class="w-full max-w-xs"
+  >
+    <input
+      class="range range-primary w-full"
+      type="range"
+      name={name}
+      value={value}
+      min={min}
+      max={max}
+      step={step}
+    />
+    <div class="flex justify-between px-2.5 mt-2 text-xs">
+      for i := 0; i < stepCount; i += 1 {
+        <span>|</span>
+      }
+    </div>
+    <div class="flex justify-between px-2.5 mt-2 text-xs text-center">
+      for i := 0; i < stepCount; i += 1 {
+        <span>{i * step}</span>
+      }
+    </div>
+  </div>
+}

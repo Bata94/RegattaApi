@@ -24,6 +24,10 @@
   themes: light --default, dark --prefersdark;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 @media print {
   div.no-break {
     break-inside: avoid;
