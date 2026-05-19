@@ -11,17 +11,36 @@ templ Breadcrumbs(entries []BreadcrumbsEntries) {
   <div class="breadcrumbs text-sm !m-0 !p-4">
     <ul class="!m-0 !p-0">
       for _, e := range entries {
+        {{
+          titleClass := "text-sm"
+        }}
+
         if e.Paths == "" {
-          <li>{e.Title}</li>
-        } else {
+          {{
+            titleClass += " cursor-default hover:no-underline"
+          }}
           <li>
-            <a
+            <h6
+              class={titleClass}
+            >
+              {e.Title}
+            </h6>
+          </li>
+        } else {
+          {{
+            titleClass += " font-semibold"
+          }}
+          <li>
+            <h6
+              class={titleClass}
               hx-boost="true"
               hx-get={e.Paths}
               hx-target="main"
+              hx-swap="innerHTML"
               hx-push-url="true"
-              href={e.Paths}
-            >{e.Title}</a>
+            >
+              {e.Title}
+            </h6>
           </li>
         }
       }
@@ -53,11 +72,6 @@ templ LandingPageDivCol() {
   <div class="w-full flex flex-col pt-10 pb-4 px-2 md:px-6 lg:px-12">
     { children... }
   </div>
-}
-
-script toastRemove(id string) {
-  var el = document.getElementById(id);
-  if (el) el.remove();
 }
 
 templ Toast(msg string, color InputColor) {
