@@ -2,26 +2,6 @@ package ui_layouts
 
 import "github.com/bata94/RegattaApi/internal/templates/components"
 
-script toastAutoDismissInit() {
-  if (window._toastObserver) return;
-  window._toastObserver = true;
-  var observer = new MutationObserver(function(mutations) {
-    mutations.forEach(function(mutation) {
-      mutation.addedNodes.forEach(function(node) {
-        if (node.nodeType === Node.ELEMENT_NODE && !node.classList.contains('alert-error')) {
-          setTimeout(function() {
-            if (node.parentElement) {
-              node.remove();
-            }
-          }, 5000);
-        }
-      });
-    });
-  });
-  var container = document.getElementById('toast-container');
-  if (container) observer.observe(container, { childList: true });
-}
-
 templ MinimalLayout(body templ.Component) {
 <!doctype html>
 <html>
@@ -38,6 +18,7 @@ templ MinimalLayout(body templ.Component) {
   <script src="/assets/js/htmx.min.js"></script>
   <script src="/assets/js/htmx-ext-response-target.js"></script>
   <script src="/assets/js/theming.js"></script>
+  <script src="/assets/js/toast.js"></script>
 </head>
 <body
   class="max-w-screen prose antialiased"
@@ -63,7 +44,6 @@ templ baseLayoutBody(body templ.Component, navbarConfig ui_components.NavBarConf
 
   @ui_components.Footer()
   <div id="toast-container" class="toast toast-end"/>
-  @toastAutoDismissInit()
 }
 
 templ BaseLayout(body templ.Component, navbarConfig ui_components.NavBarConfig) {
