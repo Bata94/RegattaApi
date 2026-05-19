@@ -45,6 +45,23 @@ templ SubmitButton(text string, color InputColor) {
   </div>
 }
 
+templ LineInput(name, label, value, inpType string, required bool) {
+  <div class="form-control mb-6 w-full">
+    <label class="label">
+      <span class="label-text">{label}</span>
+    </label>
+    <input
+      type={inpType}
+      name={name}
+      class="input input-bordered w-full"
+      value={value}
+      if required {
+        required
+      }
+    />
+  </div>
+}
+
 templ FileUpload(name, label string, required bool) {
   <div class="form-control mb-6 w-full">
     <label class="label">

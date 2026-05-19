@@ -70,28 +70,28 @@ type Zeitplaung struct {
 }
 
 type RennenZeitplaung struct {
-  Uuid uuid.UUID `json:"uuid"`
-  Sort_id int `json:"sort_id"`
-  Nummer string `json:"nummer"`
-  Bezeichnung string `json:"bezeichnung"`
-  Bezeichnung_lang string `json:"bezeichnung_lang"`
-  Zusatz string `json:"zusatz"`
-  Wettkampf sqlc.Wettkampf `json:"wettkampf"`
-  Tag sqlc.Tag `json:"tag"`
-  Startzeit string `json:"startzei"`
+	Uuid             uuid.UUID      `json:"uuid"`
+	Sort_id          int            `json:"sort_id"`
+	Nummer           string         `json:"nummer"`
+	Bezeichnung      string         `json:"bezeichnung"`
+	Bezeichnung_lang string         `json:"bezeichnung_lang"`
+	Zusatz           string         `json:"zusatz"`
+	Wettkampf        sqlc.Wettkampf `json:"wettkampf"`
+	Tag              sqlc.Tag       `json:"tag"`
+	Startzeit        string         `json:"startzei"`
 }
 
 func RennenZeitplaungFromSqlc(rennen sqlc.GetRennenZeitplanRow) RennenZeitplaung {
 	return RennenZeitplaung{
-		Uuid: rennen.Uuid,
-		Sort_id: int(rennen.SortID),
-		Nummer: rennen.Nummer,
-		Bezeichnung: rennen.Bezeichnung,
+		Uuid:             rennen.Uuid,
+		Sort_id:          int(rennen.SortID),
+		Nummer:           rennen.Nummer,
+		Bezeichnung:      rennen.Bezeichnung,
 		Bezeichnung_lang: rennen.BezeichnungLang,
-		Zusatz: rennen.Zusatz.String,
-		Wettkampf: rennen.Wettkampf,
-		Tag: rennen.Tag,
-		Startzeit: rennen.Startzeit.String,
+		Zusatz:           rennen.Zusatz.String,
+		Wettkampf:        rennen.Wettkampf,
+		Tag:              rennen.Tag,
+		Startzeit:        rennen.Startzeit.String,
 	}
 }
 
@@ -171,71 +171,63 @@ func GetAllRennen(p GetAllRennenParams) ([]Rennen, error) {
 }
 
 func GetAllRennenWithAthlet(p GetAllRennenParams) ([]Rennen, error) {
-	retLs := []Rennen{}
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	rLs, err := DB.Queries.GetAllRennen(ctx)
-	if err != nil {
-		return retLs, err
-	}
-	qLs, err := DB.Queries.GetAllRennenWithAthlet(
-		ctx,
-		[]sqlc.Wettkampf{
-			sqlc.WettkampfLangstrecke,
-			sqlc.WettkampfSlalom,
-			sqlc.WettkampfKurzstrecke,
-			sqlc.WettkampfStaffel,
-		},
-	)
-	if err != nil {
-		return retLs, err
+	// Filter by Wettkampf
+	var wettkampfFilterLs []sqlc.Wettkampf
+	if !p.ShowWettkampf.Valid {
+		wettkampfFilterLs = AllWettkampf
+	} else {
+		wettkampfFilterLs = []sqlc.Wettkampf{p.ShowWettkampf.Wettkampf}
 	}
 
-	for _, r := range rLs {
-		rennen := RennenFromSqlc(r.Rennen, int(r.NumMeldungen), r.NumAbteilungen)
-		retLs = append(retLs, rennen)
+	// Phase 1: fetch races with Meldungen
+	baseRows, err := DB.Queries.GetAllRennenWithMeld(ctx, wettkampfFilterLs)
+	if err != nil {
+		return nil, err
+	}
+	races := sqlcRennenToCrudRennen(baseRows, p.ShowEmpty)
+
+	if !p.GetAthleten {
+		return races, nil
 	}
 
-	i := 0
-	for _, q := range qLs {
-		for retLs[i].Uuid != q.Rennen.Uuid {
-			i++
+	// Phase 2: fetch athlete rows and merge into races
+	athRows, err := DB.Queries.GetAllRennenAthletRows(ctx, wettkampfFilterLs)
+	if err != nil {
+		return races, err
+	}
+	// Index races by UUID
+	raceIndex := make(map[uuid.UUID]int, len(races))
+	for i, r := range races {
+		raceIndex[r.Uuid] = i
+	}
+	// Merge athlete entries
+	for _, ar := range athRows {
+		ri, ok := raceIndex[ar.RennenUuid]
+		if !ok {
 			continue
 		}
-
-		indexLastMeld := len(retLs[i].Meldungen) - 1
-		if indexLastMeld < 0 || retLs[i].Meldungen[indexLastMeld].Uuid != q.Meldung.Uuid {
-			position := int(q.Position)
-			retLs[i].Meldungen = append(retLs[i].Meldungen, Meldung{
-				Meldung: q.Meldung,
-				Verein:  &Verein{Verein: q.Verein},
-				Athleten: []Athlet{{
-					Athlet:   q.Athlet,
-					Rolle:    &q.Rolle,
-					Position: &position,
-				}},
-			})
-		} else {
-			position := int(q.Position)
-			retLs[i].Meldungen[indexLastMeld].Athleten = append(retLs[i].Meldungen[indexLastMeld].Athleten, Athlet{
-				Athlet:   q.Athlet,
-				Rolle:    &q.Rolle,
-				Position: &position,
-			})
+		// find Meldung slot
+		mi := -1
+		for j, m := range races[ri].Meldungen {
+			if m.Uuid == ar.MeldungUuid {
+				mi = j
+				break
+			}
 		}
+		if mi < 0 {
+			continue
+		}
+		pos := int(ar.Position)
+		rolePtr := &ar.Rolle
+		races[ri].Meldungen[mi].Athleten = append(
+			races[ri].Meldungen[mi].Athleten,
+			Athlet{Athlet: ar.Athlet, Rolle: rolePtr, Position: &pos},
+		)
 	}
-
-	for _, r := range retLs {
-		// Sort Meldungen
-		slices.SortFunc(r.Meldungen, func(a, b Meldung) int {
-			return cmp.Or(
-				cmp.Compare(a.Abteilung, b.Abteilung),
-				cmp.Compare(a.Bahn, b.Bahn),
-			)
-		})
-	}
-	return retLs, nil
+	return races, nil
 }
 
 func RennenFromSqlc(rennen sqlc.Rennen, numMeld int, numAbt interface{}) Rennen {
@@ -285,27 +277,35 @@ func sqlcRennenToCrudRennen(q []sqlc.GetAllRennenWithMeldRow, getEmptyRennen boo
 		}
 
 		if row.Uuid != uuid.Nil {
+			// Construct Meldung and associated Verein
+			v := sqlc.Verein{
+				Uuid:     row.VereinUuid,
+				Name:     row.Name.String,
+				Kurzform: row.Kurzform.String,
+				Kuerzel:  row.Kuerzel.String,
+			}
+			m := sqlc.Meldung{
+				Uuid:               row.Uuid,
+				DrvRevisionUuid:    row.DrvRevisionUuid,
+				Typ:                row.Typ.String,
+				Bemerkung:          row.Bemerkung,
+				Abgemeldet:         row.Abgemeldet.Bool,
+				Dns:                row.Dns.Bool,
+				Dnf:                row.Dnf.Bool,
+				Dsq:                row.Dsq.Bool,
+				ZeitnahmeBemerkung: row.ZeitnahmeBemerkung,
+				StartNummer:        row.StartNummer.Int32,
+				Abteilung:          row.Abteilung.Int32,
+				Bahn:               row.Bahn.Int32,
+				Kosten:             row.Kosten.Int32,
+				RechnungsNummer:    row.RechnungsNummer,
+				VereinUuid:         row.VereinUuid,
+				RennenUuid:         row.RennenUuid,
+			}
 			curRennen.Meldungen = append(curRennen.Meldungen, Meldung{
-				Meldung: sqlc.Meldung{
-					Uuid:               row.Uuid,
-					DrvRevisionUuid:    row.DrvRevisionUuid,
-					Typ:                row.Typ.String,
-					Bemerkung:          row.Bemerkung,
-					Abgemeldet:         row.Abgemeldet.Bool,
-					Dns:                row.Dns.Bool,
-					Dnf:                row.Dnf.Bool,
-					Dsq:                row.Dsq.Bool,
-					ZeitnahmeBemerkung: row.ZeitnahmeBemerkung,
-					StartNummer:        row.StartNummer.Int32,
-					Abteilung:          row.Abteilung.Int32,
-					Bahn:               row.Bahn.Int32,
-					Kosten:             row.Kosten.Int32,
-					RechnungsNummer:    row.RechnungsNummer,
-					VereinUuid:         row.VereinUuid,
-					RennenUuid:         row.RennenUuid,
-				},
+				Meldung:  m,
 				Rennen:   &Rennen{},
-				Verein:   &Verein{},
+				Verein:   &Verein{Verein: v},
 				Athleten: []Athlet{},
 			})
 		}

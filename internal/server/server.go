@@ -299,8 +299,9 @@ func GetRouter() http.Handler {
 	r.Handle("DELETE", "/internal/regattaleitung/pausen/{id}", wrapHandler(pausenDeleteHandler, true))
 
 	baseLayoutHandler("/internal/regattaleitung/zeitplan", func(c *handler.Context) (templ.Component, error) {
-		return ui_pages.InternalRegattaleitung(), nil
+		return ui_pages.InternalRegattaleitungZeitplan(), nil
 	})
+	r.Handle("POST", "/internal/regattaleitung/zeitplan", wrapHandler(zeitplanPostHandler, true))
 	baseLayoutHandler("/internal/regattaleitung/startnummern", func(c *handler.Context) (templ.Component, error) {
 		return ui_pages.InternalRegattaleitung(), nil
 	})
@@ -1067,4 +1068,29 @@ func pausenDeleteHandler(c *handler.Context) error {
 
 	templ.Handler(ui_pages.InternalRegattaleitungPausen()).ServeHTTP(c.Writer, c.Request)
 	return nil
+}
+
+func zeitplanPostHandler(c *handler.Context) error {
+	startzeit_saStr := c.FormValue("startzeit_sa")
+	startzeit_sa, err := strconv.Atoi(startzeit_saStr)
+	if err != nil || startzeit_sa < 0 || startzeit_sa > 24 {
+		return toastReturn(c, "406 - Invalid startzeit_sa", ui_components.Error)
+	}
+	startzeit_soStr := c.FormValue("startzeit_so")
+	startzeit_so, err := strconv.Atoi(startzeit_soStr)
+	if err != nil || startzeit_so < 0 || startzeit_so > 24 {
+		return toastReturn(c, "406 - Invalid startzeit_so", ui_components.Error)
+	}
+
+	zeitplan := crud.SetZeitplanParams{
+		SaStartStunde: startzeit_sa,
+		SoStartStunde: startzeit_so,
+	}
+
+	err = crud.SetZeitplan(zeitplan)
+	if err != nil {
+		return toastReturn(c, "500 - Error while creating zeitplan", ui_components.Error)
+	}
+
+	return toastReturn(c, "Zeitplan erstellt", ui_components.Success)
 }

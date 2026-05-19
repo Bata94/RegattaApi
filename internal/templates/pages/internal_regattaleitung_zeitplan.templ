@@ -1,0 +1,63 @@
+package ui_pages
+
+import "github.com/bata94/RegattaApi/internal/templates/components"
+
+templ InternalRegattaleitungZeitplan() {
+  {{
+    breadcrumbs := []ui_components.BreadcrumbsEntries{
+      ui_components.BreadcrumbsEntries{
+        Title: "Home",
+        Paths: "/",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Internes",
+        Paths: "/internal",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Regattaleitung",
+        Paths: "/internal/regattaleitung",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Zeitplan",
+        Paths: "/internal/regattaleitung/zeitplan",
+      },
+    }
+  }}
+
+  @ui_components.Breadcrumbs(breadcrumbs)
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Zeitplan")
+    @ui_components.PageHeaderSubtext("")
+
+    <div
+      id="zeitplan-create"
+      class="card bg-base-100 min-w-96 shadow-sm w-fit mx-auto"
+    >
+      <form
+        class=""
+        hx-post="/internal/regattaleitung/zeitplan"
+      >
+        <div
+        class="card-body"
+        >
+          <h2
+            class="card-title w-fit mx-auto mt-2"
+          >
+            Zeitplan erstellen
+          </h2>
+          <div class="divider"></div>
+          <h4 class="text-center !my-2 !p-0">
+            Startzeit in vollen Stunden (z.B. 9 -> 09:00)
+          </h4>
+          <div class="form-control">
+            @ui_components.LineInput("startzeit_sa", "Samstag", "9", "number", true)
+            @ui_components.LineInput("startzeit_so", "Sonntag", "9", "number", true)
+          </div>
+          <div class="w-fit mx-auto">
+            @ui_components.SubmitButton("Zeitplan erstellen", ui_components.Success)
+          </div>
+        </div>
+      </form>
+    </div>
+  }
+}

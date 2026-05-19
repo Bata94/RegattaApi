@@ -48,6 +48,7 @@ func GetMeldeergebnisHtml(c *handler.Context) error {
 	}
 	rLs, err := crud.GetAllRennenWithAthlet(crud.GetAllRennenParams{
 		GetMeldungen:  true,
+		GetAthleten:   true,
 		ShowEmpty:     true,
 		ShowStarted:   true,
 		ShowWettkampf: sqlc.NullWettkampf{},
@@ -326,15 +327,15 @@ type DrvRegatta struct {
 }
 
 type DrvEntries struct {
-	Id         uuid.UUID `json:"id"`
-	RevisionId uuid.UUID `json:"revision_id"`
-	EventId    uuid.UUID `json:"event_id"`
-	ClubId     uuid.UUID `json:"club_id"`
-	Name       string    `json:"name"`
-	ShortName  string    `json:"shortname"`
-	Sequence   int       `json:"sequence"`
-	Status     int       `json:"status"`
-	AltEventID uuid.UUID `json:"alternative_event_id"`
+	Id         uuid.UUID           `json:"id"`
+	RevisionId uuid.UUID           `json:"revision_id"`
+	EventId    uuid.UUID           `json:"event_id"`
+	ClubId     uuid.UUID           `json:"club_id"`
+	Name       string              `json:"name"`
+	ShortName  string              `json:"shortname"`
+	Sequence   int                 `json:"sequence"`
+	Status     int                 `json:"status"`
+	AltEventID uuid.UUID           `json:"alternative_event_id"`
 	Members    []DrvEntriesMembers `json:"members"`
 }
 
@@ -896,77 +897,19 @@ func SetStartnummern(c *handler.Context) error {
 	return c.JSON("Startnummern vergeben!")
 }
 
-type SetZeitplanParams struct {
-	SaStartStunde int `json:"sa_start_stunde"`
-	SoStartStunde int `json:"so_start_stunde"`
-}
-
 func SetZeitplan(c *handler.Context) error {
-	param := new(SetZeitplanParams)
+	param := new(crud.SetZeitplanParams)
 	err := c.BodyParser(param)
 	if err != nil {
 		return err
 	}
 
-	rLs, err := crud.GetAllRennen(crud.GetAllRennenParams{
-		GetMeldungen:  true,
-		ShowEmpty:     true,
-		ShowStarted:   true,
-		ShowWettkampf: sqlc.NullWettkampf{},
-	})
+	err = crud.SetZeitplan(*param)
 	if err != nil {
 		return err
 	}
 
-	pLs, err := crud.GetAllPausen()
-	if err != nil {
-		return err
-	}
-
-	curStartTimeSa, _ := time.Parse("15:04", fmt.Sprintf("%d:00", param.SaStartStunde))
-	curStartTimeSo, _ := time.Parse("15:04", fmt.Sprintf("%d:00", param.SoStartStunde))
-
-	tag := "Sa"
-	for _, r := range rLs {
-		if r.Tag == sqlc.TagSa {
-			saTimeStr := curStartTimeSa.Format("15:04")
-			fmt.Printf("Setting RennenNr: %s to time %s\n", r.Nummer, saTimeStr)
-			err := crud.UpdateStartZeit(sqlc.UpdateStartZeitParams{
-				Uuid:      r.Uuid,
-				Startzeit: pgtype.Text{String: saTimeStr, Valid: true},
-			})
-			if err != nil {
-				return err
-			}
-			curStartTimeSa = curStartTimeSa.Add(time.Minute * time.Duration(r.Rennabstand))
-
-			for _, p := range pLs {
-				if p.NachRennenUuid == r.Uuid {
-					curStartTimeSa = curStartTimeSa.Add(time.Minute * time.Duration(p.Laenge))
-				}
-			}
-		} else if r.Tag == sqlc.TagSo {
-			tag = "So"
-			soTimeStr := curStartTimeSo.Format("15:04")
-			fmt.Printf("Setting RennenNr: %s to time %s\n", r.Nummer, soTimeStr)
-			err := crud.UpdateStartZeit(sqlc.UpdateStartZeitParams{
-				Uuid:      r.Uuid,
-				Startzeit: pgtype.Text{String: soTimeStr, Valid: true},
-			})
-			if err != nil {
-				return err
-			}
-			curStartTimeSo = curStartTimeSo.Add(time.Minute * time.Duration(r.Rennabstand))
-
-			for _, p := range pLs {
-				if p.NachRennenUuid == r.Uuid {
-					curStartTimeSo = curStartTimeSo.Add(time.Minute * time.Duration(p.Laenge))
-				}
-			}
-		}
-	}
-
-	return c.JSON(tag + " Zeitplan gesetzt!")
+	return c.JSON("Zeitplan gesetzt!")
 }
 
 type PausesenMeldeergebnisPDF struct {
@@ -979,7 +922,7 @@ type RennenMeldeergebnisPDF struct {
 	Uuid              string
 	RennNr            string
 	Bezeichnung       string
-	BezeichnungZusatz  string
+	BezeichnungZusatz string
 	Startzeit         string
 	Rennabstand       int
 	Tag               string
@@ -1006,7 +949,7 @@ type ErgebnisRennenPDF struct {
 	Uuid              string
 	RennNr            string
 	Bezeichnung       string
-	BezeichnungZusatz  string
+	BezeichnungZusatz string
 	Startzeit         string
 	Rennabstand       int
 	Tag               string

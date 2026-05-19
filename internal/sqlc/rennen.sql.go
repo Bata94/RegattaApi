@@ -153,93 +153,50 @@ func (q *Queries) GetAllRennen(ctx context.Context) ([]GetAllRennenRow, error) {
 	return items, nil
 }
 
-const getAllRennenWithAthlet = `-- name: GetAllRennenWithAthlet :many
+const getAllRennenAthletRows = `-- name: GetAllRennenAthletRows :many
 SELECT
-  rennen.uuid, rennen.sort_id, rennen.nummer, rennen.bezeichnung, rennen.bezeichnung_lang, rennen.zusatz, rennen.leichtgewicht, rennen.geschlecht, rennen.bootsklasse, rennen.bootsklasse_lang, rennen.altersklasse, rennen.altersklasse_lang, rennen.tag, rennen.wettkampf, rennen.kosten_eur, rennen.rennabstand, rennen.startzeit,
-  meldung.uuid, meldung.drv_revision_uuid, meldung.typ, meldung.bemerkung, meldung.abgemeldet, meldung.dns, meldung.dnf, meldung.dsq, meldung.zeitnahme_bemerkung, meldung.start_nummer, meldung.abteilung, meldung.bahn, meldung.kosten, meldung.rechnungs_nummer, meldung.verein_uuid, meldung.rennen_uuid,
+  r.uuid         AS rennen_uuid,
+  m.uuid         AS meldung_uuid,
+  link_meldung_athlet.position,
+  link_meldung_athlet.rolle,
   athlet.uuid, athlet.vorname, athlet.name, athlet.geschlecht, athlet.jahrgang, athlet.gewicht, athlet.startberechtigt, athlet.verein_uuid,
-  verein.uuid, verein.name, verein.kurzform, verein.kuerzel,
-  link_meldung_athlet.position, link_meldung_athlet.rolle,
-  (SELECT COUNT(meldung.uuid) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid AND meldung.abgemeldet = false) as num_meldungen,
-  (SELECT COALESCE(MAX(meldung.abteilung),0) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid) as num_abteilungen
-FROM
-  rennen
-JOIN
-  meldung
-ON
-  rennen.uuid = meldung.rennen_uuid
-JOIN
-  verein
-ON
-  meldung.verein_uuid = verein.uuid
-JOIN
-  link_meldung_athlet
-ON
-  meldung.uuid = link_meldung_athlet.meldung_uuid
-JOIN
-  athlet
-ON
-  link_meldung_athlet.athlet_uuid = athlet.uuid
-WHERE
-  wettkampf = ANY($1::wettkampf[])
-ORDER BY
-  rennen.sort_id, meldung.uuid, link_meldung_athlet.rolle, link_meldung_athlet.position
+  verein.uuid, verein.name, verein.kurzform, verein.kuerzel
+FROM rennen r
+JOIN meldung m
+  ON r.uuid = m.rennen_uuid
+JOIN link_meldung_athlet
+  ON m.uuid = link_meldung_athlet.meldung_uuid
+JOIN athlet
+  ON link_meldung_athlet.athlet_uuid = athlet.uuid
+JOIN verein
+  ON athlet.verein_uuid = verein.uuid
+WHERE r.wettkampf = ANY($1::wettkampf[])
+ORDER BY r.sort_id, m.abteilung, m.bahn, link_meldung_athlet.rolle, link_meldung_athlet.position
 `
 
-type GetAllRennenWithAthletRow struct {
-	Rennen         Rennen      `json:"rennen"`
-	Meldung        Meldung     `json:"meldung"`
-	Athlet         Athlet      `json:"athlet"`
-	Verein         Verein      `json:"verein"`
-	Position       int32       `json:"position"`
-	Rolle          Rolle       `json:"rolle"`
-	NumMeldungen   int64       `json:"num_meldungen"`
-	NumAbteilungen interface{} `json:"num_abteilungen"`
+type GetAllRennenAthletRowsRow struct {
+	RennenUuid  uuid.UUID `json:"rennen_uuid"`
+	MeldungUuid uuid.UUID `json:"meldung_uuid"`
+	Position    int32     `json:"position"`
+	Rolle       Rolle     `json:"rolle"`
+	Athlet      Athlet    `json:"athlet"`
+	Verein      Verein    `json:"verein"`
 }
 
-func (q *Queries) GetAllRennenWithAthlet(ctx context.Context, dollar_1 []Wettkampf) ([]GetAllRennenWithAthletRow, error) {
-	rows, err := q.db.Query(ctx, getAllRennenWithAthlet, dollar_1)
+func (q *Queries) GetAllRennenAthletRows(ctx context.Context, dollar_1 []Wettkampf) ([]GetAllRennenAthletRowsRow, error) {
+	rows, err := q.db.Query(ctx, getAllRennenAthletRows, dollar_1)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []GetAllRennenWithAthletRow{}
+	items := []GetAllRennenAthletRowsRow{}
 	for rows.Next() {
-		var i GetAllRennenWithAthletRow
+		var i GetAllRennenAthletRowsRow
 		if err := rows.Scan(
-			&i.Rennen.Uuid,
-			&i.Rennen.SortID,
-			&i.Rennen.Nummer,
-			&i.Rennen.Bezeichnung,
-			&i.Rennen.BezeichnungLang,
-			&i.Rennen.Zusatz,
-			&i.Rennen.Leichtgewicht,
-			&i.Rennen.Geschlecht,
-			&i.Rennen.Bootsklasse,
-			&i.Rennen.BootsklasseLang,
-			&i.Rennen.Altersklasse,
-			&i.Rennen.AltersklasseLang,
-			&i.Rennen.Tag,
-			&i.Rennen.Wettkampf,
-			&i.Rennen.KostenEur,
-			&i.Rennen.Rennabstand,
-			&i.Rennen.Startzeit,
-			&i.Meldung.Uuid,
-			&i.Meldung.DrvRevisionUuid,
-			&i.Meldung.Typ,
-			&i.Meldung.Bemerkung,
-			&i.Meldung.Abgemeldet,
-			&i.Meldung.Dns,
-			&i.Meldung.Dnf,
-			&i.Meldung.Dsq,
-			&i.Meldung.ZeitnahmeBemerkung,
-			&i.Meldung.StartNummer,
-			&i.Meldung.Abteilung,
-			&i.Meldung.Bahn,
-			&i.Meldung.Kosten,
-			&i.Meldung.RechnungsNummer,
-			&i.Meldung.VereinUuid,
-			&i.Meldung.RennenUuid,
+			&i.RennenUuid,
+			&i.MeldungUuid,
+			&i.Position,
+			&i.Rolle,
 			&i.Athlet.Uuid,
 			&i.Athlet.Vorname,
 			&i.Athlet.Name,
@@ -252,10 +209,6 @@ func (q *Queries) GetAllRennenWithAthlet(ctx context.Context, dollar_1 []Wettkam
 			&i.Verein.Name,
 			&i.Verein.Kurzform,
 			&i.Verein.Kuerzel,
-			&i.Position,
-			&i.Rolle,
-			&i.NumMeldungen,
-			&i.NumAbteilungen,
 		); err != nil {
 			return nil, err
 		}
@@ -276,8 +229,8 @@ SELECT
   (SELECT COALESCE(MAX(meldung.abteilung),0) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid) as num_abteilungen
 FROM
   rennen
-FULL
-  JOIN meldung
+FULL JOIN
+  meldung
 ON
   rennen.uuid = meldung.rennen_uuid
 FULL JOIN

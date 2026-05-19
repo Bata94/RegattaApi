@@ -54,7 +54,7 @@ templ rennenBody(r crud.Rennen) {
     for _, m := range r.Meldungen{
       if m.Abteilung != aktAbt {
         {{aktAbt = m.Abteilung}}
-        <h6 className="text-lg font-semibold">Abteilung {aktAbt}:</h6>
+        <h6 class="text-lg font-semibold">Abteilung {aktAbt}:</h6>
       }
 
       {{
@@ -90,12 +90,13 @@ templ rennenBody(r crud.Rennen) {
 
 templ MeldeergebnisCollapseBody(w sqlc.Wettkampf) {
   {{
-    rennen, err := crud.GetAllRennenWithAthlet((crud.GetAllRennenParams{
+    rennen, err := crud.GetAllRennenWithAthlet(crud.GetAllRennenParams{
       GetMeldungen: true,
+      GetAthleten: true,
       ShowEmpty: true,
       ShowStarted: true,
       ShowWettkampf: sqlc.NullWettkampf{Wettkampf: w, Valid: true},
-    }))
+    })
 
     pausen, errPausen := crud.GetPausenByWettkampf([]sqlc.Wettkampf{w})
   }}
