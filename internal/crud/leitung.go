@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -85,5 +86,73 @@ func SetZeitplan(param SetZeitplanParams) error {
 		}
 	}
 
+	return nil
+}
+
+func SetStartnummern() error {
+	check, err := CheckMeldungSetzung()
+	if err != nil {
+		return err
+	}
+	if !check {
+		return &handler.Error{StatusCode: 400, Message: "Setzung not done!"}
+	}
+
+	check2, err := CheckMeldungStartnummern()
+	if err != nil {
+		return err
+	}
+	if check2 {
+		return &handler.Error{StatusCode: 400, Message: "Startnummern not done!"}
+	}
+
+	rLs, err := GetAllRennen(GetAllRennenParams{
+		GetMeldungen:  true,
+		ShowEmpty:     true,
+		ShowStarted:   true,
+		ShowWettkampf: sqlc.NullWettkampf{},
+	})
+	if err != nil {
+		return err
+	}
+
+	startNummerMap := make(map[sqlc.Tag]int32)
+	startNummerMap[sqlc.TagSa] = 1
+	startNummerMap[sqlc.TagSo] = 1
+
+	for _, r := range rLs {
+		for _, m := range r.Meldungen {
+			if m.Abgemeldet {
+				continue
+			}
+			err = UpdateStartNummer(sqlc.UpdateStartNummerParams{
+				Uuid:        m.Uuid,
+				StartNummer: startNummerMap[r.Tag],
+			})
+			if err != nil {
+				return err
+			}
+			startNummerMap[r.Tag]++
+		}
+	}
+
+	return nil
+}
+
+func ResetStartnummern() error {
+	mLs, err := GetAllMeldungen()
+	if err != nil {
+		return err
+	}
+
+	for _, m := range mLs {
+		err = UpdateStartNummer(sqlc.UpdateStartNummerParams{
+			Uuid:        m.Uuid,
+			StartNummer: 0,
+		})
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }

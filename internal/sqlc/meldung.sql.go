@@ -46,6 +46,24 @@ func (q *Queries) CheckMedlungSetzung(ctx context.Context) (CheckMedlungSetzungR
 	return i, err
 }
 
+const checkMedlungStartnummern = `-- name: CheckMedlungStartnummern :one
+SELECT uuid, abteilung, bahn FROM meldung
+WHERE start_nummer != 0 LIMIT 1
+`
+
+type CheckMedlungStartnummernRow struct {
+	Uuid      uuid.UUID `json:"uuid"`
+	Abteilung int32     `json:"abteilung"`
+	Bahn      int32     `json:"bahn"`
+}
+
+func (q *Queries) CheckMedlungStartnummern(ctx context.Context) (CheckMedlungStartnummernRow, error) {
+	row := q.db.QueryRow(ctx, checkMedlungStartnummern)
+	var i CheckMedlungStartnummernRow
+	err := row.Scan(&i.Uuid, &i.Abteilung, &i.Bahn)
+	return i, err
+}
+
 const createMeldung = `-- name: CreateMeldung :one
 INSERT INTO meldung (
   uuid,

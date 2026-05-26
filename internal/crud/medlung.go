@@ -139,6 +139,21 @@ func CheckMeldungSetzung() (bool, error) {
 	return true, nil
 }
 
+func CheckMeldungStartnummern() (bool, error) {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	_, err := DB.Queries.CheckMedlungStartnummern(ctx)
+	if err != nil {
+		if isNoRowError(err) {
+			return false, nil
+		}
+		return true, err
+	}
+
+	return true, nil
+}
+
 func CreateMeldung(mParams CreateMeldungParams) (Meldung, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()

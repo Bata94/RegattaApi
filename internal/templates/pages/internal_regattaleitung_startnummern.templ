@@ -1,0 +1,161 @@
+package ui_pages
+
+import "github.com/bata94/RegattaApi/internal/templates/components"
+
+templ InternalRegattaleitungStartnummern() {
+  {{
+    breadcrumbs := []ui_components.BreadcrumbsEntries{
+      ui_components.BreadcrumbsEntries{
+        Title: "Home",
+        Paths: "/",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Internes",
+        Paths: "/internal",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Regattaleitung",
+        Paths: "/internal/regattaleitung",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Startnummernverwaltung",
+        Paths: "/internal/regattaleitung/startnummern",
+      },
+    }
+  }}
+  @ui_components.Breadcrumbs(breadcrumbs)
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Startnummernverwaltung")
+    @ui_components.PageHeaderSubtext("")
+
+    @ui_components.InternalNavBtnGrid([]ui_components.InternalNavBtnParams{
+      {Name: "Startnummern verteilen", Desc: "Verteilen der Startnummern nach der erfolgreichen Setzung", URL: "/internal/regattaleitung/startnummern/verteilen"},
+      {Name: "Startnummernbereich anpassen", Desc: "Änderung des Bereichs der zuvergebenen Startnummern", URL: "/internal/regattaleitung/startnummern/bereich"},
+      {Name: "Startnummer ändern", Desc: "Änderung einer Startnummer für eine spezielle Meldung", URL: "/internal/regattaleitung/startnummern/aenderung"},
+    })
+  }
+}
+
+templ InternalRegattaleitungStartnummernVerteilen() {
+  {{
+    breadcrumbs := []ui_components.BreadcrumbsEntries{
+      ui_components.BreadcrumbsEntries{
+        Title: "Home",
+        Paths: "/",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Internes",
+        Paths: "/internal",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Regattaleitung",
+        Paths: "/internal/regattaleitung",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Startnummernverwaltung",
+        Paths: "/internal/regattaleitung/startnummern",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Startnummern verteilen",
+        Paths: "/internal/regattaleitung/startnummern/verteilen",
+      },
+    }
+  }}
+  @ui_components.Breadcrumbs(breadcrumbs)
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Startnummern verteilen")
+    @ui_components.PageHeaderSubtext("")
+
+    <div
+      class="bg-red-500/70 text-white font-bold text-lg p-4 rounded-md w-fit mx-auto"
+    >
+       Achtung!!! <br />
+       Diese Funktion kann nur einmal ausgeführt werden. Sollte eine erneute Startnummerverteilung nötig sein, muss die alte zunächst zurückgesetzt werden! <br />
+       Nach dem Zurücksetzen sind alle bisherigen Startnummernzuteilungen unwiderruflich verloren!
+    </div>
+
+    <div class="md:w-4/5 mx-auto flex flex-col md:flex-row md:justify-between">
+      <form
+        class="w-fit"
+        hx-post="/internal/regattaleitung/startnummern/verteilen"
+      >
+        <div class="w-fit mx-auto">
+          @ui_components.SubmitButton("Startnummern verteilen", ui_components.Warning)
+        </div>
+      </form>
+
+      <form
+        class="w-fit"
+        hx-delete="/internal/regattaleitung/startnummern/verteilen"
+      >
+        <div class="w-fit mx-auto">
+          @ui_components.SubmitButton("Startnummern zurücksetzen", ui_components.Error)
+        </div>
+      </form>
+    </div>
+  }
+}
+
+templ InternalRegattaleitungStartnummernBereich() {
+  {{
+    breadcrumbs := []ui_components.BreadcrumbsEntries{
+      ui_components.BreadcrumbsEntries{
+        Title: "Home",
+        Paths: "/",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Internes",
+        Paths: "/internal",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Regattaleitung",
+        Paths: "/internal/regattaleitung",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Startnummernverwaltung",
+        Paths: "/internal/regattaleitung/startnummern",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Startnummernbereich anpassen",
+        Paths: "/internal/regattaleitung/startnummern/bereich",
+      },
+    }
+  }}
+  @ui_components.Breadcrumbs(breadcrumbs)
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Startnummernbereich anpassen")
+    @ui_components.PageHeaderSubtext("Work in progress")
+  }
+}
+
+templ InternalRegattaleitungStartnummernAendern() {
+  {{
+    breadcrumbs := []ui_components.BreadcrumbsEntries{
+      ui_components.BreadcrumbsEntries{
+        Title: "Home",
+        Paths: "/",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Internes",
+        Paths: "/internal",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Regattaleitung",
+        Paths: "/internal/regattaleitung",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Startnummernverwaltung",
+        Paths: "/internal/regattaleitung/startnummern",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Startnummern verteilen",
+        Paths: "/internal/regattaleitung/startnummern/aenderung",
+      },
+    }
+  }}
+  @ui_components.Breadcrumbs(breadcrumbs)
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Startnummer ändern")
+    @ui_components.PageHeaderSubtext("Work in progress")
+  }
+}

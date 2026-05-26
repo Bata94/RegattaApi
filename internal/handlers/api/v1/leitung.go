@@ -859,39 +859,8 @@ func ResetSetzung(c *handler.Context) error {
 }
 
 func SetStartnummern(c *handler.Context) error {
-	check, err := crud.CheckMeldungSetzung()
-	if err != nil {
-		return err
-	}
-	if !check {
-		return &handler.Error{StatusCode: 400, Message: "Setzung not done!"}
-	}
-
-	rLs, err := crud.GetAllRennen(crud.GetAllRennenParams{
-		GetMeldungen:  true,
-		ShowEmpty:     true,
-		ShowStarted:   true,
-		ShowWettkampf: sqlc.NullWettkampf{},
-	})
-	if err != nil {
-		return err
-	}
-
-	for _, r := range rLs {
-		startNummer := int32(1)
-		for _, m := range r.Meldungen {
-			if m.Abgemeldet {
-				continue
-			}
-			err = crud.UpdateStartNummer(sqlc.UpdateStartNummerParams{
-				Uuid:        m.Uuid,
-				StartNummer: startNummer,
-			})
-			if err != nil {
-				return err
-			}
-			startNummer++
-		}
+	if err := crud.SetStartnummern(); err != nil {
+		return &handler.Error{StatusCode: 500, Message: fmt.Sprintf("Error while setting startnummern: %s", err.Error())}
 	}
 
 	return c.JSON("Startnummern vergeben!")

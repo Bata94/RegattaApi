@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -303,7 +304,18 @@ func GetRouter() http.Handler {
 	})
 	r.Handle("POST", "/internal/regattaleitung/zeitplan", wrapHandler(zeitplanPostHandler, true))
 	baseLayoutHandler("/internal/regattaleitung/startnummern", func(c *handler.Context) (templ.Component, error) {
-		return ui_pages.InternalRegattaleitung(), nil
+		return ui_pages.InternalRegattaleitungStartnummern(), nil
+	})
+	baseLayoutHandler("/internal/regattaleitung/startnummern/verteilen", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.InternalRegattaleitungStartnummernVerteilen(), nil
+	})
+	r.Handle("POST", "/internal/regattaleitung/startnummern/verteilen", wrapHandler(startnummernVerteilenPostHandler, true))
+	r.Handle("DELETE", "/internal/regattaleitung/startnummern/verteilen", wrapHandler(startnummernVerteilenDeleteHandler, true))
+	baseLayoutHandler("/internal/regattaleitung/startnummern/bereich", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.InternalRegattaleitungStartnummernBereich(), nil
+	})
+	baseLayoutHandler("/internal/regattaleitung/startnummern/aenderung", func(c *handler.Context) (templ.Component, error) {
+		return ui_pages.InternalRegattaleitungStartnummernAendern(), nil
 	})
 	baseLayoutHandler("/internal/regattaleitung/pdf_meldeergebnis", func(c *handler.Context) (templ.Component, error) {
 		return ui_pages.InternalRegattaleitung(), nil
@@ -1093,4 +1105,26 @@ func zeitplanPostHandler(c *handler.Context) error {
 	}
 
 	return toastReturn(c, "Zeitplan erstellt", ui_components.Success)
+}
+
+func startnummernVerteilenPostHandler(c *handler.Context) error {
+	err := crud.SetStartnummern()
+	if err != nil {
+		var he *handler.Error
+		if errors.As(err, &he) {
+			return toastReturn(c, fmt.Sprintf("%d - %s", he.StatusCode, he.Message), ui_components.Error)
+		}
+		return toastReturn(c, "500 - Error while setting startnummern", ui_components.Error)
+	}
+
+	return toastReturn(c, "Startnummern erfolgreich verteilt!", ui_components.Success)
+}
+
+func startnummernVerteilenDeleteHandler(c *handler.Context) error {
+	err := crud.ResetStartnummern()
+	if err != nil {
+		return toastReturn(c, "500 - Error while setting startnummern", ui_components.Error)
+	}
+
+	return toastReturn(c, "Startnummern erfolgreich zurückgesetzt!", ui_components.Success)
 }

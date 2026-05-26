@@ -85,6 +85,10 @@ ORDER BY
 SELECT uuid, abteilung, bahn FROM meldung
 WHERE abteilung != 0 AND bahn != 0 LIMIT 1;
 
+-- name: CheckMedlungStartnummern :one
+SELECT uuid, abteilung, bahn FROM meldung
+WHERE start_nummer != 0 LIMIT 1;
+
 -- name: Ummeldung :exec
 UPDATE
   link_meldung_athlet
