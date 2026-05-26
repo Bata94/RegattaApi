@@ -1,6 +1,5 @@
 package ui_components
 
-// TODO: Close collapse on navigation
 
 type NavBarConfig struct {
   Entries  []NavBarEntry
@@ -54,7 +53,7 @@ templ navbarEntry(entry NavBarEntry, userCaps []string, loggedIn bool) {
     </li>
   } else {
     <li>
-      <button hx-get={entry.URL} hx-target="main" hx-push-url="true" href={entry.URL}>{entry.Name}</button>
+      <button hx-get={entry.URL} hx-target="main" hx-push-url="true" href={entry.URL} onclick="this.closest('details')?.removeAttribute('open')">{entry.Name}</button>
     </li>
   }
 }
