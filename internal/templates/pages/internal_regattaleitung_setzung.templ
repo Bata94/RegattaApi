@@ -179,7 +179,7 @@ templ InternalRegattaleitungSetzung() {
   }
 }
 
-templ InternalRegattaleitungSetzungLosung(msg string) {
+templ InternalRegattaleitungSetzungLosung() {
   {{
     breadcrumbs := []ui_components.BreadcrumbsEntries{
       ui_components.BreadcrumbsEntries{
@@ -209,12 +209,6 @@ templ InternalRegattaleitungSetzungLosung(msg string) {
     @ui_components.PageHeader("Setzungslosung")
     @ui_components.PageHeaderSubtext("Hier kannst du die Setzungslosung durchführen.")
 
-    if msg != "" {
-      <div class="w-full mb-4">
-        <h4 class="text-error !m-0 !p-0">{msg}</h4>
-      </div>
-    }
-
     <div
       class="bg-red-500/70 text-white font-bold text-lg p-4 rounded-md w-fit mx-auto"
     >
@@ -227,7 +221,6 @@ templ InternalRegattaleitungSetzungLosung(msg string) {
       <form
         class="w-fit"
         hx-post="/internal/regattaleitung/setzungsverwaltung/losung"
-        hx-target="main"
       >
         <div class="w-fit mx-auto">
           @ui_components.SubmitButton("Losung durchführen", ui_components.Warning)
@@ -237,7 +230,6 @@ templ InternalRegattaleitungSetzungLosung(msg string) {
       <form
         class="w-fit"
         hx-delete="/internal/regattaleitung/setzungsverwaltung/losung"
-        hx-target="main"
       >
         <div class="w-fit mx-auto">
           @ui_components.SubmitButton("Losung zurücksetzen", ui_components.Error)
@@ -479,25 +471,6 @@ templ InternalRegattaleitungSetzungAenderungRennen(rennId uuid.UUID) {
 }
 
 templ meldungDragDropEntry(m crud.Meldung) {
-  {{
-    teilnehmerStr := ""
-    for _, a := range m.Athleten {
-      if *a.Rolle == sqlc.RolleTrainer {
-        continue
-      }
-
-      if teilnehmerStr != "" {
-        teilnehmerStr += ", "
-      }
-
-      if *a.Rolle == sqlc.RolleStm {
-        teilnehmerStr += fmt.Sprintf("Stm.: %s %s (%s)", a.Vorname, a.Name, a.Jahrgang)
-      } else {
-        teilnehmerStr += fmt.Sprintf("%s %s (%s)", a.Vorname, a.Name, a.Jahrgang)
-      }
-    }
-  }}
-
   <li
     class="draggable-item list-none border border-mrgblau rounded-md shadow-md !mx-0 !my-2 !p-2 cursor-grab hover:bg-neutral-focus transition-colors duration-150"
     draggable="true"
@@ -519,7 +492,7 @@ templ meldungDragDropEntry(m crud.Meldung) {
       {m.StartNummer} - {m.Verein.Name}
     </h4>
     <p class="text-sm !p-0 !m-0">
-      {teilnehmerStr}
+      {m.TeilnehmerString()}
     </p>
   </li>
 }

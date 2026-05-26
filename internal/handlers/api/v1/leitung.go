@@ -92,27 +92,10 @@ func GetMeldeergebnisHtml(c *handler.Context) error {
 			continue
 		}
 		for _, m := range r.Meldungen {
-			athletenStr := ""
-			for _, a := range m.Athleten {
-				if *a.Rolle == sqlc.RolleTrainer {
-					continue
-				}
-
-				if athletenStr != "" {
-					athletenStr += ", "
-				}
-
-				if *a.Rolle == sqlc.RolleStm {
-					athletenStr += fmt.Sprintf("\nStm.: %s %s (%s)", a.Vorname, a.Name, a.Jahrgang)
-				} else {
-					athletenStr += fmt.Sprintf("%s %s (%s)", a.Vorname, a.Name, a.Jahrgang)
-				}
-			}
-
 			meldungEntry := MeldungMeldeergebnisPDF{
 				StartNummer: int(m.StartNummer),
 				Bahn:        int(m.Bahn),
-				Teilnehmer:  athletenStr,
+				Teilnehmer:  m.TeilnehmerString(),
 				Verein:      m.Verein.Name,
 			}
 
@@ -746,7 +729,8 @@ func getRennInfo(regattaDays []string, event DrvEvents) (*sqlc.Wettkampf, *sqlc.
 		return nil, nil, 0, err
 	}
 
-	if event.Days[0].Date == regattaDays[0] {
+	switch event.Days[0].Date {
+	case regattaDays[0]:
 		tag = sqlc.TagSa
 
 		if rennNr < 100 {
@@ -762,7 +746,7 @@ func getRennInfo(regattaDays []string, event DrvEvents) (*sqlc.Wettkampf, *sqlc.
 				rennabstand = 3
 			}
 		}
-	} else if event.Days[0].Date == regattaDays[1] {
+	case regattaDays[1]:
 		tag = sqlc.TagSo
 
 		if rennNr < 310 || rennNr == 321 {
@@ -772,7 +756,7 @@ func getRennInfo(regattaDays []string, event DrvEvents) (*sqlc.Wettkampf, *sqlc.
 			wettkampf = sqlc.WettkampfStaffel
 			rennabstand = 10
 		}
-	} else {
+	default:
 		return nil, nil, 0, errors.New("Could not find valid Date")
 	}
 
@@ -788,16 +772,14 @@ func shuffle(array []crud.Meldung) []crud.Meldung {
 }
 
 func SetzungsLosung(c *handler.Context) error {
-	fmt.Println("Setzungslosung!")
 	check, err := crud.CheckMeldungSetzung()
-	fmt.Println("Check:", check)
-	fmt.Println("Err:", err)
 	if err != nil {
 		return err
 	}
 	if check {
-		return &handler.Error{StatusCode: 400, Message: "Setzung already done!"}
-	}
+		retErr := &api.BAD_REQUEST
+		retErr.Msg = "Setzung bereits erledigt! Vorher reseten um zu wiederholen!"
+		return retErr}
 
 	allRennen, err := crud.GetAllRennen(crud.GetAllRennenParams{
 		GetMeldungen:  true,
@@ -806,23 +788,74 @@ func SetzungsLosung(c *handler.Context) error {
 		ShowWettkampf: sqlc.NullWettkampf{},
 	})
 	if err != nil {
-		fmt.Println("GetAllRennen Error:", err)
 		return err
 	}
 
 	for _, r := range allRennen {
-		shuffledMeldungen := shuffle(r.Meldungen)
-		for i, m := range shuffledMeldungen {
-			m.Abteilung = int32((i / 6) + 1)
-			m.Bahn = int32((i % 6) + 1)
-			err = crud.UpdateMeldungSetzung(sqlc.UpdateMeldungSetzungParams{
+		maxBahnen := 1
+
+		switch r.Wettkampf {
+		case sqlc.WettkampfKurzstrecke:
+			maxBahnen = 4
+		case sqlc.WettkampfSlalom:
+			maxBahnen = 3
+		case sqlc.WettkampfLangstrecke:
+			maxBahnen = 99999
+		case sqlc.WettkampfStaffel:
+			maxBahnen = 2
+		}
+
+		numMeld := 0
+		for _, m := range r.Meldungen {
+			if !m.Abgemeldet {
+				numMeld++
+			}
+		}
+		if numMeld == 0 {
+			continue
+		}
+
+		remainder := numMeld % maxBahnen
+		numAbteilungen := numMeld / maxBahnen
+		if remainder > 0 {
+			numAbteilungen++
+		}
+
+		sizes := make([]int, numAbteilungen)
+		for i := range sizes {
+			sizes[i] = maxBahnen
+		}
+		if remainder > 0 {
+			sizes[numAbteilungen-1] = remainder
+		}
+		if remainder == 1 && numAbteilungen >= 2 {
+			sizes[numAbteilungen-2]--
+			sizes[numAbteilungen-1]++
+		}
+
+		r.Meldungen = shuffle(r.Meldungen)
+
+		abteilungIdx := 0
+		bahn := int32(1)
+		count := 0
+
+		for _, m := range r.Meldungen {
+			if m.Abgemeldet {
+				continue
+			}
+			if err := crud.UpdateMeldungSetzung(sqlc.UpdateMeldungSetzungParams{
 				Uuid:      m.Uuid,
-				Abteilung: m.Abteilung,
-				Bahn:      m.Bahn,
-			})
-			if err != nil {
-				fmt.Println("UpdateMeldungSetzung Error:", err)
+				Abteilung: int32(abteilungIdx + 1),
+				Bahn:      bahn,
+			}); err != nil {
 				return err
+			}
+			bahn++
+			count++
+			if count >= sizes[abteilungIdx] {
+				abteilungIdx++
+				bahn = 1
+				count = 0
 			}
 		}
 	}

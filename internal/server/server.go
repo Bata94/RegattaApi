@@ -257,7 +257,7 @@ func GetRouter() http.Handler {
 		return ui_pages.InternalRegattaleitungSetzung(), nil
 	})
 	baseLayoutHandler("/internal/regattaleitung/setzungsverwaltung/losung", func(c *handler.Context) (templ.Component, error) {
-		return ui_pages.InternalRegattaleitungSetzungLosung(""), nil
+		return ui_pages.InternalRegattaleitungSetzungLosung(), nil
 	})
 	r.Handle("POST", "/internal/regattaleitung/setzungsverwaltung/losung", wrapHandler(setzungsVerwaltungLosungPostHandler, true))
 	r.Handle("DELETE", "/internal/regattaleitung/setzungsverwaltung/losung", wrapHandler(setzungsVerwaltungLosungDeleteHandler, true))
@@ -934,21 +934,17 @@ func drvUploadPostHandler(c *handler.Context) error {
 func setzungsVerwaltungLosungPostHandler(c *handler.Context) error {
 	err := api_v1.SetzungsLosung(c)
 	if err != nil {
-		templ.Handler(ui_pages.InternalRegattaleitungSetzungLosung(fmt.Sprintf("Ein Fehler ist aufgetreten: %s", err.Error()))).ServeHTTP(c.Writer, c.Request)
-		return nil
+		return toastReturn(c, fmt.Sprintf("Ein Fehler ist aufgetreten: %s", err.Error()), ui_components.Error)
 	}
-	templ.Handler(ui_pages.InternalRegattaleitungSetzungLosung("Losung erfolgreich!")).ServeHTTP(c.Writer, c.Request)
-	return nil
+	return toastReturn(c, "Losung erfolgreich!", ui_components.Success)
 }
 
 func setzungsVerwaltungLosungDeleteHandler(c *handler.Context) error {
 	err := api_v1.ResetSetzung(c)
 	if err != nil {
-		templ.Handler(ui_pages.InternalRegattaleitungSetzungLosung(fmt.Sprintf("Ein Fehler ist aufgetreten: %s", err.Error()))).ServeHTTP(c.Writer, c.Request)
-		return nil
+		return toastReturn(c, fmt.Sprintf("Ein Fehler ist aufgetreten: %s", err.Error()), ui_components.Error)
 	}
-	templ.Handler(ui_pages.InternalRegattaleitungSetzungLosung("Setzung erfolgreich zurückgesetzt!")).ServeHTTP(c.Writer, c.Request)
-	return nil
+	return toastReturn(c, "Setzung erfolgreich zurückgesetzt!", ui_components.Success)
 }
 
 func setzungsVerwaltungAenderungRennenPostHandler(c *handler.Context) error {

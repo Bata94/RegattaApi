@@ -1,8 +1,6 @@
 package ui_pages
 
 import (
-  "fmt"
-
   "github.com/bata94/RegattaApi/internal/templates/components"
   "github.com/bata94/RegattaApi/internal/sqlc"
   "github.com/bata94/RegattaApi/internal/crud"
@@ -23,8 +21,13 @@ templ rennenHeader(r crud.Rennen) {
   </h4>
 }
 
+// TODO: On Bigger Screens, show Abteilungen next to each other
+
 templ rennenBody(r crud.Rennen) {
-  {{var aktAbt int32 = 0}}
+  {{
+    var aktAbt int32 = 0
+    var abgemedeteMeldungen []crud.Meldung = []crud.Meldung{}
+  }}
 
   <div id={r.Uuid.String()} class="px-2 py-0">
     <h5 class="font-semibold">
@@ -52,37 +55,39 @@ templ rennenBody(r crud.Rennen) {
     </h6>
 
     for _, m := range r.Meldungen{
+      if m.Abgemeldet {
+        {{
+          abgemedeteMeldungen = append(abgemedeteMeldungen, m)
+          continue
+        }}
+      }
       if m.Abteilung != aktAbt {
         {{aktAbt = m.Abteilung}}
         <h6 class="text-lg font-semibold">Abteilung {aktAbt}:</h6>
       }
-
-      {{
-        teilnehmerStr := ""
-        for _, a := range m.Athleten {
-          if *a.Rolle == sqlc.RolleTrainer {
-            continue
-          }
-
-          if teilnehmerStr != "" {
-            teilnehmerStr += ", "
-          }
-
-          if *a.Rolle == sqlc.RolleStm {
-            teilnehmerStr += fmt.Sprintf("Stm.: %s %s (%s)", a.Vorname, a.Name, a.Jahrgang)
-          } else {
-            teilnehmerStr += fmt.Sprintf("%s %s (%s)", a.Vorname, a.Name, a.Jahrgang)
-          }
-        }
-      }}
 
       <div class="mx-2 mt-4">
         <h5 class="px-1 font-semibold">
           {m.StartNummer} - {m.Verein.Name}
         </h5>
         <p class="m-0 p-0 px-2">
-          {teilnehmerStr}
+          {m.TeilnehmerString()}
         </p>
+      </div>
+    }
+    if len(abgemedeteMeldungen) > 0 {
+      <h6 class="text-lg font-semibold">
+        Abmeldungen:
+      </h6>
+      <div class="mx-2 mt-4">
+        for _, m := range abgemedeteMeldungen {
+          <h5 class="px-1 font-semibold">
+            {m.StartNummer} - {m.Verein.Name}
+          </h5>
+          <p class="m-0 p-0 px-2">
+            {m.TeilnehmerString()}
+          </p>
+        }
       </div>
     }
   </div>

@@ -20,6 +20,26 @@ type Meldung struct {
 	Athleten []Athlet `json:"athleten"`
 }
 
+func (m Meldung) TeilnehmerString() string {
+	var retStr string
+	for _, a := range m.Athleten {
+		if *a.Rolle == sqlc.RolleTrainer {
+			continue
+		}
+
+		if retStr != "" {
+			retStr += ", "
+		}
+
+		if *a.Rolle == sqlc.RolleStm {
+			retStr += fmt.Sprintf("Stm.: %s %s (%s)", a.Vorname, a.Name, a.Jahrgang)
+		} else {
+			retStr += fmt.Sprintf("%s %s (%s)", a.Vorname, a.Name, a.Jahrgang)
+		}
+	}
+	return retStr
+}
+
 type UpdateSetzungBatchParams struct {
 	RennenUUID uuid.UUID                         `json:"rennen_uuid"`
 	Meldungen  []sqlc.UpdateMeldungSetzungParams `json:"meldungen"`
