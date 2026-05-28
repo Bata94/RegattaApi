@@ -1,0 +1,33 @@
+package ui_pages
+
+import (
+	"github.com/bata94/RegattaApi/internal/templates/components"
+)
+
+templ InternalRegattaleitungEmailIndex() {
+  {{
+    breadcrumbs := []ui_components.BreadcrumbsEntries{
+      ui_components.BreadcrumbsEntries{
+        Title: "Home",
+        Paths: "/",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Internes",
+        Paths: "/internal",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Regattaleitung",
+        Paths: "/internal/regattaleitung",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "eMail",
+        Paths: "/internal/regattaleitung/email",
+      },
+    }
+  }}
+  @ui_components.Breadcrumbs(breadcrumbs)
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("eMail")
+    @ui_components.PageHeaderSubtext("Work in progress")
+  }
+}

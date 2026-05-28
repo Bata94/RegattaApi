@@ -21,6 +21,7 @@ import (
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/bata94/RegattaApi/internal/templates/components"
 	"github.com/bata94/RegattaApi/internal/templates/pages"
+	"github.com/bata94/RegattaApi/internal/utils"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
@@ -318,13 +319,14 @@ func GetRouter() http.Handler {
 		return ui_pages.InternalRegattaleitungStartnummernAendern(), nil
 	})
 	baseLayoutHandler("/internal/regattaleitung/pdf_meldeergebnis", func(c *handler.Context) (templ.Component, error) {
-		return ui_pages.InternalRegattaleitung(), nil
+		return ui_pages.InternalRegattaleitungPdfMeldeergebnis(false), nil
 	})
+	r.Handle("POST", "/internal/regattaleitung/pdf_meldeergebnis", wrapHandler(pdfMeldeergebnisPostHandler, true))
 	baseLayoutHandler("/internal/regattaleitung/vereine", func(c *handler.Context) (templ.Component, error) {
-		return ui_pages.InternalRegattaleitung(), nil
+		return ui_pages.InternalRegattaleitungVereinsverwaltung(), nil
 	})
 	baseLayoutHandler("/internal/regattaleitung/email", func(c *handler.Context) (templ.Component, error) {
-		return ui_pages.InternalRegattaleitung(), nil
+		return ui_pages.InternalRegattaleitungEmailIndex(), nil
 	})
 
 	baseLayoutHandler("/internal/admin", func(c *handler.Context) (templ.Component, error) {
@@ -376,7 +378,7 @@ func GetRouter() http.Handler {
 	r.Handle("POST", "/api/v1/buero/kasse/rechnung/{uuid}", wrapHandler(api_v1.KasseCreateRechnungPDF, true))
 
 	r.Handle("GET", "/api/v1/leitung/pdfFooter", wrapHandler(api_v1.GetPdfFooter, true))
-	r.Handle("GET", "/api/v1/leitung/meldeergebnis", wrapHandler(api_v1.GetMeldeergebnisHtml, true))
+	r.Handle("GET", "/api/v1/leitung/meldeergebnis", wrapHandler(api_v1.GetMeldeergebnisHtml, false))
 	r.Handle("GET", "/api/v1/leitung/meldeergebnis/list", wrapHandler(api_v1.GetMeldeergebnisList, true))
 	r.Handle("GET", "/api/v1/leitung/meldeergebnis/{filename}", wrapHandler(api_v1.GetMeldeergebnisFilename, true))
 	r.Handle("POST", "/api/v1/leitung/meldeergebnis", wrapHandler(api_v1.GenerateMeldeergebnis, true))
@@ -1123,4 +1125,21 @@ func startnummernVerteilenDeleteHandler(c *handler.Context) error {
 	}
 
 	return toastReturn(c, "Startnummern erfolgreich zurückgesetzt!", ui_components.Success)
+}
+
+func pdfMeldeergebnisPostHandler(c *handler.Context) error {
+	fileName := fmt.Sprintf("Meldeergebnis_%s", time.Now().Format("2006-01-02_15-04-05"))
+	_, err := utils.SavePDFfromHTML(
+		"leitung/meldeergebnis",
+		"meldeergebnis",
+		fileName,
+		true,
+	)
+	if err != nil {
+		os.Remove(fmt.Sprintf("./files/meldeergebnis/%s", fileName))
+		return toastReturn(c, fmt.Sprintf("Fehler während PDF Erstellung: %s", err.Error()), ui_components.Error)
+	}
+
+	templ.Handler(ui_pages.InternalRegattaleitungPdfMeldeergebnis(true)).ServeHTTP(c.Writer, c.Request)
+	return nil
 }

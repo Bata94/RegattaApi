@@ -15,8 +15,10 @@ import (
 
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handler"
+	"github.com/bata94/RegattaApi/internal/handlers"
 	"github.com/bata94/RegattaApi/internal/handlers/api"
 	"github.com/bata94/RegattaApi/internal/sqlc"
+	pdf_templates "github.com/bata94/RegattaApi/internal/templates/pdf"
 	"github.com/bata94/RegattaApi/internal/utils"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -57,18 +59,18 @@ func GetMeldeergebnisHtml(c *handler.Context) error {
 		return err
 	}
 
-	pLsParsed := []PausesenMeldeergebnisPDF{}
+	pLsParsed := []pdf_templates.PausenMeldeergebnisPDF{}
 	for _, p := range pLs {
-		pLsParsed = append(pLsParsed, PausesenMeldeergebnisPDF{
+		pLsParsed = append(pLsParsed, pdf_templates.PausenMeldeergebnisPDF{
 			Id:             int(p.ID),
 			Laenge:         int(p.Laenge),
 			NachRennenUuid: p.NachRennenUuid.String(),
 		})
 	}
 
-	rLsParsed := []RennenMeldeergebnisPDF{}
+	rLsParsed := []pdf_templates.RennenMeldeergebnisPDF{}
 	for _, r := range rLs {
-		rParsed := RennenMeldeergebnisPDF{
+		rParsed := pdf_templates.RennenMeldeergebnisPDF{
 			Uuid:              r.Uuid.String(),
 			RennNr:            r.Nummer,
 			Bezeichnung:       r.Bezeichnung,
@@ -79,8 +81,8 @@ func GetMeldeergebnisHtml(c *handler.Context) error {
 			NumMeldungen:      *r.NumMeldungen,
 			NumAbteilungen:    *r.NumAbteilungen,
 			Wettkampf:         r.Wettkampf,
-			Abteilungen:       make([]AbteilungenMeldeergebnisPDF, *r.NumAbteilungen),
-			Abmeldungen:       []MeldungMeldeergebnisPDF{},
+			Abteilungen:       make([]pdf_templates.AbteilungenMeldeergebnisPDF, *r.NumAbteilungen),
+			Abmeldungen:       []pdf_templates.MeldungMeldeergebnisPDF{},
 		}
 
 		for i := range rParsed.Abteilungen {
@@ -92,7 +94,7 @@ func GetMeldeergebnisHtml(c *handler.Context) error {
 			continue
 		}
 		for _, m := range r.Meldungen {
-			meldungEntry := MeldungMeldeergebnisPDF{
+			meldungEntry := pdf_templates.MeldungMeldeergebnisPDF{
 				StartNummer: int(m.StartNummer),
 				Bahn:        int(m.Bahn),
 				Teilnehmer:  m.TeilnehmerString(),
@@ -112,7 +114,11 @@ func GetMeldeergebnisHtml(c *handler.Context) error {
 		rLsParsed = append(rLsParsed, rParsed)
 	}
 
-	return c.JSON(rLsParsed)
+	return handlers.RenderPdf(
+		c,
+		fmt.Sprintf("Meldeergebnis_%s", time.Now().Format("2006-01-02_15-04-05")),
+		pdf_templates.MeldeErgebnis(rLsParsed, pLsParsed),
+	)
 }
 
 func GenerateMeldeergebnis(c *handler.Context) error {
