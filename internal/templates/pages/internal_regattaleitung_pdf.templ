@@ -29,7 +29,6 @@ templ InternalRegattaleitungPdfMeldeergebnis(highlightLast bool) {
     }
 
     pdfLS, errFiles := utils.GetFilenames("meldeergebnis")
-    slices.Reverse(pdfLS)
   }}
   if errFiles != nil {
     @ui_components.ErrorBody(500, errFiles.Error())
@@ -53,24 +52,30 @@ templ InternalRegattaleitungPdfMeldeergebnis(highlightLast bool) {
     <h2 class="!mx-0 !mt-4 !mb-8 !p-0">Erstellte Meldeergebnisse:</h2>
     <div class="w-full h-full">
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        for i, pdf := range pdfLS {
-          {{
-            btnClass := "btn btn-outline"
-            if i == 0 && highlightLast {
-              btnClass = "btn btn-success"
-            }
-            btnClass += " p-4 w-fit mx-auto"
+        if len(pdfLS) == 0 {
+          <h4>Noch keine Meldeergebnisse erstellt!</h4>
 
-           }}
+        } else {
+          {{slices.Reverse(pdfLS)}}
+          for i, pdf := range pdfLS {
+            {{
+              btnClass := "btn btn-outline"
+              if i == 0 && highlightLast {
+                btnClass = "btn btn-success"
+              }
+              btnClass += " p-4 w-fit mx-auto"
 
-          <a
-            class={btnClass}
-            href={fmt.Sprintf("/files/meldeergebnis/%s", pdf)}
-            target="_blank"
-          >
-            <i class="fa fa-file-pdf-o"></i>
-            {pdf}
-          </a>
+             }}
+
+            <a
+              class={btnClass}
+              href={fmt.Sprintf("/files/meldeergebnis/%s", pdf)}
+              target="_blank"
+            >
+              <i class="fa fa-file-pdf-o"></i>
+              {pdf}
+            </a>
+          }
         }
       </div>
     </div>

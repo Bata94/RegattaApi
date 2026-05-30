@@ -10,6 +10,11 @@ import (
 func GetFilenames(dir string) ([]string, error) {
 	var files []string
 	path := filepath.Join("./files", dir)
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		os.MkdirAll(fmt.Sprint(path), os.ModePerm)
+
+	}
+
 	err := filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
 		if !info.IsDir() {
 			files = append(files, info.Name())
