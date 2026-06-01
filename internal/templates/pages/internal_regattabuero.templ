@@ -24,18 +24,8 @@ templ InternalRegattabuero() {
 
     @ui_components.PageHeader("Regattabüro")
     @ui_components.PageHeaderSubtext("Hier kannst du die Regattabüro-Funktionen nutzen.")
-    <div
-      class="btn btn-outline min-w-64 w-1/2 h-20 mx-auto mb-8"
-      hx-get="/internal/regattabuero"
-      hx-target="main"
-      hx-push-url="true"
-      hy-boost="true"
-      href="/internal/regattabuero"
-    >
-      <h2 class="text-2xl font-bold !m-0">
-        Neues Dashboard (Beta)
-      </h2>
-    </div>
+
+    // @internalRegattabueroNewDashboardBtn()
 
     @ui_components.InternalNavBtnGrid([]ui_components.InternalNavBtnParams{
       {Name: "Abmeldung", Desc: "Meldungen abmelden", URL: "#"},
@@ -51,4 +41,19 @@ templ InternalRegattabuero() {
       {Name: "Änderungen von Obleuten", Desc: "Ab-, Um- und Nachmeldungen von Vereins Obleuten akzeptieren bzw. ablehnen", URL: "#"},
     })
   }
+}
+
+templ internalRegattabueroNewDashboardBtn() {
+  <div
+    class="btn btn-outline min-w-64 w-1/2 h-20 mx-auto mb-8"
+    hx-get="/internal/regattabuero"
+    hx-target="main"
+    hx-push-url="true"
+    hy-boost="true"
+    href="/internal/regattabuero"
+  >
+    <h2 class="text-2xl font-bold !m-0">
+      Neues Dashboard (Beta)
+    </h2>
+  </div>
 }
