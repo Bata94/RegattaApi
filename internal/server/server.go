@@ -251,6 +251,7 @@ func GetRouter() http.Handler {
 		if next == "" {
 				return ui_pages.Error(404, "Wettkampf nicht gefunden"), errors.New("Wettkampf nicht gefunden")
 		}
+		title := c.GetQueryParam("title")
 		nextUrl := "/internal/regattabuero/%s/"
 		switch next {
 		case "abmeldung":
@@ -264,7 +265,7 @@ func GetRouter() http.Handler {
 		if err != nil {
 			return ui_pages.Error(500, "Fehler beim Laden der Vereine"), errors.New("Fehler beim Laden der Vereine")
 		}
-		return ui_pages.InternalVereinswahl(nextUrl, vereine), nil
+		return ui_pages.InternalVereinswahl(nextUrl, title, vereine), nil
 	})
 	baseLayoutHandler("/internal/regattabuero/{v_uuid}/abmeldung", func(c *handler.Context) (templ.Component, error) {
 		vereinUuidStr := c.Param("v_uuid")
@@ -277,6 +278,18 @@ func GetRouter() http.Handler {
 			return ui_pages.Error(500, "Error while loading meldungen"), errors.New("Error while loading meldungen")
 		}
 		return ui_pages.InternalRegattabueroAbmeldung(meldungen), nil
+	})
+	baseLayoutHandler("/internal/regattabuero/{v_uuid}/ummeldung", func(c *handler.Context) (templ.Component, error) {
+		vereinUuidStr := c.Param("v_uuid")
+		vereinUuid, err := uuid.Parse(vereinUuidStr)
+		if err != nil {
+			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+		}
+		meldungen, err := crud.GetAllMeldungForVerein(vereinUuid)
+		if err != nil {
+			return ui_pages.Error(500, "Error while loading meldungen"), errors.New("Error while loading meldungen")
+		}
+		return ui_pages.InternalRegattabueroUmmeldung(meldungen), nil
 	})
 
 	baseLayoutHandler("/internal/regattaleitung", func(c *handler.Context) (templ.Component, error) {

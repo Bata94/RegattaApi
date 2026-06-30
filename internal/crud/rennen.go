@@ -43,6 +43,33 @@ type GetAllRennenParams struct {
 	ShowWettkampf sqlc.NullWettkampf
 }
 
+type Tag sqlc.Tag
+
+const (
+	TagSa Tag = "sa"
+	TagSo Tag = "so"
+)
+
+func (t Tag) String() string {
+	switch t {
+	case TagSa:
+		return "Samstag"
+	case TagSo:
+		return "Sonntag"
+	}
+	return "Unbekannter Tag"
+}
+
+func (t Tag) StringShort() string {
+	switch t {
+	case TagSa:
+		return "Sa"
+	case TagSo:
+		return "So"
+	}
+	return "???"
+}
+
 type Rennen struct {
 	Uuid             uuid.UUID       `json:"uuid"`
 	SortID           int             `json:"sort_id"`
@@ -56,7 +83,7 @@ type Rennen struct {
 	BootsklasseLang  string          `json:"bootsklasse_lang"`
 	Altersklasse     string          `json:"altersklasse"`
 	AltersklasseLang string          `json:"altersklasse_lang"`
-	Tag              sqlc.Tag        `json:"tag"`
+	Tag              Tag             `json:"tag"`
 	Wettkampf        sqlc.Wettkampf  `json:"wettkampf"`
 	KostenEur        int             `json:"kosten_eur"`
 	Rennabstand      int             `json:"rennabstand"`
@@ -77,7 +104,7 @@ type RennenZeitplaung struct {
 	Bezeichnung_lang string         `json:"bezeichnung_lang"`
 	Zusatz           string         `json:"zusatz"`
 	Wettkampf        sqlc.Wettkampf `json:"wettkampf"`
-	Tag              sqlc.Tag       `json:"tag"`
+	Tag              Tag            `json:"tag"`
 	Startzeit        string         `json:"startzei"`
 }
 
@@ -90,7 +117,7 @@ func RennenZeitplaungFromSqlc(rennen sqlc.GetRennenZeitplanRow) RennenZeitplaung
 		Bezeichnung_lang: rennen.BezeichnungLang,
 		Zusatz:           rennen.Zusatz.String,
 		Wettkampf:        rennen.Wettkampf,
-		Tag:              rennen.Tag,
+		Tag:              Tag(rennen.Tag),
 		Startzeit:        rennen.Startzeit.String,
 	}
 }
@@ -250,7 +277,7 @@ func RennenFromSqlc(rennen sqlc.Rennen, numMeld int, numAbt interface{}) Rennen 
 		BootsklasseLang:  rennen.BootsklasseLang,
 		Altersklasse:     rennen.Altersklasse,
 		AltersklasseLang: rennen.AltersklasseLang,
-		Tag:              rennen.Tag,
+		Tag:              Tag(rennen.Tag),
 		Wettkampf:        rennen.Wettkampf,
 		KostenEur:        int(rennen.KostenEur.Int32),
 		Rennabstand:      int(rennen.Rennabstand.Int32),

@@ -1,0 +1,14 @@
+package ui_components
+
+import "github.com/bata94/RegattaApi/internal/crud"
+
+templ MeldungsCard(m crud.Meldung) {
+  <div
+    class="card bg-base-100 shadow-md hover:cursor-pointer"
+  >
+    <div class="card-body">
+      <h5 class="card-title">Rennen: {m.Rennen.Nummer} - {m.Rennen.BezeichnungLang}</h5>
+      <p class="card-text">{m.StartNummer}: {m.TeilnehmerString()}</p>
+    </div>
+  </div>
+}

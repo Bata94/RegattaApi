@@ -4,6 +4,9 @@ BINARY_NAME := "regattaapi"
 DOCKER_REGISTRY := "ghcr.io/bata94/"
 # EXPORT_RESULT := false # for CI please set EXPORT_RESULT to true
 
+default:
+  @just --list
+
 build-docker:
 	docker build --target prod --tag $(BINARY_NAME) .
 

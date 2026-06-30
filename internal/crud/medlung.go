@@ -90,13 +90,13 @@ func GetMeldungMinimal(uuid uuid.UUID) (Meldung, error) {
 	return Meldung{Meldung: m}, nil
 }
 
-func GetMeldungByStartNrUndTag(startNummer int, tag sqlc.Tag) (Meldung, error) {
+func GetMeldungByStartNrUndTag(startNummer int, tag Tag) (Meldung, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
 	q, err := DB.Queries.GetMeldungByStartNrUndTag(ctx, sqlc.GetMeldungByStartNrUndTagParams{
 		StartNummer: int32(startNummer),
-		Tag:         tag,
+		Tag:         sqlc.Tag(tag),
 	})
 	if err != nil {
 		return Meldung{}, err
@@ -300,11 +300,11 @@ func SetMeldungRechnungsNummer(meldUuid uuid.UUID, rechnungsNummer string) error
 	})
 }
 
-func GetStartnummerLast(tag sqlc.Tag) (int32, error) {
+func GetStartnummerLast(tag Tag) (int32, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	lastStartNr, err := DB.Queries.GetLastStartnummer(ctx, tag)
+	lastStartNr, err := DB.Queries.GetLastStartnummer(ctx, sqlc.Tag(tag))
 	if err != nil {
 		return 0, err
 	}

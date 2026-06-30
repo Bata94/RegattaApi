@@ -10,7 +10,6 @@ import (
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/bata94/RegattaApi/internal/handlers"
-	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/google/uuid"
 )
 
@@ -111,7 +110,7 @@ func GenerateEndZeit(c *handler.Context) error {
 					log.Println("Error StartNummerStr to int")
 					return err
 				}
-				meld, err := crud.GetMeldungByStartNrUndTag(startNummerInt, sqlc.TagSa)
+				meld, err := crud.GetMeldungByStartNrUndTag(startNummerInt, crud.TagSa)
 				if err != nil {
 					log.Println("GetMeldungByStartNrUndTag")
 					return err

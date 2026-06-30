@@ -6,16 +6,74 @@ import (
 )
 
 templ InternalRegattabueroAbmeldung(meldungen []crud.Meldung) {
-  <div class="max-w-[90%] mx-auto my-4 flex flex-col gap-4">
-    @ui_components.PageHeader("Abmeldung")
-    for _, m := range meldungen {
-      <div
-        class="card bg-base-100 shadow-md"
-      >
-        <div class="card-body">
-          <h5 class="card-title">{m.StartNummer}</h5>
-        </div>
-      </div>
+  {{
+    breadcrumbs := []ui_components.BreadcrumbsEntries{
+      ui_components.BreadcrumbsEntries{
+        Title: "Home",
+        Paths: "/",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Internes",
+        Paths: "/internal",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Regattabüro",
+        Paths: "/internal/regattabuero",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Abmeldung",
+        Paths: "",
+      },
     }
-  </div>
+    var curDay crud.Tag
+  }}
+  @ui_components.Breadcrumbs(breadcrumbs)
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Abmeldung")
+    @ui_components.PageHeaderSubtext("")
+    <div class="flex flex-col gap-4">
+      for _, m := range meldungen {
+        if curDay != m.Rennen.Tag {
+          {{
+            curDay = m.Rennen.Tag
+          }}
+          <div class="text-xl font-bold">{curDay}</div>
+        }
+        @ui_components.MeldungsCard(m)
+      }
+    </div>
+  }
+}
+
+templ InternalRegattabueroUmmeldung(meldungen []crud.Meldung) {
+  {{
+    breadcrumbs := []ui_components.BreadcrumbsEntries{
+      ui_components.BreadcrumbsEntries{
+        Title: "Home",
+        Paths: "/",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Internes",
+        Paths: "/internal",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Regattabüro",
+        Paths: "/internal/regattabuero",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Ummeldung",
+        Paths: "",
+      },
+    }
+  }}
+  @ui_components.Breadcrumbs(breadcrumbs)
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Ummeldung")
+    @ui_components.PageHeaderSubtext("")
+    <div class="flex flex-col gap-4">
+      for _, m := range meldungen {
+        @ui_components.MeldungsCard(m)
+      }
+    </div>
+  }
 }

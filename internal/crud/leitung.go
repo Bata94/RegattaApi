@@ -45,7 +45,7 @@ func SetZeitplan(param SetZeitplanParams) error {
 
 	for _, r := range rLs {
 		switch r.Tag {
-		case sqlc.TagSa:
+		case TagSa:
 			saTimeStr := curStartTimeSa.Format("15:04")
 			fmt.Printf("Setting RennenNr: %s to time %s\n", r.Nummer, saTimeStr)
 			err := UpdateStartZeit(sqlc.UpdateStartZeitParams{
@@ -66,7 +66,7 @@ func SetZeitplan(param SetZeitplanParams) error {
 					curStartTimeSa = curStartTimeSa.Add(time.Minute * time.Duration(p.Laenge))
 				}
 			}
-		case sqlc.TagSo:
+		case TagSo:
 			soTimeStr := curStartTimeSo.Format("15:04")
 			fmt.Printf("Setting RennenNr: %s to time %s\n", r.Nummer, soTimeStr)
 			err := UpdateStartZeit(sqlc.UpdateStartZeitParams{
@@ -116,9 +116,9 @@ func SetStartnummern() error {
 		return err
 	}
 
-	startNummerMap := make(map[sqlc.Tag]int32)
-	startNummerMap[sqlc.TagSa] = 1
-	startNummerMap[sqlc.TagSo] = 1
+	startNummerMap := make(map[Tag]int32)
+	startNummerMap[TagSa] = 1
+	startNummerMap[TagSo] = 1
 
 	for _, r := range rLs {
 		for _, m := range r.Meldungen {
