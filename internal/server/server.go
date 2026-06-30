@@ -273,23 +273,86 @@ func GetRouter() http.Handler {
 		if err != nil {
 			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
 		}
+		verein, err := crud.GetVerein(vereinUuid)
+		if err != nil {
+			return ui_pages.Error(500, "Error while loading verein"), errors.New("Error while loading verein")
+		}
 		meldungen, err := crud.GetAllMeldungForVerein(vereinUuid)
 		if err != nil {
 			return ui_pages.Error(500, "Error while loading meldungen"), errors.New("Error while loading meldungen")
 		}
-		return ui_pages.InternalRegattabueroAbmeldung(meldungen), nil
+		return ui_pages.InternalRegattabueroAbmeldung(verein, meldungen), nil
 	})
+	baseLayoutHandler("/internal/regattabuero/{v_uuid}/abmeldung/{m_uuid}", func(c *handler.Context) (templ.Component, error) {
+		vereinUuidStr := c.Param("v_uuid")
+		vereinUuid, err := uuid.Parse(vereinUuidStr)
+		if err != nil {
+			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+		}
+		meldungUuidStr := c.Param("m_uuid")
+		meldungUuid, err := uuid.Parse(meldungUuidStr)
+		if err != nil {
+			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+		}
+
+		verein, err := crud.GetVerein(vereinUuid)
+		if err != nil {
+			return ui_pages.Error(500, "Error while loading verein"), errors.New("Error while loading verein")
+		}
+		meldung, err := crud.GetMeldung(meldungUuid)
+		if err != nil {
+			return ui_pages.Error(500, "Error while loading meldung"), errors.New("Error while loading meldung")
+		}
+
+		if meldung.VereinUuid != verein.Uuid {
+			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+		}
+
+		return ui_pages.InternalRegattabueroAbmeldungMeldung(verein, meldung), nil
+	})
+	r.Handle("DELETE", "/internal/regattabuero/{v_uuid}/abmeldung/{m_uuid}", wrapHandler(abmeldungDeletePostHandler, true))
 	baseLayoutHandler("/internal/regattabuero/{v_uuid}/ummeldung", func(c *handler.Context) (templ.Component, error) {
 		vereinUuidStr := c.Param("v_uuid")
 		vereinUuid, err := uuid.Parse(vereinUuidStr)
 		if err != nil {
 			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
 		}
+		verein, err := crud.GetVerein(vereinUuid)
+		if err != nil {
+			return ui_pages.Error(500, "Error while loading verein"), errors.New("Error while loading verein")
+		}
 		meldungen, err := crud.GetAllMeldungForVerein(vereinUuid)
 		if err != nil {
 			return ui_pages.Error(500, "Error while loading meldungen"), errors.New("Error while loading meldungen")
 		}
-		return ui_pages.InternalRegattabueroUmmeldung(meldungen), nil
+		return ui_pages.InternalRegattabueroUmmeldung(verein, meldungen), nil
+	})
+	baseLayoutHandler("/internal/regattabuero/{v_uuid}/ummeldung/{m_uuid}", func(c *handler.Context) (templ.Component, error) {
+		vereinUuidStr := c.Param("v_uuid")
+		vereinUuid, err := uuid.Parse(vereinUuidStr)
+		if err != nil {
+			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+		}
+		meldungUuidStr := c.Param("m_uuid")
+		meldungUuid, err := uuid.Parse(meldungUuidStr)
+		if err != nil {
+			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+		}
+
+		verein, err := crud.GetVerein(vereinUuid)
+		if err != nil {
+			return ui_pages.Error(500, "Error while loading verein"), errors.New("Error while loading verein")
+		}
+		meldung, err := crud.GetMeldung(meldungUuid)
+		if err != nil {
+			return ui_pages.Error(500, "Error while loading meldung"), errors.New("Error while loading meldung")
+		}
+
+		if meldung.VereinUuid != verein.Uuid {
+			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+		}
+
+		return ui_pages.InternalRegattabueroUmmeldungMeldung(verein, meldung), nil
 	})
 
 	baseLayoutHandler("/internal/regattaleitung", func(c *handler.Context) (templ.Component, error) {
@@ -1186,5 +1249,40 @@ func pdfMeldeergebnisPostHandler(c *handler.Context) error {
 	}
 
 	templ.Handler(ui_pages.InternalRegattaleitungPdfMeldeergebnis(true)).ServeHTTP(c.Writer, c.Request)
+	return nil
+}
+
+func abmeldungDeletePostHandler(c *handler.Context) error {
+	vereinUuidStr := c.Param("v_uuid")
+	vereinUuid, err := uuid.Parse(vereinUuidStr)
+	if err != nil {
+		return &handler.Error{StatusCode: 406, Message: "Invalid UUID"}
+	}
+	meldungUuidStr := c.Param("m_uuid")
+	meldungUuid, err := uuid.Parse(meldungUuidStr)
+	if err != nil {
+		return &handler.Error{StatusCode: 406, Message: "Invalid UUID"}
+	}
+
+	verein, err := crud.GetVerein(vereinUuid)
+	if err != nil {
+		return &handler.Error{StatusCode: 500, Message: "Error while loading verein"}
+	}
+	meldung, err := crud.GetMeldung(meldungUuid)
+	if err != nil {
+		return &handler.Error{StatusCode: 500, Message: "Error while loading meldung"}
+	}
+
+	if meldung.VereinUuid != verein.Uuid {
+		return &handler.Error{StatusCode: 406, Message: "Invalid UUID"}
+	}
+
+	err = crud.Abmeldung(meldungUuid)
+	if err != nil {
+		return &handler.Error{StatusCode: 500, Message: "Error while deleting meldung"}
+	}
+
+	c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("/internal/regattabuero/%s/abmeldung", verein.Uuid))
+	c.Writer.WriteHeader(http.StatusOK)
 	return nil
 }

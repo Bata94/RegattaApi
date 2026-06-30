@@ -1,11 +1,13 @@
 package ui_pages
 
 import (
+  "fmt"
+
   "github.com/bata94/RegattaApi/internal/crud"
   "github.com/bata94/RegattaApi/internal/templates/components"
 )
 
-templ InternalRegattabueroAbmeldung(meldungen []crud.Meldung) {
+templ InternalRegattabueroAbmeldung(v crud.Verein, meldungen []crud.Meldung) {
   {{
     breadcrumbs := []ui_components.BreadcrumbsEntries{
       ui_components.BreadcrumbsEntries{
@@ -29,7 +31,111 @@ templ InternalRegattabueroAbmeldung(meldungen []crud.Meldung) {
   }}
   @ui_components.Breadcrumbs(breadcrumbs)
   @ui_components.InternalPageDivCol() {
-    @ui_components.PageHeader("Abmeldung")
+    @ui_components.PageHeader("Abmeldung für " + v.Name)
+    @ui_components.PageHeaderSubtext("Bereits abgemeldete Meldungen werden nicht angezeigt")
+    <div class="flex flex-col gap-4">
+      for _, m := range meldungen {
+        if curDay != m.Rennen.Tag {
+          {{
+            curDay = m.Rennen.Tag
+          }}
+          <div class="text-xl font-bold text-mrgblau">{curDay}:</div>
+          <div class="divider h-4 m-0 mb-2 p-0"/>
+        }
+        if !m.Abgemeldet {
+          @ui_components.MeldungsCard(m, ui_components.DefaultGetHXNavigationOptions(fmt.Sprintf("/internal/regattabuero/%s/abmeldung/%s", v.Uuid, m.Uuid)))
+        }
+      }
+    </div>
+  }
+}
+
+templ InternalRegattabueroAbmeldungMeldung(v crud.Verein, m crud.Meldung) {
+  {{
+    breadcrumbs := []ui_components.BreadcrumbsEntries{
+      ui_components.BreadcrumbsEntries{
+        Title: "Home",
+        Paths: "/",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Internes",
+        Paths: "/internal",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Regattabüro",
+        Paths: "/internal/regattabuero",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Abmeldung",
+        Paths: "",
+      },
+    }
+
+    yesUrl := fmt.Sprintf("/internal/regattabuero/%s/abmeldung/%s", v.Uuid, m.Uuid)
+    noUrl := fmt.Sprintf("/internal/regattabuero/%s/abmeldung", v.Uuid)
+  }}
+  @ui_components.Breadcrumbs(breadcrumbs)
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Abmeldung für " + v.Name)
+    @ui_components.PageHeaderSubtext("")
+
+    <p>Sind Sie sicher, dass Sie die folgende Meldung abmelden möchten?</p>
+    <div class="flex flex-col gap-4 items-center">
+      <div class="card bg-base-100 p-4 rounded-md shadow-md">
+        <h5 class="text-xl font-bold">Zu Rennen: {m.Rennen.Nummer} - {m.Rennen.BezeichnungLang}</h5>
+        <p class="text-xl">Startnummer: {m.StartNummer} Verein: {v.Name}</p>
+        <p class="text-xl">Teilnehmer: {m.TeilnehmerString()}</p>
+      </div>
+      <div class="flex flex-row gap-4">
+        <button
+          class="btn btn-warning"
+          hx-delete={yesUrl}
+          hx-target="main"
+          hx-push-url="true"
+          href={yesUrl}
+        >
+          Ja
+        </button>
+        <button
+          class="btn btn-primary"
+          hx-get={noUrl}
+          hx-boost="true"
+          hx-target="main"
+          hx-push-url="true"
+          href={noUrl}
+        >
+          Nein
+        </button>
+      </div>
+    </div>
+  }
+}
+
+templ InternalRegattabueroUmmeldung(v crud.Verein, meldungen []crud.Meldung) {
+  {{
+    breadcrumbs := []ui_components.BreadcrumbsEntries{
+      ui_components.BreadcrumbsEntries{
+        Title: "Home",
+        Paths: "/",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Internes",
+        Paths: "/internal",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Regattabüro",
+        Paths: "/internal/regattabuero",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Ummeldung",
+        Paths: "",
+      },
+    }
+    var curDay crud.Tag
+  }}
+  @ui_components.Breadcrumbs(breadcrumbs)
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Ummeldung für " + v.Name)
     @ui_components.PageHeaderSubtext("")
     <div class="flex flex-col gap-4">
       for _, m := range meldungen {
@@ -37,15 +143,16 @@ templ InternalRegattabueroAbmeldung(meldungen []crud.Meldung) {
           {{
             curDay = m.Rennen.Tag
           }}
-          <div class="text-xl font-bold">{curDay}</div>
+          <div class="text-xl font-bold text-mrgblau">{curDay}:</div>
+          <div class="divider h-4 m-0 mb-2 p-0"/>
         }
-        @ui_components.MeldungsCard(m)
+        @ui_components.MeldungsCard(m, ui_components.DefaultGetHXNavigationOptions(fmt.Sprintf("/internal/regattabuero/%s/ummeldung/%s", v.Uuid, m.Uuid)))
       }
     </div>
   }
 }
 
-templ InternalRegattabueroUmmeldung(meldungen []crud.Meldung) {
+templ InternalRegattabueroUmmeldungMeldung(v crud.Verein, m crud.Meldung) {
   {{
     breadcrumbs := []ui_components.BreadcrumbsEntries{
       ui_components.BreadcrumbsEntries{
@@ -68,12 +175,7 @@ templ InternalRegattabueroUmmeldung(meldungen []crud.Meldung) {
   }}
   @ui_components.Breadcrumbs(breadcrumbs)
   @ui_components.InternalPageDivCol() {
-    @ui_components.PageHeader("Ummeldung")
+    @ui_components.PageHeader("Ummeldung für " + v.Name)
     @ui_components.PageHeaderSubtext("")
-    <div class="flex flex-col gap-4">
-      for _, m := range meldungen {
-        @ui_components.MeldungsCard(m)
-      }
-    </div>
   }
 }

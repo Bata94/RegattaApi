@@ -1,14 +1,71 @@
 package ui_components
 
-import "github.com/bata94/RegattaApi/internal/crud"
+import (
+  "fmt"
+  "github.com/bata94/RegattaApi/internal/crud"
+)
 
-templ MeldungsCard(m crud.Meldung) {
+type HXNavigationOptions struct {
+  URL    string
+  Target string
+  Push   bool
+  Method HXNavigationMethod
+}
+
+type HXNavigationMethod int
+
+const (
+  GET HXNavigationMethod = iota
+  POST
+  PUT
+  DELETE
+)
+
+func DefaultGetHXNavigationOptions(url string) HXNavigationOptions {
+  return HXNavigationOptions{
+    URL:    url,
+    Target: "main",
+    Push:   true,
+    Method: GET,
+  }
+}
+
+func (m HXNavigationOptions) Render() string {
+  str := fmt.Sprintf("hx-boost=true hx-target=%s href=%s ", m.Target, m.URL)
+
+  switch m.Method {
+  case GET:
+    str += fmt.Sprintf("hx-get=%s ", m.URL)
+  case POST:
+    str += fmt.Sprintf("hx-post=%s ", m.URL)
+  case PUT:
+    str += fmt.Sprintf("hx-put=%s ", m.URL)
+  case DELETE:
+    str += fmt.Sprintf("hx-delete=%s ", m.URL)
+  default:
+    str += fmt.Sprintf("hx-get=%s ", m.URL)
+  }
+
+  if m.Push {
+    str += " hx-push-url=true"
+  }
+
+  return str
+}
+
+templ MeldungsCard(m crud.Meldung, navOpt HXNavigationOptions) {
+  {{
+    cardClass := "card bg-base-100 shadow-md hover:cursor-pointer"
+    navArguments := navOpt.Render()
+  }}
   <div
-    class="card bg-base-100 shadow-md hover:cursor-pointer"
+    class={cardClass}
+    {navArguments}
   >
     <div class="card-body">
       <h5 class="card-title">Rennen: {m.Rennen.Nummer} - {m.Rennen.BezeichnungLang}</h5>
-      <p class="card-text">{m.StartNummer}: {m.TeilnehmerString()}</p>
+      <p class="card-text">Startnummer: {m.StartNummer}</p>
+      <p class="card-text">Teilnehmer: {m.TeilnehmerString()}</p>
     </div>
   </div>
 }
