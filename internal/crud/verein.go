@@ -166,11 +166,12 @@ func GetForAllVereineMissingAthlet(athletType MissingAthletType) ([]Verein, erro
 	retLs := []Verein{}
 
 	var queryFunc func(uuid.UUID) ([]Athlet, error)
-	if athletType == 0 {
+	switch athletType {
+	case 0:
 		queryFunc = GetAllAthletenForVereinWaage
-	} else if athletType == 1 {
+	case 1:
 		queryFunc = GetAllAthletenForVereinMissStartber
-	} else {
+	default:
 		return vLs, errors.New("Unknown athlet type")
 	}
 
@@ -180,7 +181,7 @@ func GetForAllVereineMissingAthlet(athletType MissingAthletType) ([]Verein, erro
 			return vLs, err
 		}
 
-		if missAthlet != nil && len(missAthlet) != 0 {
+		if len(missAthlet) != 0 {
 			v.Athleten = missAthlet
 			retLs = append(retLs, v)
 		}

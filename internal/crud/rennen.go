@@ -257,7 +257,7 @@ func GetAllRennenWithAthlet(p GetAllRennenParams) ([]Rennen, error) {
 	return races, nil
 }
 
-func RennenFromSqlc(rennen sqlc.Rennen, numMeld int, numAbt interface{}) Rennen {
+func RennenFromSqlc(rennen sqlc.Rennen, numMeld int, numAbt any) Rennen {
 	numAbteilungenI32, ok := numAbt.(int32)
 	if !ok {
 		log.Println("Error converting numAbt to int32 ", numAbt)
