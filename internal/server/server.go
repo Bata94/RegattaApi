@@ -310,7 +310,7 @@ func GetRouter() http.Handler {
 
 		return ui_pages.InternalRegattabueroAbmeldungMeldung(verein, meldung), nil
 	})
-	r.Handle("DELETE", "/internal/regattabuero/{v_uuid}/abmeldung/{m_uuid}", wrapHandler(abmeldungDeletePostHandler, true))
+	r.Handle("DELETE", "/internal/regattabuero/{v_uuid}/abmeldung/{m_uuid}", wrapHandler(abmeldungDeleteHandler, true))
 	baseLayoutHandler("/internal/regattabuero/{v_uuid}/ummeldung", func(c *handler.Context) (templ.Component, error) {
 		vereinUuidStr := c.Param("v_uuid")
 		vereinUuid, err := uuid.Parse(vereinUuidStr)
@@ -352,8 +352,15 @@ func GetRouter() http.Handler {
 			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
 		}
 
-		return ui_pages.InternalRegattabueroUmmeldungMeldung(verein, meldung), nil
+		athleten, err := crud.GetAllAthletenForVerein(verein.Uuid)
+		if err != nil {
+			return ui_pages.Error(500, "Error while loading athleten"), errors.New("Error while loading athleten")
+		}
+
+		// TODO: Filter only viable athleten
+		return ui_pages.InternalRegattabueroUmmeldungMeldung(verein, meldung, athleten), nil
 	})
+	r.Handle("POST", "/internal/regattabuero/{v_uuid}/ummeldung/{m_uuid}", wrapHandler(ummeldungPostHandler, true))
 
 	baseLayoutHandler("/internal/regattaleitung", func(c *handler.Context) (templ.Component, error) {
 		return ui_pages.InternalRegattaleitung(), nil
@@ -1252,7 +1259,7 @@ func pdfMeldeergebnisPostHandler(c *handler.Context) error {
 	return nil
 }
 
-func abmeldungDeletePostHandler(c *handler.Context) error {
+func abmeldungDeleteHandler(c *handler.Context) error {
 	vereinUuidStr := c.Param("v_uuid")
 	vereinUuid, err := uuid.Parse(vereinUuidStr)
 	if err != nil {
@@ -1285,4 +1292,66 @@ func abmeldungDeletePostHandler(c *handler.Context) error {
 	c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("/internal/regattabuero/%s/abmeldung", verein.Uuid))
 	c.Writer.WriteHeader(http.StatusOK)
 	return nil
+}
+
+func ummeldungPostHandler(c *handler.Context) error {
+	vereinUuidStr := c.Param("v_uuid")
+	vereinUuid, err := uuid.Parse(vereinUuidStr)
+	if err != nil {
+		return &handler.Error{StatusCode: 406, Message: "Invalid UUID"}
+	}
+	meldungUuidStr := c.Param("m_uuid")
+	meldungUuid, err := uuid.Parse(meldungUuidStr)
+	if err != nil {
+		return &handler.Error{StatusCode: 406, Message: "Invalid UUID"}
+	}
+
+	verein, err := crud.GetVerein(vereinUuid)
+	if err != nil {
+		return &handler.Error{StatusCode: 500, Message: "Error while loading verein"}
+	}
+	meldung, err := crud.GetMeldung(meldungUuid)
+	if err != nil {
+		return &handler.Error{StatusCode: 500, Message: "Error while loading meldung"}
+	}
+
+	if meldung.VereinUuid != verein.Uuid {
+		return &handler.Error{StatusCode: 406, Message: "Invalid UUID"}
+	}
+
+	if err := c.Request.ParseForm(); err != nil {
+		return &handler.Error{StatusCode: 400, Message: "Error parsing form"}
+	}
+
+	for i := range meldung.Athleten {
+		athUuidStr := c.Request.FormValue(fmt.Sprintf("athleten_%d", i))
+		if athUuidStr == "" {
+			continue
+		}
+		athUuid, err := uuid.Parse(athUuidStr)
+		if err != nil {
+			return &handler.Error{StatusCode: 400, Message: fmt.Sprintf("Invalid athlete UUID at position %d", i)}
+		}
+		if athUuid == meldung.Athleten[i].Uuid {
+			continue
+		}
+		err = crud.Ummeldung(sqlc.UmmeldungParams{
+			MeldungUuid: meldungUuid,
+			Rolle:       *meldung.Athleten[i].Rolle,
+			Position:    int32(*meldung.Athleten[i].Position),
+			AthletUuid:  athUuid,
+		})
+		if err != nil {
+			return &handler.Error{StatusCode: 500, Message: fmt.Sprintf("Error updating athlete at position %d", i)}
+		}
+	}
+
+	meldungen, err := crud.GetAllMeldungForVerein(verein.Uuid)
+	if err != nil {
+		return &handler.Error{StatusCode: 500, Message: "Error while loading meldungen"}
+	}
+
+	c.Writer.Header().Set("HX-Push-Url", fmt.Sprintf("/internal/regattabuero/%s/ummeldung", verein.Uuid))
+	c.Writer.WriteHeader(http.StatusOK)
+	return ui_pages.InternalRegattabueroUmmeldung(verein, meldungen).Render(context.Background(), c.Writer)
 }

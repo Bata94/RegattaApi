@@ -146,13 +146,16 @@ templ InternalRegattabueroUmmeldung(v crud.Verein, meldungen []crud.Meldung) {
           <div class="text-xl font-bold text-mrgblau">{curDay}:</div>
           <div class="divider h-4 m-0 mb-2 p-0"/>
         }
-        @ui_components.MeldungsCard(m, ui_components.DefaultGetHXNavigationOptions(fmt.Sprintf("/internal/regattabuero/%s/ummeldung/%s", v.Uuid, m.Uuid)))
+        if !m.Abgemeldet {
+          @ui_components.MeldungsCard(m, ui_components.DefaultGetHXNavigationOptions(fmt.Sprintf("/internal/regattabuero/%s/ummeldung/%s", v.Uuid, m.Uuid)))
+        }
       }
     </div>
   }
 }
 
-templ InternalRegattabueroUmmeldungMeldung(v crud.Verein, m crud.Meldung) {
+// TODO: Check for previous Ummeldungen, only 50% + Stm is allowed!
+templ InternalRegattabueroUmmeldungMeldung(v crud.Verein, m crud.Meldung, athleten []crud.Athlet) {
   {{
     breadcrumbs := []ui_components.BreadcrumbsEntries{
       ui_components.BreadcrumbsEntries{
@@ -172,10 +175,50 @@ templ InternalRegattabueroUmmeldungMeldung(v crud.Verein, m crud.Meldung) {
         Paths: "",
       },
     }
+
+    yesUrl := fmt.Sprintf("/internal/regattabuero/%s/ummeldung/%s", v.Uuid, m.Uuid)
+    noUrl := fmt.Sprintf("/internal/regattabuero/%s/ummeldung", v.Uuid)
+
+    athletLabels := []string{}
+    athletValues := []string{}
+    for _, a := range athleten {
+      athletLabels = append(athletLabels, a.AthletString())
+      athletValues = append(athletValues, a.Uuid.String())
+    }
   }}
   @ui_components.Breadcrumbs(breadcrumbs)
   @ui_components.InternalPageDivCol() {
     @ui_components.PageHeader("Ummeldung für " + v.Name)
     @ui_components.PageHeaderSubtext("")
+
+    <form
+      hx-post={yesUrl}
+      hx-target="main"
+      hx-push-url="true"
+    >
+      <div class="flex flex-col gap-4 items-center">
+        <div class="card bg-base-100 p-4 rounded-md shadow-md">
+          <h5 class="text-xl font-bold">Zu Rennen: {m.Rennen.Nummer} - {m.Rennen.BezeichnungLang}</h5>
+          <p class="text-xl">Startnummer: {m.StartNummer} Verein: {v.Name}</p>
+          <p class="text-xl">Teilnehmer:</p>
+          for i, a := range m.Athleten {
+            @ui_components.DropDown(fmt.Sprintf("athleten_%d", i), fmt.Sprintf("Athlet %d", i+1), athletLabels, athletValues, a.Uuid.String(), false)
+          }
+        </div>
+        <div class="flex flex-row gap-4">
+          @ui_components.SubmitButton("Ja", ui_components.Success)
+          <button
+            class="btn btn-primary mt-6"
+            hx-get={noUrl}
+            hx-boost="true"
+            hx-target="main"
+            hx-push-url="true"
+            href={noUrl}
+          >
+            Nein
+          </button>
+        </div>
+      </div>
+    </form>
   }
 }

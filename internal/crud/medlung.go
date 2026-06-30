@@ -32,9 +32,10 @@ func (m Meldung) TeilnehmerString() string {
 		}
 
 		if *a.Rolle == sqlc.RolleStm {
-			retStr += fmt.Sprintf("Stm.: %s %s (%s)", a.Vorname, a.Name, a.Jahrgang)
+			retStr += "Stm.: "
+			retStr += a.AthletString()
 		} else {
-			retStr += fmt.Sprintf("%s %s (%s)", a.Vorname, a.Name, a.Jahrgang)
+			retStr += a.AthletString()
 		}
 	}
 	return retStr

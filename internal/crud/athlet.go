@@ -1,6 +1,7 @@
 package crud
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/bata94/RegattaApi/internal/db"
@@ -17,6 +18,14 @@ type Athlet struct {
 	Verein       *Verein     `json:"verein"`
 	Meldungen    []Meldung   `json:"meldungen"`
 	ErstesRennen *Rennen     `json:"erstes_rennen"`
+}
+
+func (ath *Athlet) AthletString() string {
+	return fmt.Sprintf("%s %s (%s)", ath.Vorname, ath.Name, ath.Jahrgang)
+}
+
+func (ath *Athlet) FullName() string {
+	return fmt.Sprintf("%s %s", ath.Vorname, ath.Name)
 }
 
 func (ath *Athlet) UpdateStartberechtigung(startberechtigt bool) error {

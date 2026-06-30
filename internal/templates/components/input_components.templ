@@ -45,6 +45,32 @@ templ SubmitButton(text string, color InputColor) {
   </div>
 }
 
+templ DropDown(name, label string, options, values []string, selectedValue string, required bool) {
+  {{
+    if values == nil {
+      values = options
+    }
+  }}
+  <div class="form-control mb-6 w-full">
+    <label class="label">
+      <span class="label-text">{label}</span>
+    </label>
+    <select
+      name={name}
+      class="select select-bordered w-full"
+      if required {
+        required
+      }
+    >
+      for i, o := range options {
+        <option value={values[i]} if values[i] == selectedValue {
+          selected
+        }>{o}</option>
+      }
+    </select>
+  </div>
+}
+
 templ LineInput(name, label, value, inpType string, required bool) {
   <div class="form-control mb-6 w-full">
     <label class="label">
