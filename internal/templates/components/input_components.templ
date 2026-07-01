@@ -132,3 +132,20 @@ templ RangeStepInput(name, label string, value, min, max, step int, required boo
     </div>
   </div>
 }
+
+templ Toggle(name, label string, value bool, required bool) {
+  <div class="form-control w-full flex flex-row justify-between">
+    <label class="label">
+      <span class="label-text">{label}</span>
+    </label>
+    <input
+      type="checkbox"
+      name={name}
+      class="toggle toggle-primary"
+      value={value}
+      if required {
+        required
+      }
+    />
+  </div>
+}

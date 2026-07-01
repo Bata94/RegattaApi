@@ -395,7 +395,19 @@ func GetRouter() http.Handler {
 		// TODO: Filter only viable athleten
 		return ui_pages.InternalRegattabueroNachmeldungMeldung(verein, rennen, athleten), nil
 	})
-	r.Handle("POST", "/internal/regattabuero/{v_uuid}/nachmeldung/{m_uuid}", wrapHandler(nachmeldungPostHandler, true))
+	r.Handle("POST", "/internal/regattabuero/{v_uuid}/nachmeldung/{r_uuid}", wrapHandler(nachmeldungPostHandler, true))
+	baseLayoutHandler("/internal/regattabuero/{v_uuid}/nachmeldung/success/{m_uuid}", func(c *handler.Context) (templ.Component, error) {
+		meldungUuidStr := c.Param("m_uuid")
+		meldungUuid, err := uuid.Parse(meldungUuidStr)
+		if err != nil {
+			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+		}
+		m, err := crud.GetMeldung(meldungUuid)
+		if err != nil {
+			return ui_pages.Error(500, "Error while loading meldung") , errors.New("Error while loading meldung")
+		}
+		return ui_pages.InternalRegattabueroNachmeldungSuccess(m), nil
+	})
 
 	baseLayoutHandler("/internal/regattaleitung", func(c *handler.Context) (templ.Component, error) {
 		return ui_pages.InternalRegattaleitung(), nil
@@ -1384,7 +1396,72 @@ func ummeldungPostHandler(c *handler.Context) error {
 }
 
 func nachmeldungPostHandler(c *handler.Context) error {
-	return nil
+	vereinUuidStr := c.Param("v_uuid")
+	// vereinUuid, err := uuid.Parse(vereinUuidStr)
+	// if err != nil {
+	// 	return &handler.Error{StatusCode: 406, Message: "Invalid UUID"}
+	// }
+	rennenUuidStr := c.Param("r_uuid")
+	rennenUuid, err := uuid.Parse(rennenUuidStr)
+	if err != nil {
+		return &handler.Error{StatusCode: 406, Message: "Invalid UUID"}
+	}
+
+	// verein, err := crud.GetVerein(vereinUuid)
+	// if err != nil {
+	// 	return &handler.Error{StatusCode: 500, Message: "Error while loading verein"}
+	// }
+	rennen, err := crud.GetRennen(rennenUuid)
+	if err != nil {
+		return &handler.Error{StatusCode: 500, Message: "Error while loading rennen"}
+	}
+
+	if err := c.Request.ParseForm(); err != nil {
+		return &handler.Error{StatusCode: 400, Message: "Error parsing form"}
+	}
+
+	numAthletes, stmRequired := rennen.GetTeilnehmerMeldeParams()
+
+	params := api_v1.PostNachmeldungParams{
+		VereinUuid: c.Request.FormValue("verein_uuid"),
+		RennenUuid: c.Request.FormValue("rennen_uuid"),
+		DoppeltesMeldentgeldBefreiung: c.Request.FormValue("doppeltes_meldentgeld_befreiung") != "",
+		Athleten: []api_v1.PostNachmeldungAthletParams{},
+	}
+
+	for i := range numAthletes {
+		athVal := c.Request.FormValue(fmt.Sprintf("athleten_%d", i))
+		if athVal == "" || athVal == "---" {
+			continue
+		}
+		params.Athleten = append(params.Athleten, api_v1.PostNachmeldungAthletParams{
+			AthletUuid: athVal,
+			Position:   strconv.Itoa(i),
+		})
+	}
+
+	if stmRequired {
+		stmVal := c.Request.FormValue("stm")
+		if stmVal != "" && stmVal != "---" {
+			params.Athleten = append(params.Athleten, api_v1.PostNachmeldungAthletParams{
+				AthletUuid: stmVal,
+				Position:   "stm",
+			})
+		}
+	}
+
+	m, err := api_v1.CreateNachmeldung(params)
+	if err != nil {
+		return &handler.Error{StatusCode: 500, Message: "Error creating nachmeldung: " + err.Error()}
+	}
+	meldung, err := crud.GetMeldung(m.Uuid)
+	if err != nil {
+		return &handler.Error{StatusCode: 500, Message: "Error while loading meldung"}
+	}
+
+	c.Writer.Header().Set("HX-Push-Url", fmt.Sprintf("/internal/regattabuero/%s/nachmeldung/success/%s", vereinUuidStr, m.Uuid.String()))
+	c.Writer.WriteHeader(http.StatusOK)
+	return ui_pages.InternalRegattabueroNachmeldungSuccess(meldung).Render(context.Background(), c.Writer)
 }
 
 func rennenTabHandler(c *handler.Context) error {

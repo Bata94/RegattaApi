@@ -4,6 +4,8 @@ import (
 	"cmp"
 	"log"
 	"slices"
+	"strconv"
+	"strings"
 
 	"github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/handlers/api"
@@ -92,6 +94,19 @@ type Rennen struct {
 	NumAbteilungen   *int            `json:"num_abteilungen"`
 	Meldungen        []Meldung       `json:"meldungen"`
 }
+
+// returns number of athletes and if Stm is required
+// If the number of athletes is 0, there is an error parsing the string
+func (r Rennen) GetTeilnehmerMeldeParams() (int, bool) {
+	numAthletes, err := strconv.Atoi(r.Bootsklasse[:1])
+	if err != nil {
+		numAthletes = 0
+	}
+	stmRequired := strings.Contains(r.Bootsklasse, "+")
+
+	return numAthletes, stmRequired
+}
+
 type Zeitplaung struct {
 	Rennen []RennenZeitplaung `json:"rennen"`
 }

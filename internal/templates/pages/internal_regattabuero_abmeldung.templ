@@ -274,8 +274,15 @@ templ InternalRegattabueroNachmeldungMeldung(v crud.Verein, r crud.Rennen, athle
       },
     }
 
-    formUrl := fmt.Sprintf("/internal/regattabuero/%s/nachmeldung", v.Uuid)
+    formUrl := fmt.Sprintf("/internal/regattabuero/%s/nachmeldung/%s", v.Uuid, r.Uuid)
+    numAthletes, stmRequired := r.GetTeilnehmerMeldeParams()
 
+    athletLabels := []string{"--- Bitte Teilnehmer auswählen ---"}
+    athletValues := []string{"---"}
+    for _, a := range athleten {
+      athletLabels = append(athletLabels, a.AthletString())
+      athletValues = append(athletValues, a.Uuid.String())
+    }
   }}
   @ui_components.Breadcrumbs(breadcrumbs)
   @ui_components.InternalPageDivCol() {
@@ -286,12 +293,29 @@ templ InternalRegattabueroNachmeldungMeldung(v crud.Verein, r crud.Rennen, athle
       hx-post={formUrl}
       hx-target="main"
       hx-push-url="true"
+      href={formUrl}
     >
       <div class="flex flex-col gap-4 items-center">
         <div class="card bg-base-100 p-4 rounded-md shadow-md">
-        </div>
-        <div class="flex flex-row gap-4">
+          <div class="card-body">
+            <h5 class="card-title">Rennen: {r.Nummer} - {r.BezeichnungLang}</h5>
+            <div class="divider m-0 p-0"/>
+            <p class="text-xl">Teilnehmer:</p>
+            for i := range numAthletes {
+              @ui_components.DropDown(fmt.Sprintf("athleten_%d", i), fmt.Sprintf("Ruderer %d:", i+1), athletLabels, athletValues, "", true)
+            }
 
+            if stmRequired {
+              @ui_components.DropDown("stm", "Stm.:", athletLabels, athletValues, "", true)
+            }
+
+            @ui_components.Toggle("doppeltes_meldentgeld_befreiung", "Befreiung vom doppelten Meldeentgeld", false, false)
+            <input type="hidden" name="verein_uuid" value={v.Uuid.String()}/>
+            <input type="hidden" name="rennen_uuid" value={r.Uuid.String()}/>
+          </div>
+        </div>
+
+        <div class="flex flex-row gap-4">
           @ui_components.SubmitButton("Ja", ui_components.Success)
           <button
             class="btn btn-primary mt-6"
@@ -306,5 +330,50 @@ templ InternalRegattabueroNachmeldungMeldung(v crud.Verein, r crud.Rennen, athle
         </div>
       </div>
     </form>
+  }
+}
+
+templ InternalRegattabueroNachmeldungSuccess(m crud.Meldung) {
+  {{
+    breadcrumbs := []ui_components.BreadcrumbsEntries{
+      ui_components.BreadcrumbsEntries{
+        Title: "Home",
+        Paths: "/",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Internes",
+        Paths: "/internal",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Regattabüro",
+        Paths: "/internal/regattabuero",
+      },
+      ui_components.BreadcrumbsEntries{
+        Title: "Nachmeldung",
+        Paths: "",
+      },
+    }
+    backUrl := fmt.Sprintf("/internal/regattabuero/%s/nachmeldung", m.Verein.Uuid)
+  }}
+  @ui_components.Breadcrumbs(breadcrumbs)
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Nachmeldung erfolgreich!")
+    @ui_components.PageHeaderSubtext("")
+
+    @ui_components.MeldungsCard(m, ui_components.NoNavHXNavigationOptions())
+
+    // TODO: Add Rennen Info and direct Link to Setzungsänderung
+    // TODO: Add Btn to give out Startnummer
+
+    <button
+      class="btn btn-primary mt-6"
+      hx-get={backUrl}
+      hx-boost="true"
+      hx-target="main"
+      hx-push-url="true"
+      href={backUrl}
+    >
+      Zurück
+    </button>
   }
 }

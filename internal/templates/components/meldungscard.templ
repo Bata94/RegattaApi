@@ -30,7 +30,20 @@ func DefaultGetHXNavigationOptions(url string) HXNavigationOptions {
   }
 }
 
+func NoNavHXNavigationOptions() HXNavigationOptions {
+  return HXNavigationOptions{
+    URL:    "",
+    Target: "",
+    Push:   false,
+    Method: GET,
+  }
+}
+
 func (m HXNavigationOptions) Render() string {
+  if m.URL == "" {
+    return ""
+  }
+
   str := fmt.Sprintf("hx-boost=true hx-target=%s href=%s ", m.Target, m.URL)
 
   switch m.Method {
@@ -64,7 +77,7 @@ templ MeldungsCard(m crud.Meldung, navOpt HXNavigationOptions) {
   >
     <div class="card-body">
       <h5 class="card-title">Rennen: {m.Rennen.Nummer} - {m.Rennen.BezeichnungLang}</h5>
-      <p class="card-text">Startnummer: {m.StartNummer}</p>
+      <p class="card-text">Startnummer: {m.StartNummer} - Verein: {m.Verein.Name}</p>
       <p class="card-text">Teilnehmer: {m.TeilnehmerString()}</p>
     </div>
   </div>

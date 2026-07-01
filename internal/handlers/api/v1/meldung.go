@@ -121,28 +121,21 @@ type PostNachmeldungAthletParams struct {
 	Position   string `json:"position"`
 }
 
-func PostNachmeldung(c *handler.Context) error {
-	params := new(PostNachmeldungParams)
-	err := c.BodyParser(params)
-	if err != nil {
-		log.Println("Parm parse Error: ", params)
-		return err
-	}
-
+func CreateNachmeldung(params PostNachmeldungParams) (*crud.Meldung, error) {
 	vereinUuid, err := uuid.Parse(params.VereinUuid)
 	if err != nil {
 		log.Println("Verein Error: ", vereinUuid)
-		return err
+		return nil, err
 	}
 	rennenUuid, err := uuid.Parse(params.RennenUuid)
 	if err != nil {
 		log.Println("Rennen Error: ", rennenUuid)
-		return err
+		return nil, err
 	}
 
 	rennen, err := crud.GetRennen(rennenUuid)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	kosten := int32(rennen.KostenEur)
@@ -152,7 +145,7 @@ func PostNachmeldung(c *handler.Context) error {
 
 	lastStrtNr, err := crud.GetStartnummerLast(rennen.Tag)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	abteilung := int32(0)
@@ -163,11 +156,12 @@ func PostNachmeldung(c *handler.Context) error {
 		abteilung = int32(1)
 		bahn = int32(*rennen.NumMeldungen + 1)
 	} else {
-		if rennen.Wettkampf == sqlc.WettkampfKurzstrecke {
+		switch rennen.Wettkampf {
+		case sqlc.WettkampfKurzstrecke:
 			maxBahn = 4
-		} else if rennen.Wettkampf == sqlc.WettkampfStaffel {
+		case sqlc.WettkampfStaffel:
 			maxBahn = 2
-		} else if rennen.Wettkampf == sqlc.WettkampfSlalom {
+		case sqlc.WettkampfSlalom:
 			maxBahn = 3
 		}
 		if *rennen.NumMeldungen < maxBahn {
@@ -197,7 +191,7 @@ func PostNachmeldung(c *handler.Context) error {
 	for _, a := range params.Athleten {
 		athUuid, err := uuid.Parse(a.AthletUuid)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		var (
@@ -212,7 +206,7 @@ func PostNachmeldung(c *handler.Context) error {
 			athRolle = sqlc.RolleRuderer
 			athPostitionI64, err := strconv.ParseInt(a.Position, 10, 32)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			athPostition = int32(athPostitionI64)
 		}
@@ -241,6 +235,22 @@ func PostNachmeldung(c *handler.Context) error {
 		Athleten: mAth,
 	})
 
+	if err != nil {
+		return nil, err
+	}
+
+	return &m, nil
+}
+
+func PostNachmeldung(c *handler.Context) error {
+	params := new(PostNachmeldungParams)
+	err := c.BodyParser(params)
+	if err != nil {
+		log.Println("Parm parse Error: ", params)
+		return err
+	}
+
+	m, err := CreateNachmeldung(*params)
 	if err != nil {
 		return err
 	}
