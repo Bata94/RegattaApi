@@ -252,15 +252,8 @@ func GetRouter() http.Handler {
 				return ui_pages.Error(404, "Wettkampf nicht gefunden"), errors.New("Wettkampf nicht gefunden")
 		}
 		title := c.GetQueryParam("title")
-		nextUrl := "/internal/regattabuero/%s/"
-		switch next {
-		case "abmeldung":
-			nextUrl += "abmeldung"
-		case "ummeldung":
-			nextUrl += "ummeldung"
-		case "nachmeldung":
-			nextUrl += "nachmeldung"
-		}
+		nextUrl := "/internal/regattabuero/%s/" + next
+
 		vereine, err := crud.GetAllVerein()
 		if err != nil {
 			return ui_pages.Error(500, "Fehler beim Laden der Vereine"), errors.New("Fehler beim Laden der Vereine")
@@ -361,6 +354,48 @@ func GetRouter() http.Handler {
 		return ui_pages.InternalRegattabueroUmmeldungMeldung(verein, meldung, athleten), nil
 	})
 	r.Handle("POST", "/internal/regattabuero/{v_uuid}/ummeldung/{m_uuid}", wrapHandler(ummeldungPostHandler, true))
+	baseLayoutHandler("/internal/regattabuero/{v_uuid}/nachmeldung", func(c *handler.Context) (templ.Component, error) {
+		vereinUuidStr := c.Param("v_uuid")
+		vereinUuid, err := uuid.Parse(vereinUuidStr)
+		if err != nil {
+			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+		}
+		verein, err := crud.GetVerein(vereinUuid)
+		if err != nil {
+			return ui_pages.Error(500, "Error while loading verein"), errors.New("Error while loading verein")
+		}
+		return ui_pages.InternalRegattabueroNachmeldung(verein), nil
+	})
+	baseLayoutHandler("/internal/regattabuero/{v_uuid}/nachmeldung/{r_uuid}", func(c *handler.Context) (templ.Component, error) {
+		vereinUuidStr := c.Param("v_uuid")
+		vereinUuid, err := uuid.Parse(vereinUuidStr)
+		if err != nil {
+			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+		}
+		rennenUuidStr := c.Param("r_uuid")
+		rennenUuid, err := uuid.Parse(rennenUuidStr)
+		if err != nil {
+			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+		}
+
+		verein, err := crud.GetVerein(vereinUuid)
+		if err != nil {
+			return ui_pages.Error(500, "Error while loading verein"), errors.New("Error while loading verein")
+		}
+		rennen, err := crud.GetRennen(rennenUuid)
+		if err != nil {
+			return ui_pages.Error(500, "Error while loading rennen"), errors.New("Error while loading rennen")
+		}
+
+		athleten, err := crud.GetAllAthletenForVerein(verein.Uuid)
+		if err != nil {
+			return ui_pages.Error(500, "Error while loading athleten"), errors.New("Error while loading athleten")
+		}
+
+		// TODO: Filter only viable athleten
+		return ui_pages.InternalRegattabueroNachmeldungMeldung(verein, rennen, athleten), nil
+	})
+	r.Handle("POST", "/internal/regattabuero/{v_uuid}/nachmeldung/{m_uuid}", wrapHandler(nachmeldungPostHandler, true))
 
 	baseLayoutHandler("/internal/regattaleitung", func(c *handler.Context) (templ.Component, error) {
 		return ui_pages.InternalRegattaleitung(), nil
@@ -385,24 +420,14 @@ func GetRouter() http.Handler {
 		paramStr := c.Param("param")
 		log.Println("Param: ", paramStr)
 
-		if strings.Contains(paramStr, "-") {
-			log.Println("Param is a Rennen UUID")
-			rUuid, err := uuid.Parse(paramStr)
-			if err != nil {
-				log.Println("Error: ", err)
-				templ.Handler(ui_pages.Error(404, "Rennen nicht gefunden")).ServeHTTP(c.Writer, c.Request)
-				return nil, nil
-			}
-			return ui_pages.InternalRegattaleitungSetzungAenderungRennen(rUuid), nil
-		} else {
-			log.Println("Param should be a Wettkampf String")
-			wettkampf, err := crud.WettkampfFromString(paramStr)
-			if err != nil {
-				templ.Handler(ui_pages.Error(404, "Wettkampf nicht gefunden")).ServeHTTP(c.Writer, c.Request)
-				return nil, nil
-			}
-			return ui_pages.InternalRegattaleitungSetzungAenderungRennenWahl(wettkampf), nil
+		log.Println("Param is a Rennen UUID")
+		rUuid, err := uuid.Parse(paramStr)
+		if err != nil {
+			log.Println("Error: ", err)
+			templ.Handler(ui_pages.Error(404, "Rennen nicht gefunden")).ServeHTTP(c.Writer, c.Request)
+			return nil, nil
 		}
+		return ui_pages.InternalRegattaleitungSetzungAenderungRennen(rUuid), nil
 	})
 	baseLayoutHandler("/internal/regattaleitung/setzungsverwaltung/aenderung", func(c *handler.Context) (templ.Component, error) {
 		return ui_pages.InternalRegattaleitungSetzungAenderung(), nil
@@ -464,6 +489,8 @@ func GetRouter() http.Handler {
 	r.Handle("GET", "/comp/zeitplan/{wettkampf}", templHandler(zeitplanCollapseBodyHandler))
 	r.Handle("GET", "/comp/ausschreibung/{wettkampf}", templHandler(ausschreibungRennenCollapseBodyHandler))
 	r.Handle("GET", "/comp/meldeergebnis/{wettkampf}", templHandler(meldeergebnisCollapseBodyHandler))
+
+	r.Handle("GET", "/comp/internal/rennen_tab/{wettkampf}", templHandler(rennenTabHandler))
 
 	// API Handlers - Public (no auth required)
 	r.Handle("POST", "/api/auth/login", wrapHandler(api_v1.Login, false))
@@ -1354,4 +1381,23 @@ func ummeldungPostHandler(c *handler.Context) error {
 	c.Writer.Header().Set("HX-Push-Url", fmt.Sprintf("/internal/regattabuero/%s/ummeldung", verein.Uuid))
 	c.Writer.WriteHeader(http.StatusOK)
 	return ui_pages.InternalRegattabueroUmmeldung(verein, meldungen).Render(context.Background(), c.Writer)
+}
+
+func nachmeldungPostHandler(c *handler.Context) error {
+	return nil
+}
+
+func rennenTabHandler(c *handler.Context) error {
+	wettkampfStr := c.Param("wettkampf")
+	wettkampf, err := crud.WettkampfFromString(wettkampfStr)
+	if err != nil {
+		return &handler.Error{StatusCode: 406, Message: "Invalid UUID"}
+	}
+
+	showEmpty := c.GetQueryParam("show_empty") == "true"
+	showStarted := c.GetQueryParam("show_started") == "true"
+	urlFormatStr := c.GetQueryParam("url_format_str")
+
+	templ.Handler(ui_components.RennenTab(wettkampf, urlFormatStr, showEmpty, showStarted)).ServeHTTP(c.Writer, c.Request)
+	return nil
 }

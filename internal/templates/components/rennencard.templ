@@ -1,0 +1,123 @@
+package ui_components
+
+import (
+	"fmt"
+	"strings"
+
+  "github.com/bata94/RegattaApi/internal/crud"
+	"github.com/bata94/RegattaApi/internal/sqlc"
+)
+
+templ RennenCard(r crud.Rennen, navOpt HXNavigationOptions) {
+  {{
+    cardClass := "card bg-base-100 shadow-md hover:cursor-pointer"
+    navArguments := navOpt.Render()
+  }}
+  <div
+    class={cardClass}
+    {navArguments}
+  >
+    <div class="card-body">
+      <h5 class="card-title">{r.Nummer} - {r.BezeichnungLang}</h5>
+    </div>
+  </div>
+}
+
+templ RennenTabs(urlFormatStr string, showEmpty, showStarted bool) {
+  {{
+    wettkaempfe := []string{"langstrecke", "slalom", "kurzstrecke", "staffel"}
+    tabBaseUrl := "/comp/internal/rennen_tab/"
+    queryParams := fmt.Sprintf("?url_format_str=%s&show_empty=%t&show_started=%t", urlFormatStr, showEmpty, showStarted)
+
+    urlBuilder := func(w string) string {
+      return fmt.Sprint(tabBaseUrl, w, queryParams)
+    }
+  }}
+  <div
+    id="rennen-wahl"
+    class="w-full h-full "
+  >
+    <!-- name of each tab group should be unique -->
+    <div class="tabs tabs-box w-full">
+      for i, w := range wettkaempfe {
+        <input
+          type="radio"
+          name="rennenwahl_tabs"
+          class="tab"
+          aria-label={strings.Title(w)}
+          if i == 0 {
+            checked="checked"
+          }
+        />
+        <div
+          class="tab-content bg-base-100 border-base-300 !px-2 !py-0 !m-0"
+          hx-get={urlBuilder(w)}
+          hx-trigger="intersect once"
+          hx-target={"#tab-content-" + w}
+          hx-swap="outerHTML"
+        >
+          <div id={"tab-content-" + w} class="w-full h-full flex flex-row justify-center items-center">
+            <span class="loading loading-spinner loading-xl"/>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+// urlFormatStr should include %s for the clicked rennen uuid
+templ RennenTab(w sqlc.Wettkampf, urlFormatStr string, showEmpty, showStarted bool) {
+  {{
+    rennen, err := crud.GetAllRennen(crud.GetAllRennenParams{
+      GetMeldungen:  false,
+      ShowEmpty:     showEmpty,
+      ShowStarted:   showEmpty,
+      ShowWettkampf: sqlc.NullWettkampf{Wettkampf: w, Valid: true},
+    })
+  }}
+  if err != nil {
+    ErrorBody(404, err.Error())
+    {{return}}
+  }
+
+  <div
+    class=""
+  >
+    for _, r := range rennen {
+      if *r.NumMeldungen != 0 {
+        <div
+          class="card w-full bg-base-100 card-sm shadow-sm !m-0 !p-0 !my-4 cursor-pointer"
+          hx-get={fmt.Sprintf(urlFormatStr, r.Uuid)}
+          hx-target="main"
+          hx-swap="innerHTML"
+          hx-push-url="true"
+        >
+          <div class="card-body !px-4 !m-0">
+            <h2 class="card-title !m-0 !mt-1 !p-0">{r.Nummer} - {r.BezeichnungLang}</h2>
+            <p class="card-text !m-0 !p-0">
+              {*r.NumMeldungen}
+              if *r.NumMeldungen > 1 {
+                Meldungen
+              } else {
+                Meldung
+              }
+               in
+              {*r.NumAbteilungen}
+              if *r.NumAbteilungen > 1 {
+                Abteilungen
+              } else {
+                Abteilung
+              }
+            </p>
+          </div>
+        </div>
+      } else {
+        <div class="card w-full bg-base-100 card-sm shadow-sm !m-0 !p-0 !my-4 cursor-not-allowed">
+          <div class="card-body !px-4 !m-0">
+            <h2 class="card-title !m-0 !mt-1 !p-0 line-through decoration-1">{r.Nummer} - {r.BezeichnungLang}</h2>
+          </div>
+        </div>
+      }
+    }
+  </div>
+}

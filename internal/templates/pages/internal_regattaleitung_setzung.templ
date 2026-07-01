@@ -2,7 +2,6 @@ package ui_pages
 
 import "github.com/bata94/RegattaApi/internal/templates/components"
 import "github.com/bata94/RegattaApi/internal/crud"
-import "github.com/bata94/RegattaApi/internal/sqlc"
 import "github.com/google/uuid"
 import "fmt"
 
@@ -269,122 +268,8 @@ templ InternalRegattaleitungSetzungAenderung() {
     @ui_components.PageHeader("Setzungsänderung")
     @ui_components.PageHeaderSubtext("Ein Rennenwählen um Setzung zu ändern. Es werden nur Rennen mit mindestens einer Meldung angezeigt.")
 
-    <div
-      id="rennen-wahl"
-      class="w-full h-full "
-    >
-      <!-- name of each tab group should be unique -->
-      <div class="tabs tabs-box w-full">
-        <input type="radio" name="my_tabs_6" class="tab" aria-label="Langstrecke" checked="checked" />
-        <div
-          class="tab-content bg-base-100 border-base-300 !px-2 !py-0 !m-0"
-          hx-get="/internal/regattaleitung/setzungsverwaltung/aenderung/rennen/langstrecke"
-          hx-trigger="intersect once"
-          hx-target="#tab-content-langstrecke"
-          hx-swap="outerHTML"
-        >
-          <div id="tab-content-langstrecke" class="w-full h-full flex flex-row justify-center items-center">
-            <span class="loading loading-spinner loading-xl"/>
-          </div>
-        </div>
-
-        <input type="radio" name="my_tabs_6" class="tab" aria-label="Slalom" />
-        <div
-          class="tab-content bg-base-100 border-base-300 !px-2 !py-0 !m-0"
-          hx-get="/internal/regattaleitung/setzungsverwaltung/aenderung/rennen/slalom"
-          hx-trigger="intersect once"
-          hx-target="#tab-content-slalom"
-          hx-swap="outerHTML"
-        >
-          <div id="tab-content-slalom" class="w-full h-full flex flex-row justify-center items-center">
-            <span class="loading loading-spinner loading-xl"/>
-          </div>
-        </div>
-
-        <input type="radio" name="my_tabs_6" class="tab" aria-label="Kurzstrecke" />
-        <div
-          class="tab-content bg-base-100 border-base-300 !px-2 !py-0 !m-0"
-          hx-get="/internal/regattaleitung/setzungsverwaltung/aenderung/rennen/kurzstrecke"
-          hx-trigger="intersect once"
-          hx-target="#tab-content-kurzstrecke"
-          hx-swap="outerHTML"
-        >
-          <div id="tab-content-kurzstrecke" class="w-full h-full flex flex-row justify-center items-center">
-            <span class="loading loading-spinner loading-xl"/>
-          </div>
-        </div>
-
-        <input type="radio" name="my_tabs_6" class="tab" aria-label="Staffel" />
-        <div
-          class="tab-content bg-base-100 border-base-300 !px-2 !py-0 !m-0"
-          hx-get="/internal/regattaleitung/setzungsverwaltung/aenderung/rennen/staffel"
-          hx-trigger="intersect once"
-          hx-target="#tab-content-staffel"
-          hx-swap="outerHTML"
-        >
-          <div id="tab-content-staffel" class="w-full h-full flex flex-row justify-center items-center">
-            <span class="loading loading-spinner loading-xl"/>
-          </div>
-        </div>
-      </div>
-    </div>
+    @ui_components.RennenTabs("/internal/regattaleitung/setzungsverwaltung/aenderung/rennen/%25s", true, true) // %25 -> % in url
   }
-}
-
-templ InternalRegattaleitungSetzungAenderungRennenWahl(wettkampf sqlc.Wettkampf) {
-  {{
-    rennen, err := crud.GetAllRennen(crud.GetAllRennenParams{
-      GetMeldungen:  false,
-      ShowEmpty:     false,
-      ShowStarted:   true,
-      ShowWettkampf: sqlc.NullWettkampf{Wettkampf: wettkampf, Valid: true},
-    })
-  }}
-  if err != nil {
-    @ui_components.ErrorBody(404, err.Error())
-    {{return}}
-  }
-
-  <div
-    class=""
-  >
-    for _, r := range rennen {
-      if *r.NumMeldungen != 0 {
-        <div
-          class="card w-full bg-base-100 card-sm shadow-sm !m-0 !p-0 !my-4 cursor-pointer"
-          hx-get={fmt.Sprintf("/internal/regattaleitung/setzungsverwaltung/aenderung/rennen/%s", r.Uuid)}
-          hx-target="main"
-          hx-swap="innerHTML"
-          hx-push-url="true"
-        >
-          <div class="card-body !px-4 !m-0">
-            <h2 class="card-title !m-0 !mt-1 !p-0">{r.Nummer} - {r.BezeichnungLang}</h2>
-            <p class="card-text !m-0 !p-0">
-              {*r.NumMeldungen}
-              if *r.NumMeldungen > 1 {
-                Meldungen
-              } else {
-                Meldung
-              }
-               in
-              {*r.NumAbteilungen}
-              if *r.NumAbteilungen > 1 {
-                Abteilungen
-              } else {
-                Abteilung
-              }
-            </p>
-          </div>
-        </div>
-      } else {
-        <div class="card w-full bg-base-100 card-sm shadow-sm !m-0 !p-0 !my-4 cursor-not-allowed">
-          <div class="card-body !px-4 !m-0">
-            <h2 class="card-title !m-0 !mt-1 !p-0 line-through decoration-1">{r.Nummer} - {r.BezeichnungLang}</h2>
-          </div>
-        </div>
-      }
-    }
-  </div>
 }
 
 templ InternalRegattaleitungSetzungAenderungRennen(rennId uuid.UUID) {
