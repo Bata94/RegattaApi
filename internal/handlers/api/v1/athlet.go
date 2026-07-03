@@ -55,11 +55,12 @@ func CreateAthlet(c *handler.Context) error {
 
 	var geschlecht sqlc.Geschlecht
 	aParams.Geschlecht = strings.ToLower(aParams.Geschlecht)
-	if aParams.Geschlecht == "m" {
+	switch aParams.Geschlecht {
+	case "m":
 		geschlecht = sqlc.GeschlechtM
-	} else if aParams.Geschlecht == "f" || aParams.Geschlecht == "w" {
+	case "f", "w":
 		geschlecht = sqlc.GeschlechtW
-	} else if aParams.Geschlecht == "x" {
+	case "x":
 		geschlecht = sqlc.GeschlechtX
 	}
 

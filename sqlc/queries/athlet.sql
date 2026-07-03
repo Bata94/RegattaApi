@@ -2,6 +2,35 @@
 SELECT * FROM athlet
 WHERE uuid = $1 LIMIT 1;
 
+-- name: GetAthlet :many
+SELECT
+  sqlc.embed(athlet),
+  sqlc.embed(verein),
+  sqlc.embed(rennen),
+  sqlc.embed(meldung)
+FROM
+  athlet
+JOIN
+  link_meldung_athlet
+ON
+  athlet.uuid = link_meldung_athlet.athlet_uuid
+JOIN
+  meldung
+ON
+  link_meldung_athlet.meldung_uuid = meldung.uuid
+JOIN
+  rennen
+ON
+  meldung.rennen_uuid = rennen.uuid
+JOIN
+  verein
+ON
+  verein.uuid = meldung.verein_uuid
+WHERE
+  athlet.uuid = $1
+ORDER BY
+  rennen.sort_id;
+
 -- name: GetAllAthlet :many
 SELECT * FROM athlet
 ORDER BY name ASC;

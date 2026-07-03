@@ -249,15 +249,28 @@ func GetRouter() http.Handler {
 	baseLayoutHandler("/internal/regattabuero/vereinswahl", func(c *handler.Context) (templ.Component, error) {
 		next := c.GetQueryParam("next")
 		if next == "" {
-				return ui_pages.Error(404, "Wettkampf nicht gefunden"), errors.New("Wettkampf nicht gefunden")
+				return ui_pages.Error(404, "Next param is required"), errors.New("Next param is required")
 		}
 		title := c.GetQueryParam("title")
 		nextUrl := "/internal/regattabuero/%s/" + next
 
-		vereine, err := crud.GetAllVerein()
+		var (
+			vereine []crud.Verein
+			err     error
+		)
+
+		switch next {
+		case "waage":
+			vereine, err = crud.GetForAllVereineMissingAthlet(0)
+		case "startberechtigung":
+			vereine, err = crud.GetForAllVereineMissingAthlet(1)
+		default:
+			vereine, err = crud.GetAllVerein()
+		}
 		if err != nil {
 			return ui_pages.Error(500, "Fehler beim Laden der Vereine"), errors.New("Fehler beim Laden der Vereine")
 		}
+
 		return ui_pages.InternalVereinswahl(nextUrl, title, vereine), nil
 	})
 	baseLayoutHandler("/internal/regattabuero/{v_uuid}/abmeldung", func(c *handler.Context) (templ.Component, error) {
@@ -407,6 +420,115 @@ func GetRouter() http.Handler {
 			return ui_pages.Error(500, "Error while loading meldung") , errors.New("Error while loading meldung")
 		}
 		return ui_pages.InternalRegattabueroNachmeldungSuccess(m), nil
+	})
+	baseLayoutHandler("/internal/regattabuero/{v_uuid}/waage", func(c *handler.Context) (templ.Component, error) {
+		vereinUuidStr := c.Param("v_uuid")
+		vereinUuid, err := uuid.Parse(vereinUuidStr)
+		if err != nil {
+			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+		}
+		verein, err := crud.GetVerein(vereinUuid)
+		if err != nil {
+			return ui_pages.Error(500, "Error while loading verein"), errors.New("Error while loading verein")
+		}
+		athleten, err := crud.GetAllAthletenForVereinWaage(verein.Uuid)
+		if err != nil {
+			return ui_pages.Error(500, "Error while loading athleten"), errors.New("Error while loading athleten")
+		}
+
+		for i := range athleten {
+			athleten[i].Verein = &verein
+		}
+
+		return ui_pages.InternalRegattabueroWaageWahl(verein, athleten), nil
+	})
+	baseLayoutHandler("/internal/regattabuero/{v_uuid}/waage/{a_uuid}", func(c *handler.Context) (templ.Component, error) {
+		vereinUuidStr := c.Param("v_uuid")
+		vereinUuid, err := uuid.Parse(vereinUuidStr)
+		if err != nil {
+			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+		}
+		athletUuidStr := c.Param("a_uuid")
+		athletUuid, err := uuid.Parse(athletUuidStr)
+		if err != nil {
+			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+		}
+
+		verein, err := crud.GetVerein(vereinUuid)
+		if err != nil {
+			return ui_pages.Error(500, "Error while loading verein"), errors.New("Error while loading verein")
+		}
+		athlet, err := crud.GetAthlet(athletUuid)
+		if err != nil {
+			return ui_pages.Error(500, "Error while loading athlet"), errors.New("Error while loading athlet")
+		}
+
+		if athlet.VereinUuid != verein.Uuid {
+			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+		}
+
+		return ui_pages.InternalRegattabueroWaage(athlet), nil
+	})
+	r.Handle("POST", "/internal/regattabuero/{v_uuid}/waage/{a_uuid}", wrapHandler(waagePostHandler, true))
+	baseLayoutHandler("/internal/regattabuero/{v_uuid}/startberechtigung", func(c *handler.Context) (templ.Component, error) {
+		vereinUuidStr := c.Param("v_uuid")
+		vereinUuid, err := uuid.Parse(vereinUuidStr)
+		if err != nil {
+			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+		}
+		verein, err := crud.GetVerein(vereinUuid)
+		if err != nil {
+			return ui_pages.Error(500, "Error while loading verein"), errors.New("Error while loading verein")
+		}
+		athleten, err := crud.GetAllAthletenForVereinMissStartber(verein.Uuid)
+		if err != nil {
+			return ui_pages.Error(500, "Error while loading athleten"), errors.New("Error while loading athleten")
+		}
+
+		for i := range athleten {
+			athleten[i].Verein = &verein
+		}
+
+		return ui_pages.InternalRegattabueroWaageWahl(verein, athleten), nil
+	})
+	baseLayoutHandler("/internal/regattabuero/{v_uuid}/startberechtigung/{a_uuid}", func(c *handler.Context) (templ.Component, error) {
+		vereinUuidStr := c.Param("v_uuid")
+		vereinUuid, err := uuid.Parse(vereinUuidStr)
+		if err != nil {
+			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+		}
+		athletUuidStr := c.Param("a_uuid")
+		athletUuid, err := uuid.Parse(athletUuidStr)
+		if err != nil {
+			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+		}
+
+		verein, err := crud.GetVerein(vereinUuid)
+		if err != nil {
+			return ui_pages.Error(500, "Error while loading verein"), errors.New("Error while loading verein")
+		}
+		athlet, err := crud.GetAthletMinimal(athletUuid)
+		if err != nil {
+			return ui_pages.Error(500, "Error while loading athlet"), errors.New("Error while loading athlet")
+		}
+
+		if athlet.VereinUuid != verein.Uuid {
+			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+		}
+
+		return ui_pages.InternalRegattabueroStartberechtigung(athlet), nil
+	})
+	baseLayoutHandler("/internal/regattabuero/{v_uuid}/new_athlet", func(c *handler.Context) (templ.Component, error) {
+		vereinUuidStr := c.Param("v_uuid")
+		vereinUuid, err := uuid.Parse(vereinUuidStr)
+		if err != nil {
+			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+		}
+		verein, err := crud.GetVerein(vereinUuid)
+		if err != nil {
+			return ui_pages.Error(500, "Error while loading verein"), errors.New("Error while loading verein")
+		}
+		return ui_pages.InternalRegattabueroNewAthlet(verein), nil
 	})
 
 	baseLayoutHandler("/internal/regattaleitung", func(c *handler.Context) (templ.Component, error) {
@@ -1477,4 +1599,61 @@ func rennenTabHandler(c *handler.Context) error {
 
 	templ.Handler(ui_components.RennenTab(wettkampf, urlFormatStr, showEmpty, showStarted)).ServeHTTP(c.Writer, c.Request)
 	return nil
+}
+
+func waagePostHandler(c *handler.Context) error {
+	err := c.Request.ParseForm()
+	if err != nil {
+		log.Println("ParseForm: ", err)
+		return err
+	}
+
+	idStr := c.Request.FormValue("uuid")
+	gewichtStr := c.Request.FormValue("gewicht")
+	gewichtFloat, err := strconv.ParseFloat(gewichtStr, 32)
+	if err != nil {
+		log.Println("ParseFloat: ", err)
+		return err
+	}
+	gewicht := int(gewichtFloat * 10)
+
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		log.Println("Parse UUID: ", err)
+		return err
+	}
+
+	ath, err := crud.GetAthletMinimal(id)
+	if err != nil {
+		log.Println("GetAthletMinimal: ", err)
+		return err
+	}
+
+	err = ath.UpdateGewicht(gewicht)
+	if err != nil {
+		log.Println("UpdateGewicht: ", err)
+		return err
+	}
+
+	vereinUuidStr := c.Param("v_uuid")
+	vereinUuid, err := uuid.Parse(vereinUuidStr)
+	if err != nil {
+		return &handler.Error{StatusCode: 406, Message: "Invalid UUID"}
+	}
+	verein, err := crud.GetVerein(vereinUuid)
+	if err != nil {
+		return &handler.Error{StatusCode: 404, Message: "Verein nicht gefunden"}
+	}
+	athleten, err := crud.GetAllAthletenForVereinWaage(verein.Uuid)
+	if err != nil {
+		return &handler.Error{StatusCode: 500, Message: "Error while loading athleten"}
+	}
+
+	for i := range athleten {
+		athleten[i].Verein = &verein
+	}
+
+	c.Writer.Header().Set("HX-Push-Url", fmt.Sprintf("/internal/regattabuero/%s/waage", vereinUuidStr))
+	c.Writer.WriteHeader(http.StatusOK)
+	return ui_pages.InternalRegattabueroWaageWahl(verein, athleten).Render(context.Background(), c.Writer)
 }

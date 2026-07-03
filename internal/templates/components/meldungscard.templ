@@ -68,7 +68,10 @@ func (m HXNavigationOptions) Render() string {
 
 templ MeldungsCard(m crud.Meldung, navOpt HXNavigationOptions) {
   {{
-    cardClass := "card bg-base-100 shadow-md hover:cursor-pointer"
+    cardClass := "card bg-base-100 shadow-md"
+    if navOpt.URL != "" {
+      cardClass += " hover:cursor-pointer"
+    }
     navArguments := navOpt.Render()
   }}
   <div
@@ -76,9 +79,23 @@ templ MeldungsCard(m crud.Meldung, navOpt HXNavigationOptions) {
     {navArguments}
   >
     <div class="card-body">
-      <h5 class="card-title">Rennen: {m.Rennen.Nummer} - {m.Rennen.BezeichnungLang}</h5>
-      <p class="card-text">Startnummer: {m.StartNummer} - Verein: {m.Verein.Name}</p>
-      <p class="card-text">Teilnehmer: {m.TeilnehmerString()}</p>
+      if m.Rennen != nil {
+        <h5 class="card-title h-24">Rennen: {m.Rennen.Nummer} - {m.Rennen.BezeichnungLang}</h5>
+      }
+      <p
+        class="card-text"
+      >
+        Startnummer: {m.StartNummer}
+        if m.Verein != nil {
+          - Verein: {m.Verein.Name}
+        }
+        if m.Athleten != nil {
+          <br/>
+          Teilnehmer: {m.TeilnehmerString()}
+        }
+        <br/>
+        Startzeit: {m.Rennen.Tag.String()} {m.Rennen.Startzeit}
+      </p>
     </div>
   </div>
 }

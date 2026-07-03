@@ -19,6 +19,16 @@ type Verein struct {
 	Saldo        *int     `json:"saldo"`
 }
 
+func VereinFromSqlc(v sqlc.Verein, gesKosten int) Verein {
+	return Verein{
+		Verein:       v,
+		Athleten:     make([]Athlet, 0),
+		GesKosten:    &gesKosten,
+		GesZahlungen: &gesKosten,
+		Saldo:        &gesKosten,
+	}
+}
+
 func (verein *Verein) GetRechnungsnummern() ([]string, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()

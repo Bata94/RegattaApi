@@ -273,10 +273,14 @@ func GetAllRennenWithAthlet(p GetAllRennenParams) ([]Rennen, error) {
 }
 
 func RennenFromSqlc(rennen sqlc.Rennen, numMeld int, numAbt any) Rennen {
-	numAbteilungenI32, ok := numAbt.(int32)
-	if !ok {
-		log.Println("Error converting numAbt to int32 ", numAbt)
-		numAbteilungenI32 = 0
+	var numAbteilungenI32 int32
+	switch v := numAbt.(type) {
+	case int32:
+		numAbteilungenI32 = v
+	case int:
+		numAbteilungenI32 = int32(v)
+	default:
+		log.Printf("Error converting numAbt to int32: %v (%T)", numAbt, numAbt)
 	}
 	numAbteilungen := int(numAbteilungenI32)
 	return Rennen{

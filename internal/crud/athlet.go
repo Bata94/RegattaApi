@@ -62,6 +62,36 @@ func (ath *Athlet) UpdateGewicht(gewichtParam int) error {
 	return nil
 }
 
+func GetAthlet(uuid uuid.UUID) (Athlet, error) {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	rows, err := DB.Queries.GetAthlet(ctx, uuid)
+	if err != nil {
+		return Athlet{}, err
+	}
+	if len(rows) == 0 {
+		return Athlet{}, &api.NOT_FOUND
+	}
+
+	verein := VereinFromSqlc(rows[0].Verein, 0)
+	a := Athlet{
+		Athlet:    rows[0].Athlet,
+		Verein:    &verein,
+		Meldungen: []Meldung{},
+	}
+
+	for _, r := range rows {
+		rennen := RennenFromSqlc(r.Rennen, 0, 0)
+		a.Meldungen = append(a.Meldungen, Meldung{
+			Meldung: r.Meldung,
+			Rennen:  &rennen,
+		})
+	}
+
+	return a, nil
+}
+
 func GetAthletMinimal(uuid uuid.UUID) (Athlet, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
