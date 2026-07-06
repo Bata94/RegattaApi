@@ -1,6 +1,8 @@
 package api_v1
 
 import (
+	"net/http"
+
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/bata94/RegattaApi/internal/sqlc"
@@ -11,10 +13,10 @@ import (
 func GetRennen(c *handler.Context) error {
 	uuid, err := c.GetUUID("uuid")
 	if err != nil {
-		return &handler.Error{StatusCode: 400, Message: err.Error()}
+		return &handler.Error{StatusCode: http.StatusBadRequest, Message: err.Error()}
 	}
 
-	r, err := crud.GetRennen(uuid)
+	r, err := crud.GetRennen(c.Request.Context(), uuid)
 	if err != nil {
 		return err
 	}
@@ -39,7 +41,7 @@ func GetAllRennen(c *handler.Context) error {
 	}
 
 	if getAthleten && !getMeld {
-		return &handler.Error{StatusCode: 400, Message: "Query param getAthleten requires getMeldungen to be true"}
+		return &handler.Error{StatusCode: http.StatusBadRequest, Message: "Query param getAthleten requires getMeldungen to be true"}
 	}
 
 	searchParams := crud.GetAllRennenParams{
@@ -51,7 +53,7 @@ func GetAllRennen(c *handler.Context) error {
 	}
 
 	if getAthleten {
-		retLs, err := crud.GetAllRennenWithAthlet(searchParams)
+		retLs, err := crud.GetAllRennenWithAthlet(c.Request.Context(), searchParams)
 		if err != nil {
 			return err
 		}
@@ -59,7 +61,7 @@ func GetAllRennen(c *handler.Context) error {
 		return c.JSON(retLs)
 	}
 
-	rLs, err := crud.GetAllRennen(searchParams)
+	rLs, err := crud.GetAllRennen(c.Request.Context(), searchParams)
 	if err != nil {
 		return err
 	}

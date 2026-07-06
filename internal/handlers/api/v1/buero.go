@@ -1,7 +1,8 @@
 package api_v1
 
 import (
-	"log"
+	"log/slog"
+	"net/http"
 
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handler"
@@ -13,29 +14,29 @@ type AbmeldungsParams struct {
 }
 
 func StartnummernAusgabe(c *handler.Context) error {
-	return &handler.Error{StatusCode: 404, Message: "Not found"}
+	return &handler.Error{StatusCode: http.StatusNotFound, Message: "Not found"}
 }
 
 func StartnummernWechsel(c *handler.Context) error {
-	return &handler.Error{StatusCode: 404, Message: "Not found"}
+	return &handler.Error{StatusCode: http.StatusNotFound, Message: "Not found"}
 }
 
 func KasseEinzahlung(c *handler.Context) error {
-	return &handler.Error{StatusCode: 404, Message: "Not found"}
+	return &handler.Error{StatusCode: http.StatusNotFound, Message: "Not found"}
 }
 
 func KasseCreateRechnungPDF(c *handler.Context) error {
 	uuid, err := c.GetUUID("uuid")
 	if err != nil {
-		return &handler.Error{StatusCode: 400, Message: err.Error()}
+		return &handler.Error{StatusCode: http.StatusBadRequest, Message: err.Error()}
 	}
 
-	v, err := crud.GetVereinMinimal(uuid)
+	v, err := crud.GetVereinMinimal(c.Request.Context(), uuid)
 	if err != nil {
 		return err
 	}
 
-	reNr, err := v.GetNextRechnungsnummer()
+	reNr, err := v.GetNextRechnungsnummer(c.Request.Context())
 	if err != nil {
 		return err
 	}
@@ -49,10 +50,10 @@ func KasseCreateRechnungPDF(c *handler.Context) error {
 	if err != nil {
 		return err
 	}
-	log.Println("Generated:", filePath)
+	slog.Info("Generated", "file", filePath)
 
 	toMail := []string{}
-	obleute, err := crud.GetAllObmannForVerein(v.Uuid)
+	obleute, err := crud.GetAllObmannForVerein(c.Request.Context(), v.Uuid)
 	if err != nil {
 		return err
 	}
@@ -79,14 +80,14 @@ func KasseCreateRechnungPDF(c *handler.Context) error {
 }
 
 func KasseCreateRechnungAllVereine(c *handler.Context) error {
-	vereine, err := crud.GetAllVerein()
+	vereine, err := crud.GetAllVerein(c.Request.Context(), )
 	if err != nil {
 		return err
 	}
 
 	errLs := []error{}
 	for _, v := range vereine {
-		reNr, err := v.GetNextRechnungsnummer()
+		reNr, err := v.GetNextRechnungsnummer(c.Request.Context())
 		if err != nil {
 			errLs = append(errLs, err)
 			continue
@@ -102,7 +103,7 @@ func KasseCreateRechnungAllVereine(c *handler.Context) error {
 			errLs = append(errLs, err)
 			continue
 		}
-		log.Println("Generated:", filePath)
+		slog.Info("Generated", "file", filePath)
 	}
 
 	if len(errLs) > 0 {
@@ -114,20 +115,20 @@ func KasseCreateRechnungAllVereine(c *handler.Context) error {
 func KasseCreateRechnungHTML(c *handler.Context) error {
 	uuid, err := c.GetUUID("uuid")
 	if err != nil {
-		return &handler.Error{StatusCode: 400, Message: err.Error()}
+		return &handler.Error{StatusCode: http.StatusBadRequest, Message: err.Error()}
 	}
 
-	v, err := crud.GetVereinMinimal(uuid)
+	v, err := crud.GetVereinMinimal(c.Request.Context(), uuid)
 	if err != nil {
 		return err
 	}
 
-	meld, err := crud.GetAllMeldungForVerein(v.Uuid)
+	meld, err := crud.GetAllMeldungForVerein(c.Request.Context(), v.Uuid)
 	if err != nil {
 		return err
 	}
 
-	reNr, err := v.GetNextRechnungsnummer()
+	reNr, err := v.GetNextRechnungsnummer(c.Request.Context())
 	if err != nil {
 		return err
 	}
@@ -155,17 +156,17 @@ func KasseCreateRechnungHTML(c *handler.Context) error {
 		})
 		sumPreis += int(m.Kosten)
 
-		err := crud.SetMeldungRechnungsNummer(m.Uuid, reNr)
+		err := crud.SetMeldungRechnungsNummer(c.Request.Context(), m.Uuid, reNr)
 		if err != nil {
-			log.Println(err)
+			slog.Error("Error", "err", err)
 		}
 	}
 
 	if len(entries) == 0 {
-		return &handler.Error{StatusCode: 404, Message: "Keine Meldungen gefunden!"}
+		return &handler.Error{StatusCode: http.StatusNotFound, Message: "Keine Meldungen gefunden!"}
 	}
 
-	err = crud.CreateRechnung(reNr, v.Uuid, sumPreis)
+	err = crud.CreateRechnung(c.Request.Context(), reNr, v.Uuid, sumPreis)
 	if err != nil {
 		return err
 	}

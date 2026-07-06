@@ -9,7 +9,7 @@ import (
 
 templ InternalAdminUserGroups() {
   {{
-    userGroups, err:= crud.GetAllUsersGroups()
+    userGroups, err:= crud.GetAllUsersGroups(ctx)
     groupRows := []ui_components.TableRowParams{}
   }}
   if err != nil {

@@ -50,7 +50,7 @@ func baseLayoutHandler(url string, getPage PageFunc) {
 				LoggedIn: loggedIn,
 			}
 
-			if c.Headers().Get("HX-Request") == "true" {
+			if 	c.IsHtmxRequest() {
 				templ.Handler(pageBody).ServeHTTP(c.Writer, c.Request)
 			} else {
 				templ.Handler(ui_layouts.BaseLayout(pageBody, navbarCfg)).ServeHTTP(c.Writer, c.Request)
@@ -76,7 +76,7 @@ func baseLayoutHandler(url string, getPage PageFunc) {
 
 func compHandler(url string, comp templ.Component) {
 	h := func(c *handler.Context) error {
-		if c.Headers().Get("HX-Request") == "true" {
+		if 	c.IsHtmxRequest() {
 			templ.Handler(comp).ServeHTTP(c.Writer, c.Request)
 		} else {
 			templ.Handler(ui_pages.Error(404, c.Path()+" not found")).ServeHTTP(c.Writer, c.Request)

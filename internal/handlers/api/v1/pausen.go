@@ -1,6 +1,7 @@
 package api_v1
 
 import (
+	"net/http"
 	"strconv"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -28,7 +29,7 @@ func GetAllPausen(c *handler.Context) error {
 	} else {
 		wettLs = []sqlc.Wettkampf{showWettkampf.Wettkampf}
 	}
-	pLs, err := crud.GetPausenByWettkampf(wettLs)
+	pLs, err := crud.GetPausenByWettkampf(c.Request.Context(), wettLs)
 	if err != nil {
 		return err
 	}
@@ -42,10 +43,10 @@ func GetPause(c *handler.Context) error {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		return &handler.Error{StatusCode: 400, Message: "invalid id"}
+		return &handler.Error{StatusCode: http.StatusBadRequest, Message: "invalid id"}
 	}
 
-	p, err := crud.GetPause(id)
+	p, err := crud.GetPause(c.Request.Context(), id)
 	if err != nil {
 		return err
 	}
@@ -56,10 +57,10 @@ func DeletePause(c *handler.Context) error {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
-		return &handler.Error{StatusCode: 400, Message: "invalid id"}
+		return &handler.Error{StatusCode: http.StatusBadRequest, Message: "invalid id"}
 	}
 
-	err = crud.DeletePause(int32(id))
+	err = crud.DeletePause(c.Request.Context(), int32(id))
 	if err != nil {
 		return err
 	}
@@ -73,7 +74,7 @@ func CreatePause(c *handler.Context) error {
 		return err
 	}
 
-	p, err := crud.CreatePause(*params)
+	p, err := crud.CreatePause(c.Request.Context(), *params)
 	if err != nil {
 		return err
 	}
@@ -88,7 +89,7 @@ func UpdatePause(c *handler.Context) error {
 		return err
 	}
 
-	p, err := crud.UpdatePause(*params)
+	p, err := crud.UpdatePause(c.Request.Context(), *params)
 	if err != nil {
 		return err
 	}

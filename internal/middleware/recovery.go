@@ -1,7 +1,9 @@
 package middleware
 
 import (
-	"log"
+	"fmt"
+	"log/slog"
+	"net/http"
 
 	"github.com/bata94/RegattaApi/internal/handler"
 )
@@ -11,8 +13,8 @@ func Recovery() Middleware {
 		return func(c *handler.Context) error {
 			defer func() {
 				if r := recover(); r != nil {
-					log.Printf("[PANIC] %v", r)
-					c.Status(500)
+					slog.Error(fmt.Sprintf("[PANIC] %v", r))
+					c.Status(http.StatusInternalServerError)
 					c.SendString("Internal Server Error")
 				}
 			}()

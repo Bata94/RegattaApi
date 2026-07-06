@@ -1,12 +1,13 @@
 package crud
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/bata94/RegattaApi/internal/db"
-	"github.com/bata94/RegattaApi/internal/handlers/api"
+	apierr "github.com/bata94/RegattaApi/internal/errors"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -97,8 +98,8 @@ func (ath *Athlet) FullName() string {
 	return fmt.Sprintf("%s %s", ath.Vorname, ath.Name)
 }
 
-func (ath *Athlet) UpdateStartberechtigung(startberechtigt bool) error {
-	ctx, cancel := getCtxWithTo()
+func (ath *Athlet) UpdateStartberechtigung(ctx context.Context, startberechtigt bool) error {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	err := DB.Queries.UpdateAthletAerztlBesch(ctx, sqlc.UpdateAthletAerztlBeschParams{
@@ -113,8 +114,8 @@ func (ath *Athlet) UpdateStartberechtigung(startberechtigt bool) error {
 	return nil
 }
 
-func (ath *Athlet) UpdateGewicht(gewichtParam int) error {
-	ctx, cancel := getCtxWithTo()
+func (ath *Athlet) UpdateGewicht(ctx context.Context, gewichtParam int) error {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	gewicht := int32(gewichtParam)
@@ -131,8 +132,8 @@ func (ath *Athlet) UpdateGewicht(gewichtParam int) error {
 	return nil
 }
 
-func GetAthlet(uuid uuid.UUID) (Athlet, error) {
-	ctx, cancel := getCtxWithTo()
+func GetAthlet(ctx context.Context, uuid uuid.UUID) (Athlet, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	rows, err := DB.Queries.GetAthlet(ctx, uuid)
@@ -140,7 +141,7 @@ func GetAthlet(uuid uuid.UUID) (Athlet, error) {
 		return Athlet{}, err
 	}
 	if len(rows) == 0 {
-		return Athlet{}, &api.NOT_FOUND
+		return Athlet{}, &apierr.NOT_FOUND
 	}
 
 	verein := VereinFromSqlc(rows[0].Verein, 0)
@@ -161,14 +162,14 @@ func GetAthlet(uuid uuid.UUID) (Athlet, error) {
 	return a, nil
 }
 
-func GetAthletMinimal(uuid uuid.UUID) (Athlet, error) {
-	ctx, cancel := getCtxWithTo()
+func GetAthletMinimal(ctx context.Context, uuid uuid.UUID) (Athlet, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	a, err := DB.Queries.GetAthletMinimal(ctx, uuid)
 	if err != nil {
 		if isNoRowError(err) {
-			return Athlet{}, &api.NOT_FOUND
+			return Athlet{}, &apierr.NOT_FOUND
 		}
 		return Athlet{}, err
 	}
@@ -176,8 +177,8 @@ func GetAthletMinimal(uuid uuid.UUID) (Athlet, error) {
 	return Athlet{Athlet: a}, nil
 }
 
-func GetAllAthlet() ([]Athlet, error) {
-	ctx, cancel := getCtxWithTo()
+func GetAllAthlet(ctx context.Context, ) ([]Athlet, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	aLs := []Athlet{}
@@ -195,8 +196,8 @@ func GetAllAthlet() ([]Athlet, error) {
 	return aLs, err
 }
 
-func GetAllNNAthleten() ([]Athlet, error) {
-	ctx, cancel := getCtxWithTo()
+func GetAllNNAthleten(ctx context.Context, ) ([]Athlet, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	aLs := []Athlet{}
@@ -214,8 +215,8 @@ func GetAllNNAthleten() ([]Athlet, error) {
 	return aLs, err
 }
 
-func GetAllAthletenForVerein(vUuid uuid.UUID) ([]Athlet, error) {
-	ctx, cancel := getCtxWithTo()
+func GetAllAthletenForVerein(ctx context.Context, vUuid uuid.UUID) ([]Athlet, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	q, err := DB.Queries.GetAllAthletenForVerein(ctx, vUuid)
@@ -234,8 +235,8 @@ func GetAllAthletenForVerein(vUuid uuid.UUID) ([]Athlet, error) {
 	return retLs, nil
 }
 
-func GetAllAthletenForVereinWaage(vUuid uuid.UUID) ([]Athlet, error) {
-	ctx, cancel := getCtxWithTo()
+func GetAllAthletenForVereinWaage(ctx context.Context, vUuid uuid.UUID) ([]Athlet, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	retLs := []Athlet{}
@@ -258,8 +259,8 @@ func GetAllAthletenForVereinWaage(vUuid uuid.UUID) ([]Athlet, error) {
 	return retLs, nil
 }
 
-func GetAllAthletenForVereinMissStartber(vUuid uuid.UUID) ([]Athlet, error) {
-	ctx, cancel := getCtxWithTo()
+func GetAllAthletenForVereinMissStartber(ctx context.Context, vUuid uuid.UUID) ([]Athlet, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	retLs := []Athlet{}
@@ -283,13 +284,13 @@ func GetAllAthletenForVereinMissStartber(vUuid uuid.UUID) ([]Athlet, error) {
 	return retLs, nil
 }
 
-func CreateAthlet(aParams sqlc.CreateAthletParams) (Athlet, error) {
-	ctx, cancel := getCtxWithTo()
+func CreateAthlet(ctx context.Context, aParams sqlc.CreateAthletParams) (Athlet, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	a, err := DB.Queries.CreateAthlet(ctx, aParams)
 	if err != nil {
-		log.Println(err.Error())
+		slog.Error(err.Error())
 		return Athlet{}, err
 	}
 

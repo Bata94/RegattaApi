@@ -1,6 +1,7 @@
 package crud
 
 import (
+	"context"
 	DB "github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/google/uuid"
@@ -10,8 +11,8 @@ type Obmann struct {
 	*sqlc.Obmann
 }
 
-func GetAllObmannForVerein(vereinUuid uuid.UUID) ([]Obmann, error) {
-	ctx, cancel := getCtxWithTo()
+func GetAllObmannForVerein(ctx context.Context, vereinUuid uuid.UUID) ([]Obmann, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	retLs := []Obmann{}

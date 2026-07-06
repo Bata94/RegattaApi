@@ -68,7 +68,7 @@ templ RennenTabs(urlFormatStr string, showEmpty, showStarted bool) {
 // urlFormatStr should include %s for the clicked rennen uuid
 templ RennenTab(w sqlc.Wettkampf, urlFormatStr string, showEmpty, showStarted bool) {
   {{
-    rennen, err := crud.GetAllRennen(crud.GetAllRennenParams{
+    rennen, err := crud.GetAllRennen(ctx, crud.GetAllRennenParams{
       GetMeldungen:  false,
       ShowEmpty:     showEmpty,
       ShowStarted:   showEmpty,

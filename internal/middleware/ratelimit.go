@@ -3,11 +3,11 @@ package middleware
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"sync"
 	"time"
 
+	"github.com/bata94/RegattaApi/internal/config"
 	"github.com/bata94/RegattaApi/internal/handler"
 	"golang.org/x/time/rate"
 )
@@ -27,13 +27,10 @@ var (
 
 func InitRateLimiter() {
 	once.Do(func() {
-		rps := getEnvFloat("RATE_LIMIT_RPS", 10)
-		burst := getEnvInt("RATE_LIMIT_BURST", 20)
-
 		globalLimiter = &RateLimiter{
 			limiters: make(map[string]*rate.Limiter),
-			rate:     rate.Limit(rps),
-			burst:    burst,
+			rate:     rate.Limit(config.C.Rate.RPS),
+			burst:    config.C.Rate.Burst,
 			cleanup:  5 * time.Minute,
 		}
 
@@ -131,24 +128,6 @@ func (rl *RateLimiter) cleanupLoop() {
 		}
 		rl.mu.Unlock()
 	}
-}
-
-func getEnvFloat(key string, defaultValue float64) float64 {
-	if value := os.Getenv(key); value != "" {
-		if parsed, err := strconv.ParseFloat(value, 64); err == nil && parsed > 0 {
-			return parsed
-		}
-	}
-	return defaultValue
-}
-
-func getEnvInt(key string, defaultValue int) int {
-	if value := os.Getenv(key); value != "" {
-		if parsed, err := strconv.Atoi(value); err == nil && parsed > 0 {
-			return parsed
-		}
-	}
-	return defaultValue
 }
 
 // TODO: Implement distributed rate limiting with Redis for multi-instance deployments.

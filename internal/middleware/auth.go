@@ -1,19 +1,18 @@
 package middleware
 
 import (
-	"log"
-	"os"
+	"fmt"
+	"log/slog"
+	"net/http"
 	"strings"
 
+	"github.com/bata94/RegattaApi/internal/config"
 	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/golang-jwt/jwt/v5"
 )
 
 func Auth() Middleware {
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		secret = "DO_NOT_USE_IN_PROD"
-	}
+	secret := config.C.Auth.JWTSecret
 
 	return func(next handler.Handler) handler.Handler {
 		return func(c *handler.Context) error {
@@ -26,12 +25,12 @@ func Auth() Middleware {
 			}
 
 			if tokenString == "" {
-				log.Printf("Auth middleware: missing token for %s %s", c.Method(), c.Path())
-				return &handler.Error{StatusCode: 401, Message: "Missing authentication token"}
+				slog.Warn(fmt.Sprintf("Auth middleware: missing token for %s %s", c.Method(), c.Path()))
+				return &handler.Error{StatusCode: http.StatusUnauthorized, Message: "Missing authentication token"}
 			}
 
 			if strings.HasPrefix(tokenString, "Bearer ") {
-				return &handler.Error{StatusCode: 401, Message: "Invalid token format"}
+				return &handler.Error{StatusCode: http.StatusUnauthorized, Message: "Invalid token format"}
 			}
 
 			token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
@@ -39,8 +38,8 @@ func Auth() Middleware {
 			})
 
 			if err != nil || !token.Valid {
-				log.Printf("Auth middleware: invalid token for %s %s: %v", c.Method(), c.Path(), err)
-				return &handler.Error{StatusCode: 401, Message: "Invalid or expired token"}
+				slog.Warn(fmt.Sprintf("Auth middleware: invalid token for %s %s: %v", c.Method(), c.Path(), err))
+				return &handler.Error{StatusCode: http.StatusUnauthorized, Message: "Invalid or expired token"}
 			}
 
 			extractAuthData(c, token)
@@ -50,10 +49,7 @@ func Auth() Middleware {
 }
 
 func OptionalAuth() Middleware {
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		secret = "DO_NOT_USE_IN_PROD"
-	}
+	secret := config.C.Auth.JWTSecret
 
 	return func(next handler.Handler) handler.Handler {
 		return func(c *handler.Context) error {

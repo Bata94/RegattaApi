@@ -1,27 +1,19 @@
 package middleware
 
 import (
-	"log"
-	"os"
+	"fmt"
+	"log/slog"
+	"net/http"
 	"strings"
 
+	"github.com/bata94/RegattaApi/internal/config"
 	"github.com/bata94/RegattaApi/internal/handler"
 )
 
 func CORS() Middleware {
-	originsEnv := os.Getenv("CORS_ALLOWED_ORIGINS")
-	methods := os.Getenv("CORS_ALLOWED_METHODS")
-	headers := os.Getenv("CORS_ALLOWED_HEADERS")
-
-	if originsEnv == "" {
-		originsEnv = "*"
-	}
-	if methods == "" {
-		methods = "GET, POST, PUT, DELETE, OPTIONS"
-	}
-	if headers == "" {
-		headers = "Content-Type, Authorization"
-	}
+	originsEnv := config.C.CORS.AllowedOrigins
+	methods := config.C.CORS.AllowedMethods
+	headers := config.C.CORS.AllowedHeaders
 
 	allowedOrigins := strings.Split(originsEnv, ",")
 	for i := range allowedOrigins {
@@ -31,9 +23,9 @@ func CORS() Middleware {
 	return func(next handler.Handler) handler.Handler {
 		return func(c *handler.Context) error {
 			origin := c.Request.Header.Get("Origin")
-			log.Printf("CORS DEBUG: Origin=%q Allowed=%v Method=%s", origin, allowedOrigins, c.Method())
+			slog.Debug(fmt.Sprintf("CORS DEBUG: Origin=%q Allowed=%v Method=%s", origin, allowedOrigins, c.Method()))
 			matchedOrigin := matchOrigin(origin, allowedOrigins)
-			log.Printf("CORS DEBUG: Matched=%q", matchedOrigin)
+			slog.Debug(fmt.Sprintf("CORS DEBUG: Matched=%q", matchedOrigin))
 
 			if matchedOrigin != "" {
 				c.Writer.Header().Set("Access-Control-Allow-Origin", matchedOrigin)
@@ -46,7 +38,7 @@ func CORS() Middleware {
 			c.Writer.Header().Set("Access-Control-Allow-Headers", headers)
 
 			if c.Method() == "OPTIONS" {
-				c.Status(200)
+				c.Status(http.StatusOK)
 				return nil
 			}
 			return next(c)

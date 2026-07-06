@@ -1,19 +1,22 @@
 package crud
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
-	"os"
 	"time"
 
+	"github.com/bata94/RegattaApi/internal/config"
 	"github.com/bata94/RegattaApi/internal/db"
-	"github.com/bata94/RegattaApi/internal/handlers/api"
+	apierr "github.com/bata94/RegattaApi/internal/errors"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/google/uuid"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
+
+const bcryptCost = 14
 
 type User struct {
 	sqlc.User
@@ -88,10 +91,7 @@ func CheckPasswordHash(password, hash string) bool {
 }
 
 func genJWT(u sqlc.User, ug *sqlc.UsersGroup) (string, time.Time, error) {
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		secret = "DO_NOT_USE_IN_PROD"
-	}
+	secret := config.C.Auth.JWTSecret
 
 	token := jwt.New(jwt.SigningMethodHS256)
 	exp := time.Now().Add(time.Hour * 72)
@@ -116,7 +116,7 @@ func genJWT(u sqlc.User, ug *sqlc.UsersGroup) (string, time.Time, error) {
 }
 
 func hashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
 	return string(bytes), err
 }
 
@@ -124,8 +124,8 @@ func ParseUUID(s string) (uuid.UUID, error) {
 	return uuid.Parse(s)
 }
 
-func validUser(id uuid.UUID, p string) bool {
-	user, err := GetUser(id)
+func validUser(ctx context.Context, id uuid.UUID, p string) bool {
+	user, err := GetUser(ctx, id)
 	if err != nil {
 		return false
 	}
@@ -135,8 +135,8 @@ func validUser(id uuid.UUID, p string) bool {
 	return true
 }
 
-func GetAllUsers() ([]sqlc.User, error) {
-	ctx, cancel := getCtxWithTo()
+func GetAllUsers(ctx context.Context, ) ([]sqlc.User, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	uLs, err := DB.Queries.GetAllUser(ctx)
@@ -151,14 +151,14 @@ func GetAllUsers() ([]sqlc.User, error) {
 	return uLs, nil
 }
 
-func GetUser(id uuid.UUID) (*User, error) {
-	ctx, cancel := getCtxWithTo()
+func GetUser(ctx context.Context, id uuid.UUID) (*User, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	u, err := DB.Queries.GetUser(ctx, id)
 	if err != nil {
 		if isNoRowError(err) {
-			return nil, &api.NOT_FOUND
+			return nil, &apierr.NOT_FOUND
 		}
 		return nil, err
 	}
@@ -169,8 +169,8 @@ func GetUser(id uuid.UUID) (*User, error) {
 	}, err
 }
 
-func GetUserByUsername(name string) (*User, error) {
-	ctx, cancel := getCtxWithTo()
+func GetUserByUsername(ctx context.Context, name string) (*User, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	id, err := DB.Queries.GetUserUuidByName(ctx, name)
@@ -178,11 +178,11 @@ func GetUserByUsername(name string) (*User, error) {
 		return nil, err
 	}
 
-	return GetUser(id)
+	return GetUser(ctx, id)
 }
 
-func CreateUser(uInp CreateUserParams) (User, error) {
-	ctx, cancel := getCtxWithTo()
+func CreateUser(ctx context.Context, uInp CreateUserParams) (User, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	hashedPW, err := hashPassword(uInp.Password)
@@ -204,8 +204,8 @@ func CreateUser(uInp CreateUserParams) (User, error) {
 	return User{User: u}, nil
 }
 
-func UpdateUser(u uuid.UUID, uParams UpdateUserParams) error {
-	ctx, cancel := getCtxWithTo()
+func UpdateUser(ctx context.Context, u uuid.UUID, uParams UpdateUserParams) error {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	err := DB.Queries.UpdateUser(ctx, sqlc.UpdateUserParams{
@@ -221,8 +221,8 @@ func UpdateUser(u uuid.UUID, uParams UpdateUserParams) error {
 	return nil
 }
 
-func UpdatePassword(u uuid.UUID, p string) error {
-	ctx, cancel := getCtxWithTo()
+func UpdatePassword(ctx context.Context, u uuid.UUID, p string) error {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	hp, err := hashPassword(p)
@@ -241,14 +241,14 @@ func UpdatePassword(u uuid.UUID, p string) error {
 	return nil
 }
 
-func AuthLogin(l LoginParams) (*ReturnUserWithJWT, error) {
-	u, err := GetUserByUsername(l.Username)
+func AuthLogin(ctx context.Context, l LoginParams) (*ReturnUserWithJWT, error) {
+	u, err := GetUserByUsername(ctx, l.Username)
 	if err != nil {
 		return nil, err
 	}
 
 	if u.IsActive == false {
-		return nil, &api.AUTH_LOGIN_USER_NOT_ACTIVE
+		return nil, &apierr.AUTH_LOGIN_USER_NOT_ACTIVE
 	}
 
 	tokenStr := ""
@@ -256,12 +256,12 @@ func AuthLogin(l LoginParams) (*ReturnUserWithJWT, error) {
 	if CheckPasswordHash(l.Password, u.HashedPassword) {
 		tokenStr, tokenExp, err = genJWT(u.User, u.UserGroup)
 		if err != nil {
-			retErr := &api.TOKEN_GENERATION_ERROR
+			retErr := &apierr.TOKEN_GENERATION_ERROR
 			retErr.Details = err.Error()
 			return nil, retErr
 		}
 	} else {
-		return nil, &api.AUTH_LOGIN_WRONG_PASSWORD
+		return nil, &apierr.AUTH_LOGIN_WRONG_PASSWORD
 	}
 
 	if tokenStr == "" {

@@ -1,15 +1,17 @@
 package crud
 
 import (
+	"context"
 	"cmp"
 	"encoding/json"
-	"log"
+	"fmt"
+	"log/slog"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/bata94/RegattaApi/internal/db"
-	"github.com/bata94/RegattaApi/internal/handlers/api"
+	apierr "github.com/bata94/RegattaApi/internal/errors"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/google/uuid"
 	"golang.org/x/text/cases"
@@ -35,7 +37,7 @@ func WettkampfFromString(str string) (sqlc.Wettkampf, error) {
 		}
 	}
 
-	return "", &api.NOT_FOUND
+	return "", &apierr.NOT_FOUND
 }
 
 type GetAllRennenParams struct {
@@ -118,11 +120,11 @@ func (r *Rennen) GetStartzeit() *string {
 	return nil
 }
 
-func (r *Rennen) GetMeldungen() ([]Meldung, error) {
+func (r *Rennen) GetMeldungen(ctx context.Context, ) ([]Meldung, error) {
 	if r.Meldungen != nil {
 		return r.Meldungen, nil
 	}
-	loaded, err := GetRennenMeldungen(r.Uuid)
+	loaded, err := GetRennenMeldungen(context.Background(), r.Uuid)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +182,7 @@ func RennenFromSqlc(rennen sqlc.Rennen, numMeld int, numAbt any) Rennen {
 	case int:
 		numAbteilungenI32 = int32(v)
 	default:
-		log.Printf("Error converting numAbt to int32: %v (%T)", numAbt, numAbt)
+		slog.Error(fmt.Sprintf("Error converting numAbt to int32: %v (%T)", numAbt, numAbt))
 	}
 	numAbteilungen := int(numAbteilungenI32)
 	return Rennen{
@@ -282,8 +284,8 @@ func ZeitplaungFromSqlc(rennen []sqlc.GetRennenZeitplanRow) Zeitplaung {
 	}
 }
 
-func GetZeitplanung(wettkampf []sqlc.Wettkampf) (Zeitplaung, error) {
-	ctx, cancel := getCtxWithTo()
+func GetZeitplanung(ctx context.Context, wettkampf []sqlc.Wettkampf) (Zeitplaung, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	q, err := DB.Queries.GetRennenZeitplan(ctx, wettkampf)
@@ -291,14 +293,14 @@ func GetZeitplanung(wettkampf []sqlc.Wettkampf) (Zeitplaung, error) {
 		return Zeitplaung{}, err
 	}
 	if len(q) == 0 {
-		return Zeitplaung{}, &api.NOT_FOUND
+		return Zeitplaung{}, &apierr.NOT_FOUND
 	}
 
 	return ZeitplaungFromSqlc(q), nil
 }
 
-func GetAllRennen(p GetAllRennenParams) ([]Rennen, error) {
-	ctx, cancel := getCtxWithTo()
+func GetAllRennen(ctx context.Context, p GetAllRennenParams) ([]Rennen, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	var (
@@ -321,7 +323,7 @@ func GetAllRennen(p GetAllRennenParams) ([]Rennen, error) {
 
 	q, err = DB.Queries.GetAllRennenWithMeld(ctx, wettkampfFilterLs)
 	if err != nil {
-		log.Println("Query error: ", err)
+		slog.Error("Query error", "err", err)
 		return nil, err
 	}
 
@@ -344,8 +346,8 @@ func GetAllRennen(p GetAllRennenParams) ([]Rennen, error) {
 	return retLs, nil
 }
 
-func GetAllRennenWithAthlet(p GetAllRennenParams) ([]Rennen, error) {
-	ctx, cancel := getCtxWithTo()
+func GetAllRennenWithAthlet(ctx context.Context, p GetAllRennenParams) ([]Rennen, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	var wettkampfFilterLs []sqlc.Wettkampf
@@ -465,14 +467,14 @@ func sqlcRennenToCrudRennen(q []sqlc.GetAllRennenWithMeldRow, getEmptyRennen boo
 	return rLs
 }
 
-func GetRennenMinimal(uuid uuid.UUID) (Rennen, error) {
-	ctx, cancel := getCtxWithTo()
+func GetRennenMinimal(ctx context.Context, uuid uuid.UUID) (Rennen, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	r, err := DB.Queries.GetRennenMinimal(ctx, uuid)
 	if err != nil {
 		if isNoRowError(err) {
-			return Rennen{}, &api.NOT_FOUND
+			return Rennen{}, &apierr.NOT_FOUND
 		}
 		return Rennen{}, err
 	}
@@ -480,19 +482,19 @@ func GetRennenMinimal(uuid uuid.UUID) (Rennen, error) {
 	return RennenFromSqlc(r, 0, 0), nil
 }
 
-func GetRennen(uuidParam uuid.UUID) (Rennen, error) {
-	ctx, cancel := getCtxWithTo()
+func GetRennen(ctx context.Context, uuidParam uuid.UUID) (Rennen, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	q, err := DB.Queries.GetRennen(ctx, uuidParam)
 	if err != nil {
 		if isNoRowError(err) {
-			return Rennen{}, &api.NOT_FOUND
+			return Rennen{}, &apierr.NOT_FOUND
 		}
 		return Rennen{}, err
 	}
 	if len(q) == 0 {
-		return Rennen{}, &api.NOT_FOUND
+		return Rennen{}, &apierr.NOT_FOUND
 	}
 
 	r := RennenFromSqlc(q[0].Rennen, 0, int32(0))
@@ -537,8 +539,8 @@ func GetRennen(uuidParam uuid.UUID) (Rennen, error) {
 	return r, nil
 }
 
-func GetRennenMeldungen(rennenUuid uuid.UUID) ([]Meldung, error) {
-	ctx, cancel := getCtxWithTo()
+func GetRennenMeldungen(ctx context.Context, rennenUuid uuid.UUID) ([]Meldung, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	q, err := DB.Queries.GetAllRennenMeldungen(ctx, rennenUuid)
@@ -569,15 +571,15 @@ func GetRennenMeldungen(rennenUuid uuid.UUID) ([]Meldung, error) {
 	return meldungen, nil
 }
 
-func UpdateStartZeit(params sqlc.UpdateStartZeitParams) error {
-	ctx, cancel := getCtxWithTo()
+func UpdateStartZeit(ctx context.Context, params sqlc.UpdateStartZeitParams) error {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	return DB.Queries.UpdateStartZeit(ctx, params)
 }
 
-func CreateRennen(rParams sqlc.CreateRennenParams) (Rennen, error) {
-	ctx, cancel := getCtxWithTo()
+func CreateRennen(ctx context.Context, rParams sqlc.CreateRennenParams) (Rennen, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	r, err := DB.Queries.CreateRennen(ctx, rParams)

@@ -1,12 +1,14 @@
 package api_v1
 
 import (
+	"net/http"
+
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handler"
 )
 
 func GetAllVerein(c *handler.Context) error {
-	vLs, err := crud.GetAllVerein()
+	vLs, err := crud.GetAllVerein(c.Request.Context(), )
 	if err != nil {
 		return err
 	}
@@ -17,10 +19,10 @@ func GetAllVerein(c *handler.Context) error {
 func GetVerein(c *handler.Context) error {
 	uuid, err := c.GetUUID("uuid")
 	if err != nil {
-		return &handler.Error{StatusCode: 400, Message: err.Error()}
+		return &handler.Error{StatusCode: http.StatusBadRequest, Message: err.Error()}
 	}
 
-	v, err := crud.GetVerein(uuid)
+	v, err := crud.GetVerein(c.Request.Context(), uuid)
 	if err != nil {
 		return err
 	}
@@ -31,10 +33,10 @@ func GetVerein(c *handler.Context) error {
 func GetAllAthletenForVerein(c *handler.Context) error {
 	uuid, err := c.GetUUID("uuid")
 	if err != nil {
-		return &handler.Error{StatusCode: 400, Message: err.Error()}
+		return &handler.Error{StatusCode: http.StatusBadRequest, Message: err.Error()}
 	}
 
-	aLs, err := crud.GetAllAthletenForVerein(uuid)
+	aLs, err := crud.GetAllAthletenForVerein(c.Request.Context(), uuid)
 	if err != nil {
 		return err
 	}
@@ -45,10 +47,10 @@ func GetAllAthletenForVerein(c *handler.Context) error {
 func GetAllAthletenForVereinMissStartber(c *handler.Context) error {
 	uuid, err := c.GetUUID("uuid")
 	if err != nil {
-		return &handler.Error{StatusCode: 400, Message: err.Error()}
+		return &handler.Error{StatusCode: http.StatusBadRequest, Message: err.Error()}
 	}
 
-	aLs, err := crud.GetAllAthletenForVereinMissStartber(uuid)
+	aLs, err := crud.GetAllAthletenForVereinMissStartber(c.Request.Context(), uuid)
 	if err != nil {
 		return err
 	}
@@ -59,10 +61,10 @@ func GetAllAthletenForVereinMissStartber(c *handler.Context) error {
 func GetAllAthletenForVereinWaage(c *handler.Context) error {
 	uuid, err := c.GetUUID("uuid")
 	if err != nil {
-		return &handler.Error{StatusCode: 400, Message: err.Error()}
+		return &handler.Error{StatusCode: http.StatusBadRequest, Message: err.Error()}
 	}
 
-	aLs, err := crud.GetAllAthletenForVereinWaage(uuid)
+	aLs, err := crud.GetAllAthletenForVereinWaage(c.Request.Context(), uuid)
 	if err != nil {
 		return err
 	}

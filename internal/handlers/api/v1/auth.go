@@ -1,6 +1,8 @@
 package api_v1
 
 import (
+	"net/http"
+
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/golang-jwt/jwt/v5"
@@ -9,10 +11,10 @@ import (
 func Login(c *handler.Context) error {
 	loginParams := new(crud.LoginParams)
 	if err := c.BodyParser(loginParams); err != nil {
-		return &handler.Error{StatusCode: 400, Message: err.Error()}
+		return &handler.Error{StatusCode: http.StatusBadRequest, Message: err.Error()}
 	}
 
-	u, err := crud.AuthLogin(*loginParams)
+	u, err := crud.AuthLogin(c.Request.Context(), *loginParams)
 	if err != nil {
 		return err
 	}
@@ -37,10 +39,10 @@ func AuthMe(c *handler.Context) error {
 
 	userID, err := crud.ParseUUID(uuidStr)
 	if err != nil {
-		return &handler.Error{StatusCode: 401, Message: "Invalid token"}
+		return &handler.Error{StatusCode: http.StatusUnauthorized, Message: "Invalid token"}
 	}
 
-	u, err := crud.GetUser(userID)
+	u, err := crud.GetUser(c.Request.Context(), userID)
 	if err != nil {
 		return err
 	}

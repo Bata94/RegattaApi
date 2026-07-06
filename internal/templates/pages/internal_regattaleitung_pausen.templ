@@ -64,8 +64,8 @@ templ InternalRegattaleitungPausen() {
 
 templ pausenRennenWahlWettkampf(wettkampf sqlc.Wettkampf) {
   {{
-    pausen, pausenErr := crud.GetPausenByWettkampf([]sqlc.Wettkampf{wettkampf})
-    rennen, rennenErr := crud.GetAllRennen(crud.GetAllRennenParams{
+    pausen, pausenErr := crud.GetPausenByWettkampf(ctx, []sqlc.Wettkampf{wettkampf})
+    rennen, rennenErr := crud.GetAllRennen(ctx, crud.GetAllRennenParams{
       GetMeldungen:  false,
       ShowEmpty:     true,
       ShowStarted:   true,

@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/bata94/RegattaApi/internal/config"
 )
 
 func GetFilenames(dir string) ([]string, error) {
 	var files []string
-	path := filepath.Join("./files", dir)
+	path := filepath.Join(config.C.Paths.FilesDir, dir)
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		os.MkdirAll(fmt.Sprint(path), os.ModePerm)
 

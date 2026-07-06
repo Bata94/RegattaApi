@@ -1,7 +1,8 @@
 package middleware
 
 import (
-	"log"
+	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/bata94/RegattaApi/internal/handler"
@@ -15,12 +16,13 @@ func Logging() Middleware {
 			err := next(c)
 
 			duration := time.Since(start)
-			log.Printf("%s | %s | %d | %s | %s",
+			slog.Info(fmt.Sprintf("%s | %s | %d | %s | %s",
 				c.Method(),
 				c.Path(),
 				c.StatusCode(),
 				duration,
-				c.IP())
+				c.IP()),
+			)
 
 			return err
 		}

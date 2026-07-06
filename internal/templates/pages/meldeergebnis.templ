@@ -95,7 +95,7 @@ templ rennenBody(r crud.Rennen) {
 
 templ MeldeergebnisCollapseBody(w sqlc.Wettkampf) {
   {{
-    rennen, err := crud.GetAllRennenWithAthlet(crud.GetAllRennenParams{
+    rennen, err := crud.GetAllRennenWithAthlet(ctx, crud.GetAllRennenParams{
       GetMeldungen: true,
       GetAthleten: true,
       ShowEmpty: true,
@@ -103,7 +103,7 @@ templ MeldeergebnisCollapseBody(w sqlc.Wettkampf) {
       ShowWettkampf: sqlc.NullWettkampf{Wettkampf: w, Valid: true},
     })
 
-    pausen, errPausen := crud.GetPausenByWettkampf([]sqlc.Wettkampf{w})
+    pausen, errPausen := crud.GetPausenByWettkampf(ctx, []sqlc.Wettkampf{w})
   }}
   if err != nil {
     @ui_components.ErrorBody(500, err.Error())

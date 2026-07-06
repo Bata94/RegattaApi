@@ -162,7 +162,7 @@ templ allgBestimmung() {
 
 templ AusschreibungRennenCollapseBody(w sqlc.Wettkampf) {
   {{
-    zeitplan, err := crud.GetZeitplanung([]sqlc.Wettkampf{w})
+    zeitplan, err := crud.GetZeitplanung(ctx, []sqlc.Wettkampf{w})
   }}
 
   if err != nil {

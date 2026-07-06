@@ -274,7 +274,7 @@ templ InternalRegattaleitungSetzungAenderung() {
 
 templ InternalRegattaleitungSetzungAenderungRennen(rennId uuid.UUID) {
   {{
-    rennen, err := crud.GetRennen(rennId)
+    rennen, err := crud.GetRennen(ctx, rennId)
     dragDropUpdateUrl := fmt.Sprintf("/internal/regattaleitung/setzungsverwaltung/aenderung/rennen/%s", rennId)
 
     breadcrumbs := []ui_components.BreadcrumbsEntries{

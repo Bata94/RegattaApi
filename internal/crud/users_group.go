@@ -1,8 +1,9 @@
 package crud
 
 import (
+	"context"
 	"github.com/bata94/RegattaApi/internal/db"
-	"github.com/bata94/RegattaApi/internal/handlers/api"
+	apierr "github.com/bata94/RegattaApi/internal/errors"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/google/uuid"
 )
@@ -16,8 +17,8 @@ type UsersGroupWithUsers struct {
 	Users []ReturnUserMinimal
 }
 
-func GetAllUsersGroups() ([]sqlc.UsersGroup, error) {
-	ctx, cancel := getCtxWithTo()
+func GetAllUsersGroups(ctx context.Context, ) ([]sqlc.UsersGroup, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	ugLs, err := DB.Queries.GetAllUserGroup(ctx)
@@ -32,14 +33,14 @@ func GetAllUsersGroups() ([]sqlc.UsersGroup, error) {
 	return ugLs, nil
 }
 
-func GetUsersGroupsMinimal(id uuid.UUID) (sqlc.UsersGroup, error) {
-	ctx, cancel := getCtxWithTo()
+func GetUsersGroupsMinimal(ctx context.Context, id uuid.UUID) (sqlc.UsersGroup, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	ug, err := DB.Queries.GetUserGroupMinimal(ctx, id)
 	if err != nil {
 		if isNoRowError(err) {
-			return sqlc.UsersGroup{}, &api.NOT_FOUND
+			return sqlc.UsersGroup{}, &apierr.NOT_FOUND
 		}
 		return sqlc.UsersGroup{}, err
 	}
@@ -47,14 +48,14 @@ func GetUsersGroupsMinimal(id uuid.UUID) (sqlc.UsersGroup, error) {
 	return ug, nil
 }
 
-func UGwUsersFromSQLC(q []sqlc.GetUserGroupRow, id uuid.UUID) (UsersGroupWithUsers, error) {
+func UGwUsersFromSQLC(ctx context.Context, q []sqlc.GetUserGroupRow, id uuid.UUID) (UsersGroupWithUsers, error) {
 	users := []ReturnUserMinimal{}
 	var (
 		ug  sqlc.UsersGroup
 		err error
 	)
 	if len(q) == 0 {
-		ug, err = GetUsersGroupsMinimal(id)
+		ug, err = GetUsersGroupsMinimal(ctx, id)
 		if err != nil {
 			return UsersGroupWithUsers{}, err
 		}
@@ -74,23 +75,23 @@ func UGwUsersFromSQLC(q []sqlc.GetUserGroupRow, id uuid.UUID) (UsersGroupWithUse
 	}, nil
 }
 
-func GetUsersGroup(id uuid.UUID) (UsersGroupWithUsers, error) {
-	ctx, cancel := getCtxWithTo()
+func GetUsersGroup(ctx context.Context, id uuid.UUID) (UsersGroupWithUsers, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	q, err := DB.Queries.GetUserGroup(ctx, id)
 	if err != nil {
 		if isNoRowError(err) {
-			return UsersGroupWithUsers{}, &api.NOT_FOUND
+			return UsersGroupWithUsers{}, &apierr.NOT_FOUND
 		}
 		return UsersGroupWithUsers{}, err
 	}
 
-	return UGwUsersFromSQLC(q, id)
+	return UGwUsersFromSQLC(ctx, q, id)
 }
 
-func GetUsersGroupByName(name string) (UsersGroupWithUsers, error) {
-	ctx, cancel := getCtxWithTo()
+func GetUsersGroupByName(ctx context.Context, name string) (UsersGroupWithUsers, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	id, err := DB.Queries.GetUserGroupUuidByName(ctx, name)
@@ -98,11 +99,11 @@ func GetUsersGroupByName(name string) (UsersGroupWithUsers, error) {
 		return UsersGroupWithUsers{}, err
 	}
 
-	return GetUsersGroup(id)
+	return GetUsersGroup(ctx, id)
 }
 
-func CreateUserGroup(ugParams sqlc.CreateUserGroupParams) (sqlc.UsersGroup, error) {
-	ctx, cancel := getCtxWithTo()
+func CreateUserGroup(ctx context.Context, ugParams sqlc.CreateUserGroupParams) (sqlc.UsersGroup, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	ug, err := DB.Queries.CreateUserGroup(ctx, ugParams)
@@ -113,8 +114,8 @@ func CreateUserGroup(ugParams sqlc.CreateUserGroupParams) (sqlc.UsersGroup, erro
 	return ug, nil
 }
 
-func UpdateUserGroup(uuid uuid.UUID, uParams sqlc.UpdateUserGroupParams) error {
-	ctx, cancel := getCtxWithTo()
+func UpdateUserGroup(ctx context.Context, uuid uuid.UUID, uParams sqlc.UpdateUserGroupParams) error {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	err := DB.Queries.UpdateUserGroup(ctx, sqlc.UpdateUserGroupParams{

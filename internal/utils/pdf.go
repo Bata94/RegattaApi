@@ -4,12 +4,21 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	"log"
+	"log/slog"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/bata94/RegattaApi/internal/config"
+)
+
+const (
+	writeFilePerms os.FileMode = 0o666
+	paperWidth                  = "8.27"
+	paperHeight                 = "11.69"
+	pdfSuffix                   = ".pdf"
 )
 
 func SavePDFfromHTML(htmlUrl, subDir, filename string, footer bool) (string, error) {
@@ -18,14 +27,14 @@ func SavePDFfromHTML(htmlUrl, subDir, filename string, footer bool) (string, err
 	multipartWriter := multipart.NewWriter(&requestBody)
 
 	// Add the URL parameter
-	multipartWriter.WriteField("url", "http://api-dev:8080/api/v1/"+htmlUrl)
-	multipartWriter.WriteField("paperWidth", "8.27")
-	multipartWriter.WriteField("paperHeight", "11.69")
+	multipartWriter.WriteField("url", config.C.AppInternalURL+"/api/v1/"+htmlUrl)
+	multipartWriter.WriteField("paperWidth", paperWidth)
+	multipartWriter.WriteField("paperHeight", paperHeight)
 
 	if footer {
 		// Get Footerfile
 		// TODO: unnecessary HTTP Request
-		footerReq, footerReqError := http.Get("http://localhost:8080/api/v1/leitung/pdfFooter")
+		footerReq, footerReqError := http.Get(config.C.AppInternalURL + "/api/v1/leitung/pdfFooter")
 		if footerReqError != nil {
 			return "", footerReqError
 		}
@@ -45,7 +54,7 @@ func SavePDFfromHTML(htmlUrl, subDir, filename string, footer bool) (string, err
 
 	multipartWriter.Close()
 
-	req, err := http.NewRequest("POST", "http://gotenberg:3000/forms/chromium/convert/url", &requestBody)
+	req, err := http.NewRequest("POST", config.C.GotenbergURL+"/forms/chromium/convert/url", &requestBody)
 	if err != nil {
 		return "", err
 	}
@@ -54,35 +63,35 @@ func SavePDFfromHTML(htmlUrl, subDir, filename string, footer bool) (string, err
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Println("Error in HttpRequest module")
+		slog.Error("Error in HttpRequest module")
 		return "", err
 	} else if resp.StatusCode != 200 {
-		log.Println("Error in HttpRequest Status")
+		slog.Error("Error in HttpRequest Status")
 		return "", errors.New("gotenberg error: " + resp.Status)
 	}
 	defer resp.Body.Close()
 
-	if !strings.HasSuffix(filename, ".pdf") {
-		filename += ".pdf"
+	if !strings.HasSuffix(filename, pdfSuffix) {
+		filename += pdfSuffix
 	}
-	basePath := filepath.Join("./files", subDir)
-	err = os.MkdirAll(basePath, 0o666)
+	basePath := filepath.Join(config.C.Paths.FilesDir, subDir)
+	err = os.MkdirAll(basePath, writeFilePerms)
 	if err != nil {
-		log.Println("Error in Dir creation")
+		slog.Error("Error in Dir creation")
 		return "", err
 	}
 	filePath := filepath.Join(basePath, filename)
 	outputFile, err := os.Create(filePath)
 	defer outputFile.Close()
 	if err != nil {
-		log.Println("Error in creation of file")
+		slog.Error("Error in creation of file")
 		return "", err
 	}
 
 	_, err = io.Copy(outputFile, resp.Body)
 
 	if err != nil {
-		log.Println("Error in Writing to file")
+		slog.Error("Error in Writing to file")
 		return "", err
 	}
 

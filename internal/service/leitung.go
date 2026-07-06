@@ -1,9 +1,12 @@
-package crud
+package service
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 	"time"
 
+	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -14,8 +17,8 @@ type SetZeitplanParams struct {
 	SoStartStunde int `json:"so_start_stunde"`
 }
 
-func SetZeitplan(param SetZeitplanParams) error {
-	rLs, err := GetAllRennen(GetAllRennenParams{
+func SetZeitplan(ctx context.Context, param SetZeitplanParams) error {
+	rLs, err := crud.GetAllRennen(ctx, crud.GetAllRennenParams{
 		GetMeldungen:  true,
 		ShowEmpty:     true,
 		ShowStarted:   true,
@@ -25,12 +28,12 @@ func SetZeitplan(param SetZeitplanParams) error {
 		return err
 	}
 
-	pLs, err := GetAllPausen()
+	pLs, err := crud.GetAllPausen(ctx)
 	if err != nil {
 		return err
 	}
 
-	curStartTimeSa, err:= time.Parse("15:04", fmt.Sprintf("%d:00", param.SaStartStunde))
+	curStartTimeSa, err := time.Parse("15:04", fmt.Sprintf("%d:00", param.SaStartStunde))
 	if err != nil {
 		return err
 	}
@@ -50,10 +53,10 @@ func SetZeitplan(param SetZeitplanParams) error {
 		}
 
 		switch r.Tag {
-		case TagSa:
+		case crud.TagSa:
 			saTimeStr := curStartTimeSa.Format("15:04")
 			fmt.Printf("Setting RennenNr: %s to time %s\n", r.Nummer, saTimeStr)
-			err := UpdateStartZeit(sqlc.UpdateStartZeitParams{
+			err := crud.UpdateStartZeit(ctx, sqlc.UpdateStartZeitParams{
 				Uuid:      r.Uuid,
 				Startzeit: pgtype.Text{String: saTimeStr, Valid: true},
 			})
@@ -61,9 +64,9 @@ func SetZeitplan(param SetZeitplanParams) error {
 				return err
 			}
 			if r.Wettkampf == sqlc.WettkampfLangstrecke {
-				curStartTimeSa = curStartTimeSa.Add(time.Minute * time.Duration(rennAbstand * *r.NumMeldungen))
+				curStartTimeSa = curStartTimeSa.Add(time.Minute * time.Duration(rennAbstand**r.NumMeldungen))
 			} else {
-				curStartTimeSa = curStartTimeSa.Add(time.Minute * time.Duration(rennAbstand * *r.NumAbteilungen))
+				curStartTimeSa = curStartTimeSa.Add(time.Minute * time.Duration(rennAbstand**r.NumAbteilungen))
 			}
 
 			for _, p := range pLs {
@@ -71,17 +74,17 @@ func SetZeitplan(param SetZeitplanParams) error {
 					curStartTimeSa = curStartTimeSa.Add(time.Minute * time.Duration(p.Laenge))
 				}
 			}
-		case TagSo:
+		case crud.TagSo:
 			soTimeStr := curStartTimeSo.Format("15:04")
 			fmt.Printf("Setting RennenNr: %s to time %s\n", r.Nummer, soTimeStr)
-			err := UpdateStartZeit(sqlc.UpdateStartZeitParams{
+			err := crud.UpdateStartZeit(ctx, sqlc.UpdateStartZeitParams{
 				Uuid:      r.Uuid,
 				Startzeit: pgtype.Text{String: soTimeStr, Valid: true},
 			})
 			if err != nil {
 				return err
 			}
-			curStartTimeSo = curStartTimeSo.Add(time.Minute * time.Duration(rennAbstand * *r.NumAbteilungen))
+			curStartTimeSo = curStartTimeSo.Add(time.Minute * time.Duration(rennAbstand**r.NumAbteilungen))
 
 			for _, p := range pLs {
 				if p.NachRennenUuid == r.Uuid {
@@ -94,24 +97,24 @@ func SetZeitplan(param SetZeitplanParams) error {
 	return nil
 }
 
-func SetStartnummern() error {
-	check, err := CheckMeldungSetzung()
+func SetStartnummern(ctx context.Context) error {
+	check, err := crud.CheckMeldungSetzung(ctx)
 	if err != nil {
 		return err
 	}
 	if !check {
-		return &handler.Error{StatusCode: 400, Message: "Setzung not done!"}
+		return &handler.Error{StatusCode: http.StatusBadRequest, Message: "Setzung not done!"}
 	}
 
-	check2, err := CheckMeldungStartnummern()
+	check2, err := crud.CheckMeldungStartnummern(ctx)
 	if err != nil {
 		return err
 	}
 	if check2 {
-		return &handler.Error{StatusCode: 400, Message: "Startnummern not done!"}
+		return &handler.Error{StatusCode: http.StatusBadRequest, Message: "Startnummern not done!"}
 	}
 
-	rLs, err := GetAllRennen(GetAllRennenParams{
+	rLs, err := crud.GetAllRennen(ctx, crud.GetAllRennenParams{
 		GetMeldungen:  true,
 		ShowEmpty:     true,
 		ShowStarted:   true,
@@ -121,12 +124,12 @@ func SetStartnummern() error {
 		return err
 	}
 
-	startNummerMap := make(map[Tag]int32)
-	startNummerMap[TagSa] = 1
-	startNummerMap[TagSo] = 1
+	startNummerMap := make(map[crud.Tag]int32)
+	startNummerMap[crud.TagSa] = 1
+	startNummerMap[crud.TagSo] = 1
 
 	for _, r := range rLs {
-		meldungen, err := r.GetMeldungen()
+		meldungen, err := r.GetMeldungen(ctx)
 		if err != nil {
 			return err
 		}
@@ -134,7 +137,7 @@ func SetStartnummern() error {
 			if m.Abgemeldet {
 				continue
 			}
-			err = UpdateStartNummer(sqlc.UpdateStartNummerParams{
+			err = crud.UpdateStartNummer(ctx, sqlc.UpdateStartNummerParams{
 				Uuid:        m.Uuid,
 				StartNummer: startNummerMap[r.Tag],
 			})
@@ -148,14 +151,14 @@ func SetStartnummern() error {
 	return nil
 }
 
-func ResetStartnummern() error {
-	mLs, err := GetAllMeldungen()
+func ResetStartnummern(ctx context.Context) error {
+	mLs, err := crud.GetAllMeldungen(ctx)
 	if err != nil {
 		return err
 	}
 
 	for _, m := range mLs {
-		err = UpdateStartNummer(sqlc.UpdateStartNummerParams{
+		err = crud.UpdateStartNummer(ctx, sqlc.UpdateStartNummerParams{
 			Uuid:        m.Uuid,
 			StartNummer: 0,
 		})

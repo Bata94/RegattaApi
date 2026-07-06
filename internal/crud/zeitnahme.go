@@ -1,9 +1,11 @@
 package crud
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
-	"log"
+	"fmt"
+	"log/slog"
 	"time"
 
 	DB "github.com/bata94/RegattaApi/internal/db"
@@ -97,8 +99,8 @@ func ZeitnahmeFromSqlcZiel(z sqlc.ZeitnahmeZiel) Zeitnahme {
 	}
 }
 
-func GetOpenZeitnahmeStart() ([]Zeitnahme, error) {
-	ctx, cancel := getCtxWithTo()
+func GetOpenZeitnahmeStart(ctx context.Context, ) ([]Zeitnahme, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 	retLs := []Zeitnahme{}
 
@@ -114,8 +116,8 @@ func GetOpenZeitnahmeStart() ([]Zeitnahme, error) {
 	return retLs, nil
 }
 
-func GetZeitnahmeZiel(id int) (Zeitnahme, error) {
-	ctx, cancel := getCtxWithTo()
+func GetZeitnahmeZiel(ctx context.Context, id int) (Zeitnahme, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	idI32 := int32(id)
@@ -128,8 +130,8 @@ func GetZeitnahmeZiel(id int) (Zeitnahme, error) {
 	return ZeitnahmeFromSqlcZiel(q), nil
 }
 
-func GetOpenZeitnahmeZiel() ([]Zeitnahme, error) {
-	ctx, cancel := getCtxWithTo()
+func GetOpenZeitnahmeZiel(ctx context.Context, ) ([]Zeitnahme, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	q, err := DB.Queries.GetAllOpenZeitnahmeZiel(ctx)
@@ -145,11 +147,11 @@ func GetOpenZeitnahmeZiel() ([]Zeitnahme, error) {
 	return retLs, nil
 }
 
-func CreateZeitnahmeStart(rennNr *string, startNummern []string, timeClient time.Time, measuredLatency int) ([]Zeitnahme, error) {
+func CreateZeitnahmeStart(ctx context.Context, rennNr *string, startNummern []string, timeClient time.Time, measuredLatency int) ([]Zeitnahme, error) {
 	now := time.Now()
 	retLs := []Zeitnahme{}
 
-	ctx, cancel := getCtxWithTo()
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	var rennenNummer, startNummer pgtype.Text
@@ -193,10 +195,10 @@ func CreateZeitnahmeStart(rennNr *string, startNummern []string, timeClient time
 	return retLs, nil
 }
 
-func CreateZeitnahmeZiel(rennNr, startNr *string, timeClient time.Time, measuredLatency int) (Zeitnahme, error) {
+func CreateZeitnahmeZiel(ctx context.Context, rennNr, startNr *string, timeClient time.Time, measuredLatency int) (Zeitnahme, error) {
 	now := time.Now()
 
-	ctx, cancel := getCtxWithTo()
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	var rennenNummer, startNummer pgtype.Text
@@ -237,8 +239,8 @@ func CreateZeitnahmeZiel(rennNr, startNr *string, timeClient time.Time, measured
 	return ZeitnahmeFromSqlcZiel(q), nil
 }
 
-func CreateZeitnahmeErgebnis(s, z Zeitnahme, meld Meldung) error {
-	ctx, cancel := getCtxWithTo()
+func CreateZeitnahmeErgebnis(ctx context.Context, s, z Zeitnahme, meld Meldung) error {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	endZeit := z.TimeClient.Sub(*s.TimeClient)
@@ -264,13 +266,13 @@ func CreateZeitnahmeErgebnis(s, z Zeitnahme, meld Meldung) error {
 		return err
 	}
 
-	log.Println(q)
+	slog.Debug(fmt.Sprintf("%v", q))
 
 	return nil
 }
 
-func GetZeitnahmeErgebnisByMeld(meldUuid uuid.UUID) (sqlc.ZeitnahmeErgebni, error) {
-	ctx, cancel := getCtxWithTo()
+func GetZeitnahmeErgebnisByMeld(ctx context.Context, meldUuid uuid.UUID) (sqlc.ZeitnahmeErgebni, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	return DB.Queries.GetZeitnahmeErgebnisByMeld(ctx, meldUuid)

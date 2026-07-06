@@ -17,7 +17,7 @@ templ UserEdit(u crud.User, msg string) {
       uuidStr = "new"
     }
 
-    userGroups, errUserGroups := crud.GetAllUsersGroups()
+    userGroups, errUserGroups := crud.GetAllUsersGroups(ctx)
   }}
   if errUserGroups != nil {
     @ErrorBody(500, errUserGroups.Error())

@@ -1,13 +1,15 @@
 package crud
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
-	"log"
+	"fmt"
+	"log/slog"
 	"strconv"
 
 	"github.com/bata94/RegattaApi/internal/db"
-	"github.com/bata94/RegattaApi/internal/handlers/api"
+	apierr "github.com/bata94/RegattaApi/internal/errors"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/google/uuid"
 )
@@ -49,11 +51,11 @@ func (v *Verein) GetAthleten() ([]Athlet, error) {
 	if v.Athleten != nil {
 		return v.Athleten, nil
 	}
-	return v.loadAthleten()
+	return v.loadAthleten(context.Background())
 }
 
-func (v *Verein) loadAthleten() ([]Athlet, error) {
-	loaded, err := GetAllAthletenForVerein(v.Uuid)
+func (v *Verein) loadAthleten(ctx context.Context, ) ([]Athlet, error) {
+	loaded, err := GetAllAthletenForVerein(ctx, v.Uuid)
 	if err != nil {
 		return nil, err
 	}
@@ -71,8 +73,8 @@ func VereinFromSqlc(v sqlc.Verein, gesKosten int) Verein {
 	}
 }
 
-func (verein *Verein) GetRechnungsnummern() ([]string, error) {
-	ctx, cancel := getCtxWithTo()
+func (verein *Verein) GetRechnungsnummern(ctx context.Context, ) ([]string, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	retLs := []string{}
@@ -91,19 +93,19 @@ func (verein *Verein) GetRechnungsnummern() ([]string, error) {
 	return retLs, nil
 }
 
-func (verein *Verein) GetNextRechnungsnummer() (string, error) {
-	rechnungsNummern, err := verein.GetRechnungsnummern()
+func (verein *Verein) GetNextRechnungsnummer(ctx context.Context, ) (string, error) {
+	rechnungsNummern, err := verein.GetRechnungsnummern(ctx)
 	if err != nil {
 		return "", err
 	}
 	fwdNr := 0
 
-	log.Println(len(rechnungsNummern))
+	slog.Debug(fmt.Sprintf("rechnungsNummern count: %d", len(rechnungsNummern)))
 	if len(rechnungsNummern) != 0 {
 		for _, r := range rechnungsNummern {
 			l := len(r)
 			rNrStr := r[l-3 : l]
-			log.Println(rNrStr)
+			slog.Debug(fmt.Sprintf("rechnungsNummer: %s", rNrStr))
 
 			rNr, err := strconv.Atoi(rNrStr)
 			if err != nil {
@@ -134,8 +136,8 @@ func (verein *Verein) GetNextRechnungsnummer() (string, error) {
 	return reNr, nil
 }
 
-func GetAllVerein() ([]Verein, error) {
-	ctx, cancel := getCtxWithTo()
+func GetAllVerein(ctx context.Context, ) ([]Verein, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	q, err := DB.Queries.GetAllVerein(ctx)
@@ -156,14 +158,14 @@ func GetAllVerein() ([]Verein, error) {
 	return vLs, err
 }
 
-func GetVerein(uuid uuid.UUID) (Verein, error) {
-	ctx, cancel := getCtxWithTo()
+func GetVerein(ctx context.Context, uuid uuid.UUID) (Verein, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	q, err := DB.Queries.GetVerein(ctx, uuid)
 	if err != nil {
 		if isNoRowError(err) {
-			return Verein{}, &api.NOT_FOUND
+			return Verein{}, &apierr.NOT_FOUND
 		}
 		return Verein{}, err
 	}
@@ -188,14 +190,14 @@ func GetVerein(uuid uuid.UUID) (Verein, error) {
 	}, nil
 }
 
-func GetVereinMinimal(uuid uuid.UUID) (Verein, error) {
-	ctx, cancel := getCtxWithTo()
+func GetVereinMinimal(ctx context.Context, uuid uuid.UUID) (Verein, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	v, err := DB.Queries.GetVereinMinimal(ctx, uuid)
 	if err != nil {
 		if isNoRowError(err) {
-			return Verein{}, &api.NOT_FOUND
+			return Verein{}, &apierr.NOT_FOUND
 		}
 		return Verein{}, err
 	}
@@ -211,24 +213,24 @@ const (
 )
 
 func GetForAllVereineMissingAthlet(athletType MissingAthletType) ([]Verein, error) {
-	vLs, err := GetAllVerein()
+	vLs, err := GetAllVerein(context.Background())
 	if err != nil {
 		return vLs, err
 	}
 	retLs := []Verein{}
 
-	var queryFunc func(uuid.UUID) ([]Athlet, error)
+	var queryFunc func(context.Context, uuid.UUID) ([]Athlet, error)
 	switch athletType {
-	case 0:
+	case Waage:
 		queryFunc = GetAllAthletenForVereinWaage
-	case 1:
+	case Startberechtigt:
 		queryFunc = GetAllAthletenForVereinMissStartber
 	default:
 		return vLs, errors.New("Unknown athlet type")
 	}
 
 	for _, v := range vLs {
-		missAthlet, err := queryFunc(v.Uuid)
+		missAthlet, err := queryFunc(context.Background(), v.Uuid)
 		if err != nil {
 			return vLs, err
 		}
@@ -242,8 +244,8 @@ func GetForAllVereineMissingAthlet(athletType MissingAthletType) ([]Verein, erro
 	return retLs, nil
 }
 
-func CreateVerein(vParams sqlc.CreateVereinParams) (Verein, error) {
-	ctx, cancel := getCtxWithTo()
+func CreateVerein(ctx context.Context, vParams sqlc.CreateVereinParams) (Verein, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	v, err := DB.Queries.CreateVerein(ctx, vParams)

@@ -35,8 +35,8 @@ templ zeitplanPause(p crud.Pause) {
 
 templ ZeitplanCollapseBody(w sqlc.Wettkampf) {
   {{
-    rennen, err := crud.GetZeitplanung([]sqlc.Wettkampf{w})
-    pausen, errPausen := crud.GetPausenByWettkampf([]sqlc.Wettkampf{w})
+    rennen, err := crud.GetZeitplanung(ctx, []sqlc.Wettkampf{w})
+    pausen, errPausen := crud.GetPausenByWettkampf(ctx, []sqlc.Wettkampf{w})
   }}
   if err != nil {
     @ErrorBody(500, err.Error())

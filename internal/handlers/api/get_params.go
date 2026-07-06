@@ -1,6 +1,8 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/google/uuid"
 )
@@ -18,7 +20,7 @@ func GetQueryParamBoolFromCtx(c *handler.Context, param string, def bool) bool {
 func GetUuidFromCtx(c *handler.Context) (*uuid.UUID, error) {
 	uuidStr := c.Param("uuid")
 	if uuidStr == "" {
-		return nil, &ReqError{Code: 404, StatusCode: 404, Title: "ID not found", Msg: "", Details: "", Data: uuidStr}
+		return nil, &ReqError{Code: 404, StatusCode: http.StatusNotFound, Title: "ID not found", Msg: "", Details: "", Data: uuidStr}
 	}
 
 	u, err := uuid.Parse(uuidStr)

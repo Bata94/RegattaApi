@@ -110,12 +110,17 @@ func (c *Context) FormFile(key string) (string, []byte, error) {
 	return header.Filename, content, nil
 }
 
+const (
+	uploadDirPerm  os.FileMode = 0o755
+	uploadFilePerm os.FileMode = 0o644
+)
+
 func (c *Context) SaveFile(filename string, data []byte) error {
 	dir := filepath.Dir(filename)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, uploadDirPerm); err != nil {
 		return err
 	}
-	return os.WriteFile(filename, data, 0o644)
+	return os.WriteFile(filename, data, uploadFilePerm)
 }
 
 func (c *Context) BodyParser(v any) error {
@@ -171,6 +176,10 @@ func (c *Context) Method() string {
 
 func (c *Context) Headers() http.Header {
 	return c.Request.Header
+}
+
+func (c *Context) IsHtmxRequest() bool {
+	return c.Request.Header.Get("HX-Request") == "true"
 }
 
 func (c *Context) Locals(key string, value any) {

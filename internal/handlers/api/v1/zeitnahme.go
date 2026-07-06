@@ -3,7 +3,8 @@ package api_v1
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -27,10 +28,10 @@ func WsZeitnahmeZiel(c *handler.Context) error {
 
 	handlers.Register <- nil
 
-	q, err := crud.GetOpenZeitnahmeZiel()
+	q, err := crud.GetOpenZeitnahmeZiel(c.Request.Context(), )
 	if err != nil {
 		errStr := fmt.Sprint("Error getting open ZnZiel... ", err)
-		log.Println(errStr)
+		slog.Error(errStr)
 		c.Writer.Write([]byte(errStr))
 		return nil
 	}
@@ -38,7 +39,7 @@ func WsZeitnahmeZiel(c *handler.Context) error {
 	qJson, err := json.Marshal(map[string]interface{}{"list": q})
 	if err != nil {
 		errStr := fmt.Sprint("Error getting open ZnZiel... ", err)
-		log.Println(errStr)
+		slog.Error(errStr)
 		c.Writer.Write([]byte(errStr))
 		return nil
 	}
@@ -60,7 +61,7 @@ func PostZeitnahmeStart(c *handler.Context) error {
 		return err
 	}
 
-	q, err := crud.CreateZeitnahmeStart(p.RennenNummer, p.StartNummern, p.TimeClient, *p.MeasuredLatency)
+	q, err := crud.CreateZeitnahmeStart(c.Request.Context(), p.RennenNummer, p.StartNummern, p.TimeClient, *p.MeasuredLatency)
 	if err != nil {
 		return err
 	}
@@ -69,7 +70,7 @@ func PostZeitnahmeStart(c *handler.Context) error {
 }
 
 func GetOpenStarts(c *handler.Context) error {
-	q, err := crud.GetOpenZeitnahmeStart()
+	q, err := crud.GetOpenZeitnahmeStart(c.Request.Context(), )
 	if err != nil {
 		return err
 	}
@@ -78,25 +79,25 @@ func GetOpenStarts(c *handler.Context) error {
 }
 
 func GenerateEndZeit(c *handler.Context) error {
-	starts, err := crud.GetOpenZeitnahmeStart()
+	starts, err := crud.GetOpenZeitnahmeStart(c.Request.Context(), )
 	if err != nil {
-		log.Println("GetOpenZeitnahmeStart")
+		slog.Debug("GetOpenZeitnahmeStart")
 		return err
 	}
 
-	ziels, err := crud.GetOpenZeitnahmeZiel()
+	ziels, err := crud.GetOpenZeitnahmeZiel(c.Request.Context(), )
 	if err != nil {
-		log.Println("GetOpenZeitnahmeZiel")
+		slog.Debug("GetOpenZeitnahmeZiel")
 		return err
 	}
 
 	if len(ziels) == 0 {
-		log.Println("0 Ziels")
-		return &handler.Error{StatusCode: 400, Message: "No ziels"}
+		slog.Debug("0 Ziels")
+		return &handler.Error{StatusCode: http.StatusBadRequest, Message: "No ziels"}
 	}
 	if len(starts) == 0 {
-		log.Println("0 Starts")
-		return &handler.Error{StatusCode: 400, Message: "No starts"}
+		slog.Debug("0 Starts")
+		return &handler.Error{StatusCode: http.StatusBadRequest, Message: "No starts"}
 	}
 
 	for _, z := range ziels {
@@ -107,22 +108,22 @@ func GenerateEndZeit(c *handler.Context) error {
 			if *z.StartNummer == *s.StartNummer {
 				startNummerInt, err := strconv.Atoi(*s.StartNummer)
 				if err != nil {
-					log.Println("Error StartNummerStr to int")
+					slog.Error("Error StartNummerStr to int")
 					return err
 				}
-				meld, err := crud.GetMeldungByStartNrUndTag(startNummerInt, crud.TagSa)
+				meld, err := crud.GetMeldungByStartNrUndTag(c.Request.Context(), startNummerInt, crud.TagSa)
 				if err != nil {
-					log.Println("GetMeldungByStartNrUndTag")
+					slog.Debug("GetMeldungByStartNrUndTag")
 					return err
 				}
 				if meld.Uuid == uuid.Nil {
-					log.Println("GetMeldungByStartNrUndTag meld.Uuid == nil")
-					return &handler.Error{StatusCode: 400, Message: "Meldung not found"}
+					slog.Warn("GetMeldungByStartNrUndTag meld.Uuid is nil")
+					return &handler.Error{StatusCode: http.StatusBadRequest, Message: "Meldung not found"}
 				}
 
-				err = crud.CreateZeitnahmeErgebnis(s, z, meld)
+				err = crud.CreateZeitnahmeErgebnis(c.Request.Context(), s, z, meld)
 				if err != nil {
-					log.Println("CreateZeitnahmeErgebnis")
+					slog.Debug("CreateZeitnahmeErgebnis")
 					return err
 				}
 			}

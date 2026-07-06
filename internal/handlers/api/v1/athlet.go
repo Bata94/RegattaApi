@@ -1,6 +1,7 @@
 package api_v1
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/bata94/RegattaApi/internal/crud"
@@ -21,10 +22,10 @@ type NewAthletParams struct {
 func GetAthlet(c *handler.Context) error {
 	id, err := c.GetUUID("uuid")
 	if err != nil {
-		return &handler.Error{StatusCode: 400, Message: err.Error()}
+		return &handler.Error{StatusCode: http.StatusBadRequest, Message: err.Error()}
 	}
 
-	a, err := crud.GetAthletMinimal(id)
+	a, err := crud.GetAthletMinimal(c.Request.Context(), id)
 	if err != nil {
 		return err
 	}
@@ -33,7 +34,7 @@ func GetAthlet(c *handler.Context) error {
 }
 
 func GetAllAthlet(c *handler.Context) error {
-	aLs, err := crud.GetAllAthlet()
+	aLs, err := crud.GetAllAthlet(c.Request.Context(), )
 	if err != nil {
 		return err
 	}
@@ -45,12 +46,12 @@ func CreateAthlet(c *handler.Context) error {
 	aParams := new(NewAthletParams)
 	err := c.BodyParser(&aParams)
 	if err != nil {
-		return &handler.Error{StatusCode: 400, Message: err.Error()}
+		return &handler.Error{StatusCode: http.StatusBadRequest, Message: err.Error()}
 	}
 
 	vereinUuid, err := uuid.Parse(aParams.VereinUUID)
 	if err != nil {
-		return &handler.Error{StatusCode: 400, Message: err.Error()}
+		return &handler.Error{StatusCode: http.StatusBadRequest, Message: err.Error()}
 	}
 
 	var geschlecht sqlc.Geschlecht
@@ -64,7 +65,7 @@ func CreateAthlet(c *handler.Context) error {
 		geschlecht = sqlc.GeschlechtX
 	}
 
-	a, err := crud.CreateAthlet(sqlc.CreateAthletParams{
+	a, err := crud.CreateAthlet(c.Request.Context(), sqlc.CreateAthletParams{
 		Uuid:            uuid.New(),
 		VereinUuid:      vereinUuid,
 		Name:            aParams.Name,
@@ -97,12 +98,12 @@ func UpdateAthletStartberechtigung(c *handler.Context) error {
 		return err
 	}
 
-	ath, err := crud.GetAthletMinimal(id)
+	ath, err := crud.GetAthletMinimal(c.Request.Context(), id)
 	if err != nil {
 		return err
 	}
 
-	err = ath.UpdateStartberechtigung(p.Startberechtigt)
+	err = ath.UpdateStartberechtigung(c.Request.Context(), p.Startberechtigt)
 	if err != nil {
 		return err
 	}
@@ -111,7 +112,7 @@ func UpdateAthletStartberechtigung(c *handler.Context) error {
 }
 
 func GetAthletWaage(c *handler.Context) error {
-	ls, err := crud.GetForAllVereineMissingAthlet(0)
+	ls, err := crud.GetForAllVereineMissingAthlet(crud.Waage)
 	if err != nil {
 		return err
 	}
@@ -119,7 +120,7 @@ func GetAthletWaage(c *handler.Context) error {
 }
 
 func GetAthletStartberechtigung(c *handler.Context) error {
-	ls, err := crud.GetForAllVereineMissingAthlet(1)
+	ls, err := crud.GetForAllVereineMissingAthlet(crud.Startberechtigt)
 	if err != nil {
 		return err
 	}
@@ -143,12 +144,12 @@ func UpdateAthletWaage(c *handler.Context) error {
 		return err
 	}
 
-	ath, err := crud.GetAthletMinimal(id)
+	ath, err := crud.GetAthletMinimal(c.Request.Context(), id)
 	if err != nil {
 		return err
 	}
 
-	err = ath.UpdateGewicht(p.Gewicht)
+	err = ath.UpdateGewicht(c.Request.Context(), p.Gewicht)
 	if err != nil {
 		return err
 	}

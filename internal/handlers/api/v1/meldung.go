@@ -1,7 +1,9 @@
 package api_v1
 
 import (
-	"log"
+	"context"
+	"log/slog"
+	"net/http"
 	"strconv"
 
 	"github.com/bata94/RegattaApi/internal/crud"
@@ -12,7 +14,7 @@ import (
 )
 
 func GetAllMeldung(c *handler.Context) error {
-	mLs, err := crud.GetAllMeldungen()
+	mLs, err := crud.GetAllMeldungen(c.Request.Context(), )
 	if err != nil {
 		return err
 	}
@@ -26,10 +28,10 @@ func GetAllMeldung(c *handler.Context) error {
 func GetMeldung(c *handler.Context) error {
 	meldungUUID, err := c.GetUUID("uuid")
 	if err != nil {
-		return &handler.Error{StatusCode: 400, Message: err.Error()}
+		return &handler.Error{StatusCode: http.StatusBadRequest, Message: err.Error()}
 	}
 
-	m, err := crud.GetMeldung(meldungUUID)
+	m, err := crud.GetMeldung(c.Request.Context(), meldungUUID)
 	if err != nil {
 		return err
 	}
@@ -46,7 +48,7 @@ func PostAbmeldung(c *handler.Context) error {
 		return err
 	}
 
-	err = crud.Abmeldung(meldungUUID)
+	err = crud.Abmeldung(c.Request.Context(), meldungUUID)
 	if err != nil {
 		return err
 	}
@@ -90,7 +92,7 @@ func PostUmmeldung(c *handler.Context) error {
 			position = int32(positionI64)
 		}
 
-		err = crud.Ummeldung(sqlc.UmmeldungParams{
+		err = crud.Ummeldung(c.Request.Context(), sqlc.UmmeldungParams{
 			MeldungUuid: meldungUuid,
 			Rolle:       rolle,
 			Position:    position,
@@ -101,7 +103,7 @@ func PostUmmeldung(c *handler.Context) error {
 		}
 	}
 
-	m, err := crud.GetMeldung(meldungUuid)
+	m, err := crud.GetMeldung(c.Request.Context(), meldungUuid)
 	if err != nil {
 		return err
 	}
@@ -121,19 +123,19 @@ type PostNachmeldungAthletParams struct {
 	Position   string `json:"position"`
 }
 
-func CreateNachmeldung(params PostNachmeldungParams) (*crud.Meldung, error) {
+func CreateNachmeldung(ctx context.Context, params PostNachmeldungParams) (*crud.Meldung, error) {
 	vereinUuid, err := uuid.Parse(params.VereinUuid)
 	if err != nil {
-		log.Println("Verein Error: ", vereinUuid)
+		slog.Error("Verein Error", "uuid", vereinUuid)
 		return nil, err
 	}
 	rennenUuid, err := uuid.Parse(params.RennenUuid)
 	if err != nil {
-		log.Println("Rennen Error: ", rennenUuid)
+		slog.Error("Rennen Error", "uuid", rennenUuid)
 		return nil, err
 	}
 
-	rennen, err := crud.GetRennen(rennenUuid)
+	rennen, err := crud.GetRennen(ctx, rennenUuid)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +148,7 @@ func CreateNachmeldung(params PostNachmeldungParams) (*crud.Meldung, error) {
 		kosten = kosten * 2
 	}
 
-	lastStrtNr, err := crud.GetStartnummerLast(rennen.Tag)
+	lastStrtNr, err := crud.GetStartnummerLast(ctx, rennen.Tag)
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +223,7 @@ func CreateNachmeldung(params PostNachmeldungParams) (*crud.Meldung, error) {
 		})
 	}
 
-	m, err := crud.CreateMeldung(crud.CreateMeldungParams{
+	m, err := crud.CreateMeldung(ctx, crud.CreateMeldungParams{
 		CreateMeldungParams: sqlc.CreateMeldungParams{
 			Uuid:            uuid.New(),
 			VereinUuid:      vereinUuid,
@@ -249,11 +251,11 @@ func PostNachmeldung(c *handler.Context) error {
 	params := new(PostNachmeldungParams)
 	err := c.BodyParser(params)
 	if err != nil {
-		log.Println("Parm parse Error: ", params)
+		slog.Error("Param parse Error", "params", params)
 		return err
 	}
 
-	m, err := CreateNachmeldung(*params)
+	m, err := CreateNachmeldung(c.Request.Context(), *params)
 	if err != nil {
 		return err
 	}
@@ -268,7 +270,7 @@ func UpdateSetzungBatch(c *handler.Context) error {
 		return err
 	}
 
-	err = crud.UpdateSetzungBatch(*params)
+	err = crud.UpdateSetzungBatch(c.Request.Context(), *params)
 	if err != nil {
 		return err
 	}
@@ -279,10 +281,10 @@ func UpdateSetzungBatch(c *handler.Context) error {
 func GetAllMeldungForVerein(c *handler.Context) error {
 	vereinUuid, err := c.GetUUID("uuid")
 	if err != nil {
-		return &handler.Error{StatusCode: 400, Message: err.Error()}
+		return &handler.Error{StatusCode: http.StatusBadRequest, Message: err.Error()}
 	}
 
-	meldungen, err := crud.GetAllMeldungForVerein(vereinUuid)
+	meldungen, err := crud.GetAllMeldungForVerein(c.Request.Context(), vereinUuid)
 	if err != nil {
 		return err
 	}

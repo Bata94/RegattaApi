@@ -1,13 +1,14 @@
 package crud
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/bata94/RegattaApi/internal/db"
-	"github.com/bata94/RegattaApi/internal/handlers/api"
+	apierr "github.com/bata94/RegattaApi/internal/errors"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/jackc/pgx/v5/pgtype"
 
@@ -145,8 +146,8 @@ type CreateMeldungAthletParams struct {
 	Rolle    sqlc.Rolle `json:"rolle"`
 }
 
-func GetAllMeldungen() ([]Meldung, error) {
-	ctx, cancel := getCtxWithTo()
+func GetAllMeldungen(ctx context.Context, ) ([]Meldung, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	mLs := []Meldung{}
@@ -164,14 +165,14 @@ func GetAllMeldungen() ([]Meldung, error) {
 	return mLs, nil
 }
 
-func GetMeldungMinimal(uuid uuid.UUID) (Meldung, error) {
-	ctx, cancel := getCtxWithTo()
+func GetMeldungMinimal(ctx context.Context, uuid uuid.UUID) (Meldung, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	m, err := DB.Queries.GetMeldungMinimal(ctx, uuid)
 	if err != nil {
 		if isNoRowError(err) {
-			return Meldung{}, &api.NOT_FOUND
+			return Meldung{}, &apierr.NOT_FOUND
 		}
 		return Meldung{}, err
 	}
@@ -179,8 +180,8 @@ func GetMeldungMinimal(uuid uuid.UUID) (Meldung, error) {
 	return Meldung{Meldung: m}, nil
 }
 
-func GetMeldungByStartNrUndTag(startNummer int, tag Tag) (Meldung, error) {
-	ctx, cancel := getCtxWithTo()
+func GetMeldungByStartNrUndTag(ctx context.Context, startNummer int, tag Tag) (Meldung, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	q, err := DB.Queries.GetMeldungByStartNrUndTag(ctx, sqlc.GetMeldungByStartNrUndTagParams{
@@ -194,21 +195,21 @@ func GetMeldungByStartNrUndTag(startNummer int, tag Tag) (Meldung, error) {
 	if len(q) > 1 {
 		return Meldung{}, errors.New("Multiple Startnummern")
 	} else if len(q) == 0 {
-		log.Println("Keine Meldung, StartNummer: ", startNummer)
-		return Meldung{}, &api.NOT_FOUND
+		slog.Info("No Meldung found", "startNummer", startNummer)
+		return Meldung{}, &apierr.NOT_FOUND
 	}
 
 	return Meldung{Meldung: q[0]}, nil
 }
 
-func GetMeldung(uuid uuid.UUID) (Meldung, error) {
-	ctx, cancel := getCtxWithTo()
+func GetMeldung(ctx context.Context, uuid uuid.UUID) (Meldung, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	q, err := DB.Queries.GetMeldung(ctx, uuid)
 	if err != nil {
 		if isNoRowError(err) {
-			return Meldung{}, &api.NOT_FOUND
+			return Meldung{}, &apierr.NOT_FOUND
 		}
 		return Meldung{}, err
 	}
@@ -233,8 +234,8 @@ func GetMeldung(uuid uuid.UUID) (Meldung, error) {
 	}, nil
 }
 
-func CheckMeldungSetzung() (bool, error) {
-	ctx, cancel := getCtxWithTo()
+func CheckMeldungSetzung(ctx context.Context, ) (bool, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	_, err := DB.Queries.CheckMedlungSetzung(ctx)
@@ -248,8 +249,8 @@ func CheckMeldungSetzung() (bool, error) {
 	return true, nil
 }
 
-func CheckMeldungStartnummern() (bool, error) {
-	ctx, cancel := getCtxWithTo()
+func CheckMeldungStartnummern(ctx context.Context, ) (bool, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	_, err := DB.Queries.CheckMedlungStartnummern(ctx)
@@ -263,8 +264,8 @@ func CheckMeldungStartnummern() (bool, error) {
 	return true, nil
 }
 
-func CreateMeldung(mParams CreateMeldungParams) (Meldung, error) {
-	ctx, cancel := getCtxWithTo()
+func CreateMeldung(ctx context.Context, mParams CreateMeldungParams) (Meldung, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	// TODO: Implement as Transaction!
@@ -282,7 +283,7 @@ func CreateMeldung(mParams CreateMeldungParams) (Meldung, error) {
 		})
 
 		if err != nil {
-			retErr := api.INTERNAL_SERVER_ERROR
+			retErr := apierr.INTERNAL_SERVER_ERROR
 			retErr.Details = fmt.Sprintf("Error linking MeldungAthlet: %s \nMeldung-ID: %s \nAthlet-ID: %s",
 				err,
 				m.Uuid.String(),
@@ -295,20 +296,20 @@ func CreateMeldung(mParams CreateMeldungParams) (Meldung, error) {
 	return Meldung{Meldung: m}, nil
 }
 
-func UpdateMeldungSetzung(p sqlc.UpdateMeldungSetzungParams) error {
-	ctx, cancel := getCtxWithTo()
+func UpdateMeldungSetzung(ctx context.Context, p sqlc.UpdateMeldungSetzungParams) error {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	return DB.Queries.UpdateMeldungSetzung(ctx, p)
 }
 
-func UpdateSetzungBatch(p UpdateSetzungBatchParams) error {
+func UpdateSetzungBatch(ctx context.Context, p UpdateSetzungBatchParams) error {
 	if len(p.Meldungen) == 0 {
-		return &api.BAD_REQUEST
+		return &apierr.BAD_REQUEST
 	}
 
 	for _, m := range p.Meldungen {
-		err := UpdateMeldungSetzung(sqlc.UpdateMeldungSetzungParams{
+		err := UpdateMeldungSetzung(ctx, sqlc.UpdateMeldungSetzungParams{
 			Uuid:      m.Uuid,
 			Abteilung: m.Abteilung,
 			Bahn:      m.Bahn,
@@ -321,15 +322,15 @@ func UpdateSetzungBatch(p UpdateSetzungBatchParams) error {
 	return nil
 }
 
-func UpdateStartNummer(p sqlc.UpdateStartNummerParams) error {
-	ctx, cancel := getCtxWithTo()
+func UpdateStartNummer(ctx context.Context, p sqlc.UpdateStartNummerParams) error {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	return DB.Queries.UpdateStartNummer(ctx, p)
 }
 
-func GetAllMeldungForVerein(vereinUuid uuid.UUID) ([]Meldung, error) {
-	ctx, cancel := getCtxWithTo()
+func GetAllMeldungForVerein(ctx context.Context, vereinUuid uuid.UUID) ([]Meldung, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	meldungen := []Meldung{}
@@ -362,22 +363,22 @@ func GetAllMeldungForVerein(vereinUuid uuid.UUID) ([]Meldung, error) {
 	return meldungen, nil
 }
 
-func Ummeldung(p sqlc.UmmeldungParams) error {
-	ctx, cancel := getCtxWithTo()
+func Ummeldung(ctx context.Context, p sqlc.UmmeldungParams) error {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	return DB.Queries.Ummeldung(ctx, p)
 }
 
-func Abmeldung(meldUuid uuid.UUID) error {
-	ctx, cancel := getCtxWithTo()
+func Abmeldung(ctx context.Context, meldUuid uuid.UUID) error {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	return DB.Queries.Abmeldung(ctx, meldUuid)
 }
 
-func SetMeldungRechnungsNummer(meldUuid uuid.UUID, rechnungsNummer string) error {
-	ctx, cancel := getCtxWithTo()
+func SetMeldungRechnungsNummer(ctx context.Context, meldUuid uuid.UUID, rechnungsNummer string) error {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	return DB.Queries.SetMeldungRechnungsNummer(ctx, sqlc.SetMeldungRechnungsNummerParams{
@@ -389,8 +390,8 @@ func SetMeldungRechnungsNummer(meldUuid uuid.UUID, rechnungsNummer string) error
 	})
 }
 
-func GetStartnummerLast(tag Tag) (int32, error) {
-	ctx, cancel := getCtxWithTo()
+func GetStartnummerLast(ctx context.Context, tag Tag) (int32, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	lastStartNr, err := DB.Queries.GetLastStartnummer(ctx, sqlc.Tag(tag))

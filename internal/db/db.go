@@ -4,20 +4,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
+	"os"
 	"time"
 
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
-
-	_ "github.com/lib/pq"
 )
 
 var (
-	Conn    *pgx.Conn
 	Queries *sqlc.Queries
+	pool    *pgxpool.Pool
 )
 
 type DBServerOptions struct {
@@ -30,45 +29,53 @@ type DBServerOptions struct {
 }
 
 func InitConnection(opts DBServerOptions) {
-	var err error
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	dbConfig, nil := pgxpool.ParseConfig(fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=%s", opts.Host, opts.Port, opts.User, opts.Name, opts.Password, opts.Sslmode))
+	dsn := fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=%s",
+		opts.Host, opts.Port, opts.User, opts.Name, opts.Password, opts.Sslmode)
+
+	dbConfig, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
-		log.Fatalf("failed opening connection to postgres: %v", err)
+		slog.Error(fmt.Sprintf("failed to parse db config: %v", err))
+		os.Exit(1)
 	}
 
-	conn, err := pgxpool.NewWithConfig(ctx, dbConfig)
-	// conn, err := pgx.Connect(ctx, fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=%s", opts.Host, opts.Port, opts.User, opts.Name, opts.Password, opts.Sslmode))
+	pool, err = pgxpool.NewWithConfig(ctx, dbConfig)
 	if err != nil {
-		log.Fatalf("failed opening connection to postgres: %v", err)
+		slog.Error(fmt.Sprintf("failed opening connection to postgres: %v", err))
+		os.Exit(1)
 	}
 
-	customTypes, err := getCustomDataTypes(context.Background(), conn)
+	customTypes, err := getCustomDataTypes(ctx, pool)
+	if err != nil {
+		slog.Error(fmt.Sprintf("failed to load custom pg types: %v", err))
+		os.Exit(1)
+	}
+
 	dbConfig.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
 		for _, t := range customTypes {
 			conn.TypeMap().RegisterType(t)
 		}
 		return nil
 	}
-	// Immediately close the old pool and open a new one with the new dbConfig.
-	conn.Close()
-	conn, err = pgxpool.NewWithConfig(context.Background(), dbConfig)
 
-	Queries = sqlc.New(conn)
+	pool.Close()
+	pool, err = pgxpool.NewWithConfig(context.Background(), dbConfig)
+	if err != nil {
+		slog.Error(fmt.Sprintf("failed opening connection to postgres: %v", err))
+		os.Exit(1)
+	}
+
+	Queries = sqlc.New(pool)
 }
 
 func ShutdownConnection() error {
-	if Conn.IsClosed() {
+	if pool == nil {
 		return nil
 	}
-	fmt.Print("Shutting down...")
-	ctx := context.Background()
-	err := Conn.Close(ctx)
-	if err != nil {
-		return err
-	}
+	slog.Info("Shutting down database connection...")
+	pool.Close()
 	return nil
 }
 

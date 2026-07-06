@@ -9,8 +9,8 @@ import (
 
 templ InternalAdminUsers() {
   {{
-    users, err := crud.GetAllUsers()
-    userGroups, errUserGroups := crud.GetAllUsersGroups()
+    users, err := crud.GetAllUsers(ctx)
+    userGroups, errUserGroups := crud.GetAllUsersGroups(ctx)
     userRows := []ui_components.TableRowParams{}
   }}
   if err != nil {

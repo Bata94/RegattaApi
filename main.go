@@ -1,12 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 
+	"github.com/bata94/RegattaApi/internal/config"
 	DB "github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/server"
 	"github.com/bata94/RegattaApi/internal/utils"
@@ -15,18 +15,20 @@ import (
 )
 
 func main() {
+	config.Load()
+
 	DB.InitConnection(DB.DBServerOptions{
-		Host:     os.Getenv("DB_HOST"),
-		Port:     os.Getenv("DB_PORT"),
-		User:     os.Getenv("DB_USER"),
-		Password: os.Getenv("DB_PASSWORD"),
-		Name:     os.Getenv("DB_NAME"),
-		Sslmode:  os.Getenv("DB_SSLMODE"),
+		Host:     config.C.DB.Host,
+		Port:     config.C.DB.Port,
+		User:     config.C.DB.User,
+		Password: config.C.DB.Password,
+		Name:     config.C.DB.Name,
+		Sslmode:  config.C.DB.SSLMode,
 	})
 	defer DB.ShutdownConnection()
 
 	utils.InitEmail()
-	os.MkdirAll("./public", os.ModePerm)
+	os.MkdirAll(config.C.Paths.PublicDir, os.ModePerm)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -40,17 +42,7 @@ func main() {
 		}
 	}()
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "3000"
-	}
-
-	host := os.Getenv("HOST")
-	if host == "" {
-		host = "127.0.0.1"
-	}
-
-	addr := fmt.Sprintf("%s:%s", host, port)
+	addr := config.C.Server.Host + ":" + config.C.Server.Port
 	log.Printf("Starting server on %s", addr)
 	log.Fatal(http.ListenAndServe(addr, server.GetRouter()))
 }
