@@ -1,6 +1,7 @@
 package crud
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"time"
@@ -16,7 +17,35 @@ import (
 
 type User struct {
 	sqlc.User
-	UserGroup *sqlc.UsersGroup
+	UserGroup *sqlc.UsersGroup `json:"user_group,omitempty"`
+}
+
+func UserFromSqlc(u sqlc.User) User {
+	return User{User: u}
+}
+
+func (u *User) GetUserGroup() (*sqlc.UsersGroup, error) {
+	if u.UserGroup != nil {
+		return u.UserGroup, nil
+	}
+	return nil, nil
+}
+
+type userJSON struct {
+	Uuid      uuid.UUID        `json:"uuid"`
+	Username  string           `json:"username"`
+	IsActive  bool             `json:"is_active"`
+	UserGroup *sqlc.UsersGroup `json:"user_group,omitempty"`
+}
+
+func (u User) MarshalJSON() ([]byte, error) {
+	j := userJSON{
+		Uuid:      u.Uuid,
+		Username:  u.Username,
+		IsActive:  u.IsActive,
+		UserGroup: u.UserGroup,
+	}
+	return json.Marshal(j)
 }
 
 type JWT struct {
@@ -34,12 +63,6 @@ type ReturnUserWithJWT struct {
 type ReturnUserMinimal struct {
 	Uuid     uuid.UUID `json:"uuid"`
 	Username string    `json:"username"`
-}
-
-type ReturnUser struct {
-	Uuid      uuid.UUID        `json:"uuid"`
-	Username  string           `json:"username"`
-	UserGroup *sqlc.UsersGroup `json:"user_group"`
 }
 
 type LoginParams struct {
@@ -110,14 +133,6 @@ func validUser(id uuid.UUID, p string) bool {
 		return false
 	}
 	return true
-}
-
-func (u *User) ToReturnUser() ReturnUser {
-	return ReturnUser{
-		Uuid:      u.Uuid,
-		Username:  u.Username,
-		UserGroup: u.UserGroup,
-	}
 }
 
 func GetAllUsers() ([]sqlc.User, error) {

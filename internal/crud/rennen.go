@@ -2,6 +2,7 @@ package crud
 
 import (
 	"cmp"
+	"encoding/json"
 	"log"
 	"slices"
 	"strconv"
@@ -73,26 +74,90 @@ func (t Tag) StringShort() string {
 }
 
 type Rennen struct {
-	Uuid             uuid.UUID       `json:"uuid"`
-	SortID           int             `json:"sort_id"`
-	Nummer           string          `json:"nummer"`
-	Bezeichnung      string          `json:"bezeichnung"`
-	BezeichnungLang  string          `json:"bezeichnung_lang"`
-	Zusatz           string          `json:"zusatz"`
-	Leichtgewicht    bool            `json:"leichtgewicht"`
-	Geschlecht       sqlc.Geschlecht `json:"geschlecht"`
-	Bootsklasse      string          `json:"bootsklasse"`
-	BootsklasseLang  string          `json:"bootsklasse_lang"`
-	Altersklasse     string          `json:"altersklasse"`
-	AltersklasseLang string          `json:"altersklasse_lang"`
-	Tag              Tag             `json:"tag"`
-	Wettkampf        sqlc.Wettkampf  `json:"wettkampf"`
-	KostenEur        int             `json:"kosten_eur"`
-	Rennabstand      int             `json:"rennabstand"`
-	Startzeit        string          `json:"startzeit"`
-	NumMeldungen     *int            `json:"num_meldungen"`
-	NumAbteilungen   *int            `json:"num_abteilungen"`
-	Meldungen        []Meldung       `json:"meldungen"`
+	sqlc.Rennen
+	Tag            Tag       `json:"tag"`
+	NumMeldungen   *int      `json:"num_meldungen,omitempty"`
+	NumAbteilungen *int      `json:"num_abteilungen,omitempty"`
+	Meldungen      []Meldung `json:"meldungen,omitempty"`
+}
+
+func (r *Rennen) GetZusatz() *string {
+	if r.Rennen.Zusatz.Valid {
+		return &r.Rennen.Zusatz.String
+	}
+	return nil
+}
+
+func (r *Rennen) GetKostenEur() *int {
+	if r.Rennen.KostenEur.Valid {
+		v := int(r.Rennen.KostenEur.Int32)
+		return &v
+	}
+	return nil
+}
+
+func (r *Rennen) KostenEurStr() string {
+	if v := r.GetKostenEur(); v != nil {
+		return strconv.Itoa(*v)
+	}
+	return ""
+}
+
+func (r *Rennen) GetRennabstand() *int {
+	if r.Rennen.Rennabstand.Valid {
+		v := int(r.Rennen.Rennabstand.Int32)
+		return &v
+	}
+	return nil
+}
+
+func (r *Rennen) GetStartzeit() *string {
+	if r.Rennen.Startzeit.Valid {
+		return &r.Rennen.Startzeit.String
+	}
+	return nil
+}
+
+func (r *Rennen) GetMeldungen() ([]Meldung, error) {
+	if r.Meldungen != nil {
+		return r.Meldungen, nil
+	}
+	loaded, err := GetRennenMeldungen(r.Uuid)
+	if err != nil {
+		return nil, err
+	}
+	r.Meldungen = loaded
+	numMeld := len(r.Meldungen)
+	r.NumMeldungen = &numMeld
+	return r.Meldungen, nil
+}
+
+func (r Rennen) StartzeitStr() string {
+	if v := r.GetStartzeit(); v != nil {
+		return *v
+	}
+	return ""
+}
+
+func (r Rennen) ZusatzStr() string {
+	if v := r.GetZusatz(); v != nil {
+		return *v
+	}
+	return ""
+}
+
+func (r Rennen) RennabstandStr() string {
+	if v := r.GetRennabstand(); v != nil {
+		return strconv.Itoa(*v)
+	}
+	return ""
+}
+
+func (r Rennen) RennabstandInt() int {
+	if v := r.GetRennabstand(); v != nil {
+		return *v
+	}
+	return 0
 }
 
 // returns number of athletes and if Stm is required
@@ -105,6 +170,76 @@ func (r Rennen) GetTeilnehmerMeldeParams() (int, bool) {
 	stmRequired := strings.Contains(r.Bootsklasse, "+")
 
 	return numAthletes, stmRequired
+}
+
+func RennenFromSqlc(rennen sqlc.Rennen, numMeld int, numAbt any) Rennen {
+	var numAbteilungenI32 int32
+	switch v := numAbt.(type) {
+	case int32:
+		numAbteilungenI32 = v
+	case int:
+		numAbteilungenI32 = int32(v)
+	default:
+		log.Printf("Error converting numAbt to int32: %v (%T)", numAbt, numAbt)
+	}
+	numAbteilungen := int(numAbteilungenI32)
+	return Rennen{
+		Rennen:         rennen,
+		Tag:            Tag(rennen.Tag),
+		NumMeldungen:   &numMeld,
+		NumAbteilungen: &numAbteilungen,
+	}
+}
+
+type rennenJSON struct {
+	Uuid             uuid.UUID       `json:"uuid"`
+	SortID           int32           `json:"sort_id"`
+	Nummer           string          `json:"nummer"`
+	Bezeichnung      string          `json:"bezeichnung"`
+	BezeichnungLang  string          `json:"bezeichnung_lang"`
+	Zusatz           *string         `json:"zusatz,omitempty"`
+	Leichtgewicht    bool            `json:"leichtgewicht"`
+	Geschlecht       sqlc.Geschlecht `json:"geschlecht"`
+	Bootsklasse      string          `json:"bootsklasse"`
+	BootsklasseLang  string          `json:"bootsklasse_lang"`
+	Altersklasse     string          `json:"altersklasse"`
+	AltersklasseLang string          `json:"altersklasse_lang"`
+	Tag              Tag             `json:"tag"`
+	Wettkampf        sqlc.Wettkampf  `json:"wettkampf"`
+	KostenEur        *int            `json:"kosten_eur,omitempty"`
+	Rennabstand      *int            `json:"rennabstand,omitempty"`
+	Startzeit        *string         `json:"startzeit,omitempty"`
+	NumMeldungen     *int            `json:"num_meldungen,omitempty"`
+	NumAbteilungen   *int            `json:"num_abteilungen,omitempty"`
+	Meldungen        []Meldung       `json:"meldungen,omitempty"`
+}
+
+func (r Rennen) MarshalJSON() ([]byte, error) {
+	j := rennenJSON{
+		Uuid:             r.Uuid,
+		SortID:           r.SortID,
+		Nummer:           r.Nummer,
+		Bezeichnung:      r.Bezeichnung,
+		BezeichnungLang:  r.BezeichnungLang,
+		Zusatz:           r.GetZusatz(),
+		Leichtgewicht:    r.Leichtgewicht,
+		Geschlecht:       r.Geschlecht,
+		Bootsklasse:      r.Bootsklasse,
+		BootsklasseLang:  r.BootsklasseLang,
+		Altersklasse:     r.Altersklasse,
+		AltersklasseLang: r.AltersklasseLang,
+		Tag:              r.Tag,
+		Wettkampf:        r.Wettkampf,
+		KostenEur:        r.GetKostenEur(),
+		Rennabstand:      r.GetRennabstand(),
+		Startzeit:        r.GetStartzeit(),
+		NumMeldungen:     r.NumMeldungen,
+		NumAbteilungen:   r.NumAbteilungen,
+	}
+	if r.Meldungen != nil {
+		j.Meldungen = r.Meldungen
+	}
+	return json.Marshal(j)
 }
 
 type Zeitplaung struct {
@@ -194,9 +329,8 @@ func GetAllRennen(p GetAllRennenParams) ([]Rennen, error) {
 	retLs := []Rennen{}
 
 	for _, r := range rLs {
-		meldungen := []Meldung{}
-		if p.GetMeldungen {
-			meldungen = r.Meldungen
+		if p.GetMeldungen == false {
+			r.Meldungen = nil
 		}
 		if p.ShowStarted == false {
 			// TODO: Implement!
@@ -205,9 +339,7 @@ func GetAllRennen(p GetAllRennenParams) ([]Rennen, error) {
 			continue
 		}
 
-		rennen := r
-		rennen.Meldungen = meldungen
-		retLs = append(retLs, rennen)
+		retLs = append(retLs, r)
 	}
 	return retLs, nil
 }
@@ -216,7 +348,6 @@ func GetAllRennenWithAthlet(p GetAllRennenParams) ([]Rennen, error) {
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
-	// Filter by Wettkampf
 	var wettkampfFilterLs []sqlc.Wettkampf
 	if !p.ShowWettkampf.Valid {
 		wettkampfFilterLs = AllWettkampf
@@ -224,7 +355,6 @@ func GetAllRennenWithAthlet(p GetAllRennenParams) ([]Rennen, error) {
 		wettkampfFilterLs = []sqlc.Wettkampf{p.ShowWettkampf.Wettkampf}
 	}
 
-	// Phase 1: fetch races with Meldungen
 	baseRows, err := DB.Queries.GetAllRennenWithMeld(ctx, wettkampfFilterLs)
 	if err != nil {
 		return nil, err
@@ -235,23 +365,19 @@ func GetAllRennenWithAthlet(p GetAllRennenParams) ([]Rennen, error) {
 		return races, nil
 	}
 
-	// Phase 2: fetch athlete rows and merge into races
 	athRows, err := DB.Queries.GetAllRennenAthletRows(ctx, wettkampfFilterLs)
 	if err != nil {
 		return races, err
 	}
-	// Index races by UUID
 	raceIndex := make(map[uuid.UUID]int, len(races))
 	for i, r := range races {
 		raceIndex[r.Uuid] = i
 	}
-	// Merge athlete entries
 	for _, ar := range athRows {
 		ri, ok := raceIndex[ar.RennenUuid]
 		if !ok {
 			continue
 		}
-		// find Meldung slot
 		mi := -1
 		for j, m := range races[ri].Meldungen {
 			if m.Uuid == ar.MeldungUuid {
@@ -272,40 +398,6 @@ func GetAllRennenWithAthlet(p GetAllRennenParams) ([]Rennen, error) {
 	return races, nil
 }
 
-func RennenFromSqlc(rennen sqlc.Rennen, numMeld int, numAbt any) Rennen {
-	var numAbteilungenI32 int32
-	switch v := numAbt.(type) {
-	case int32:
-		numAbteilungenI32 = v
-	case int:
-		numAbteilungenI32 = int32(v)
-	default:
-		log.Printf("Error converting numAbt to int32: %v (%T)", numAbt, numAbt)
-	}
-	numAbteilungen := int(numAbteilungenI32)
-	return Rennen{
-		Uuid:             rennen.Uuid,
-		SortID:           int(rennen.SortID),
-		Nummer:           rennen.Nummer,
-		Bezeichnung:      rennen.Bezeichnung,
-		BezeichnungLang:  rennen.BezeichnungLang,
-		Zusatz:           rennen.Zusatz.String,
-		Leichtgewicht:    rennen.Leichtgewicht,
-		Geschlecht:       rennen.Geschlecht,
-		Bootsklasse:      rennen.Bootsklasse,
-		BootsklasseLang:  rennen.BootsklasseLang,
-		Altersklasse:     rennen.Altersklasse,
-		AltersklasseLang: rennen.AltersklasseLang,
-		Tag:              Tag(rennen.Tag),
-		Wettkampf:        rennen.Wettkampf,
-		KostenEur:        int(rennen.KostenEur.Int32),
-		Rennabstand:      int(rennen.Rennabstand.Int32),
-		Startzeit:        rennen.Startzeit.String,
-		NumMeldungen:     &numMeld,
-		NumAbteilungen:   &numAbteilungen,
-	}
-}
-
 func sqlcRennenToCrudRennen(q []sqlc.GetAllRennenWithMeldRow, getEmptyRennen bool) []Rennen {
 	var curRennen Rennen
 	rLs := []Rennen{}
@@ -323,7 +415,6 @@ func sqlcRennenToCrudRennen(q []sqlc.GetAllRennenWithMeldRow, getEmptyRennen boo
 		}
 
 		if row.Uuid != uuid.Nil {
-			// Construct Meldung and associated Verein
 			v := sqlc.Verein{
 				Uuid:     row.VereinUuid,
 				Name:     row.Name.String,
@@ -348,16 +439,20 @@ func sqlcRennenToCrudRennen(q []sqlc.GetAllRennenWithMeldRow, getEmptyRennen boo
 				VereinUuid:         row.VereinUuid,
 				RennenUuid:         row.RennenUuid,
 			}
+			verein := Verein{Verein: v}
 			curRennen.Meldungen = append(curRennen.Meldungen, Meldung{
-				Meldung:  m,
-				Rennen:   &Rennen{},
-				Verein:   &Verein{Verein: v},
+				Meldung: m,
+				Rennen:  &Rennen{},
+				Verein:  &verein,
 				Athleten: []Athlet{},
 			})
 		}
 	}
 
-	// sort Meldungen
+	if getEmptyRennen || len(curRennen.Meldungen) != 0 {
+		rLs = append(rLs, curRennen)
+	}
+
 	for _, r := range rLs {
 		slices.SortFunc(r.Meldungen, func(a, b Meldung) int {
 			return cmp.Or(
@@ -386,10 +481,6 @@ func GetRennenMinimal(uuid uuid.UUID) (Rennen, error) {
 }
 
 func GetRennen(uuidParam uuid.UUID) (Rennen, error) {
-	// TODO: Implement queryParams
-	// TODO: Fix NULL scan issue - SQL query uses FULL JOINs that return NULL values
-	//       but sqlc generated non-pointer types can't handle NULL
-	//       Fix by using COALESCE in SQL or regenerating sqlc with nullable types
 	ctx, cancel := getCtxWithTo()
 	defer cancel()
 
@@ -415,11 +506,12 @@ func GetRennen(uuidParam uuid.UUID) (Rennen, error) {
 				numAbt = int(meld.Abteilung)
 			}
 			if i == 0 || meld.Uuid != q[i-1].Meldung.Uuid {
+				verein := Verein{Verein: row.Verein}
 				r.Meldungen = append(
 					r.Meldungen,
 					Meldung{
 						Meldung:  meld,
-						Verein:   &Verein{Verein: row.Verein},
+						Verein:   &verein,
 						Athleten: []Athlet{},
 					},
 				)
@@ -443,6 +535,38 @@ func GetRennen(uuidParam uuid.UUID) (Rennen, error) {
 	r.NumAbteilungen = &numAbteilungen
 
 	return r, nil
+}
+
+func GetRennenMeldungen(rennenUuid uuid.UUID) ([]Meldung, error) {
+	ctx, cancel := getCtxWithTo()
+	defer cancel()
+
+	q, err := DB.Queries.GetAllRennenMeldungen(ctx, rennenUuid)
+	if err != nil {
+		if isNoRowError(err) {
+			return []Meldung{}, nil
+		}
+		return nil, err
+	}
+
+	meldungen := []Meldung{}
+	for _, row := range q {
+		if len(meldungen) == 0 || meldungen[len(meldungen)-1].Uuid != row.Meldung.Uuid {
+			verein := Verein{Verein: row.Verein}
+			meldungen = append(meldungen, Meldung{
+				Meldung: row.Meldung,
+				Verein:  &verein,
+			})
+		}
+		lastIdx := len(meldungen) - 1
+		pos := int(row.Position)
+		meldungen[lastIdx].Athleten = append(meldungen[lastIdx].Athleten, Athlet{
+			Athlet:   row.Athlet,
+			Rolle:    &row.Rolle,
+			Position: &pos,
+		})
+	}
+	return meldungen, nil
 }
 
 func UpdateStartZeit(params sqlc.UpdateStartZeitParams) error {

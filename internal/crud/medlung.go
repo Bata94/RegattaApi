@@ -1,6 +1,7 @@
 package crud
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -15,9 +16,96 @@ import (
 
 type Meldung struct {
 	sqlc.Meldung
-	Rennen   *Rennen  `json:"rennen"`
-	Verein   *Verein  `json:"verein"`
-	Athleten []Athlet `json:"athleten"`
+	Rennen   *Rennen  `json:"rennen,omitempty"`
+	Verein   *Verein  `json:"verein,omitempty"`
+	Athleten []Athlet `json:"athleten,omitempty"`
+}
+
+func MeldungFromSqlc(m sqlc.Meldung) Meldung {
+	return Meldung{Meldung: m}
+}
+
+func (m *Meldung) GetAthleten() ([]Athlet, error) {
+	if m.Athleten != nil {
+		return m.Athleten, nil
+	}
+	return nil, nil
+}
+
+func (m *Meldung) BemerkungStr() string {
+	if m.Bemerkung.Valid {
+		return m.Bemerkung.String
+	}
+	return ""
+}
+
+func (m *Meldung) ZeitnahmeBemerkungStr() string {
+	if m.ZeitnahmeBemerkung.Valid {
+		return m.ZeitnahmeBemerkung.String
+	}
+	return ""
+}
+
+func (m *Meldung) RechnungsNummerStr() string {
+	if m.RechnungsNummer.Valid {
+		return m.RechnungsNummer.String
+	}
+	return ""
+}
+
+type meldungJSON struct {
+	Uuid               uuid.UUID `json:"uuid"`
+	DrvRevisionUuid    uuid.UUID `json:"drv_revision_uuid"`
+	Typ                string    `json:"typ"`
+	Bemerkung          *string   `json:"bemerkung"`
+	Abgemeldet         bool      `json:"abgemeldet"`
+	Dns                bool      `json:"dns"`
+	Dnf                bool      `json:"dnf"`
+	Dsq                bool      `json:"dsq"`
+	ZeitnahmeBemerkung *string   `json:"zeitnahme_bemerkung"`
+	StartNummer        int32     `json:"start_nummer"`
+	Abteilung          int32     `json:"abteilung"`
+	Bahn               int32     `json:"bahn"`
+	Kosten             int32     `json:"kosten"`
+	RechnungsNummer    *string   `json:"rechnungs_nummer"`
+	VereinUuid         uuid.UUID `json:"verein_uuid"`
+	RennenUuid         uuid.UUID `json:"rennen_uuid"`
+	Rennen             *Rennen   `json:"rennen,omitempty"`
+	Verein             *Verein   `json:"verein,omitempty"`
+	Athleten           []Athlet  `json:"athleten,omitempty"`
+}
+
+func (m Meldung) MarshalJSON() ([]byte, error) {
+	j := meldungJSON{
+		Uuid:            m.Uuid,
+		DrvRevisionUuid: m.DrvRevisionUuid,
+		Typ:             m.Typ,
+		Abgemeldet:      m.Abgemeldet,
+		Dns:             m.Dns,
+		Dnf:             m.Dnf,
+		Dsq:             m.Dsq,
+		StartNummer:     m.StartNummer,
+		Abteilung:       m.Abteilung,
+		Bahn:            m.Bahn,
+		Kosten:          m.Kosten,
+		VereinUuid:      m.VereinUuid,
+		RennenUuid:      m.RennenUuid,
+		Rennen:          m.Rennen,
+		Verein:          m.Verein,
+	}
+	if m.Bemerkung.Valid {
+		j.Bemerkung = &m.Bemerkung.String
+	}
+	if m.ZeitnahmeBemerkung.Valid {
+		j.ZeitnahmeBemerkung = &m.ZeitnahmeBemerkung.String
+	}
+	if m.RechnungsNummer.Valid {
+		j.RechnungsNummer = &m.RechnungsNummer.String
+	}
+	if m.Athleten != nil {
+		j.Athleten = m.Athleten
+	}
+	return json.Marshal(j)
 }
 
 func (m Meldung) TeilnehmerString() string {

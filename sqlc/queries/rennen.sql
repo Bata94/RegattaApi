@@ -64,6 +64,32 @@ WHERE
 ORDER BY
   rennen.sort_id;
 
+-- name: GetAllRennenMeldungen :many
+SELECT
+  sqlc.embed(meldung),
+  sqlc.embed(athlet),
+  sqlc.embed(verein),
+  link_meldung_athlet.rolle,
+  link_meldung_athlet.position
+FROM
+  meldung
+JOIN
+  link_meldung_athlet
+ON
+  link_meldung_athlet.meldung_uuid = meldung.uuid
+JOIN
+  athlet
+ON
+  link_meldung_athlet.athlet_uuid = athlet.uuid
+JOIN
+  verein
+ON
+  meldung.verein_uuid = verein.uuid
+WHERE
+  meldung.rennen_uuid = $1
+ORDER BY
+  meldung.abteilung, meldung.bahn, link_meldung_athlet.rolle, link_meldung_athlet.position;
+
 -- name: GetAllRennenAthletRows :many
 SELECT
   r.uuid         AS rennen_uuid,

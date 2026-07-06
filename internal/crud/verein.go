@@ -1,6 +1,7 @@
 package crud
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 	"strconv"
@@ -13,10 +14,51 @@ import (
 
 type Verein struct {
 	sqlc.Verein
-	Athleten     []Athlet `json:"athleten"`
-	GesKosten    *int     `json:"ges_kosten"`
-	GesZahlungen *int     `json:"ges_zahlungen"`
-	Saldo        *int     `json:"saldo"`
+	Athleten     []Athlet `json:"athleten,omitempty"`
+	GesKosten    *int     `json:"ges_kosten,omitempty"`
+	GesZahlungen *int     `json:"ges_zahlungen,omitempty"`
+	Saldo        *int     `json:"saldo,omitempty"`
+}
+
+type vereinJSON struct {
+	Uuid         uuid.UUID `json:"uuid"`
+	Kuerzel      string    `json:"kuerzel"`
+	Name         string    `json:"name"`
+	Kurzform     string    `json:"kurzform"`
+	Athleten     []Athlet  `json:"athleten,omitempty"`
+	GesKosten    *int      `json:"ges_kosten,omitempty"`
+	GesZahlungen *int      `json:"ges_zahlungen,omitempty"`
+	Saldo        *int      `json:"saldo,omitempty"`
+}
+
+func (v Verein) MarshalJSON() ([]byte, error) {
+	j := vereinJSON{
+		Uuid:         v.Uuid,
+		Kuerzel:      v.Kuerzel,
+		Name:         v.Name,
+		Kurzform:     v.Kurzform,
+		Athleten:     v.Athleten,
+		GesKosten:    v.GesKosten,
+		GesZahlungen: v.GesZahlungen,
+		Saldo:        v.Saldo,
+	}
+	return json.Marshal(j)
+}
+
+func (v *Verein) GetAthleten() ([]Athlet, error) {
+	if v.Athleten != nil {
+		return v.Athleten, nil
+	}
+	return v.loadAthleten()
+}
+
+func (v *Verein) loadAthleten() ([]Athlet, error) {
+	loaded, err := GetAllAthletenForVerein(v.Uuid)
+	if err != nil {
+		return nil, err
+	}
+	v.Athleten = loaded
+	return v.Athleten, nil
 }
 
 func VereinFromSqlc(v sqlc.Verein, gesKosten int) Verein {

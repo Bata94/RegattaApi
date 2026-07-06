@@ -72,7 +72,7 @@ templ InternalRegattabueroWaage(a crud.Athlet) {
 
     <h5 class="card-title">Verein: {a.Verein.Name}</h5>
     if a.ErstesRennen != nil {
-      <p class="card-text">Erster Start: {a.ErstesRennen.Tag.String()} {a.ErstesRennen.Startzeit} Uhr</p>
+      <p class="card-text">Erster Start: {a.ErstesRennen.Tag.String()} {a.ErstesRennen.StartzeitStr()} Uhr</p>
     }
 
     <h5 class="card-title mt-4">Meldungen:</h5>

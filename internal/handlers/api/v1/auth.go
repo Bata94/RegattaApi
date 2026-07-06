@@ -40,16 +40,10 @@ func AuthMe(c *handler.Context) error {
 		return &handler.Error{StatusCode: 401, Message: "Invalid token"}
 	}
 
-	userRaw, err := crud.GetUser(userID)
+	u, err := crud.GetUser(userID)
 	if err != nil {
 		return err
 	}
 
-	u := crud.ReturnUser{
-		Uuid:      userRaw.Uuid,
-		Username:  userRaw.Username,
-		UserGroup: userRaw.UserGroup,
-	}
-
-	return c.JSON(u)
+	return c.JSON(*u)
 }

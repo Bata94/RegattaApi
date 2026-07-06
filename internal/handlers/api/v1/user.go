@@ -25,7 +25,7 @@ func GetUser(c *handler.Context) error {
 		return err
 	}
 
-	return c.JSON(u.ToReturnUser())
+	return c.JSON(*u)
 }
 
 func GetUserByName(c *handler.Context) error {
@@ -39,7 +39,7 @@ func GetUserByName(c *handler.Context) error {
 		return err
 	}
 
-	return c.JSON(u.ToReturnUser())
+	return c.JSON(*u)
 }
 
 func CreateUser(c *handler.Context) error {

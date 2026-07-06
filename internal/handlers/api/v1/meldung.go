@@ -138,7 +138,10 @@ func CreateNachmeldung(params PostNachmeldungParams) (*crud.Meldung, error) {
 		return nil, err
 	}
 
-	kosten := int32(rennen.KostenEur)
+	kosten := int32(10)
+	if v := rennen.GetKostenEur(); v != nil {
+		kosten = int32(*v)
+	}
 	if !params.DoppeltesMeldentgeldBefreiung {
 		kosten = kosten * 2
 	}

@@ -17,7 +17,7 @@ templ rennenHeader(r crud.Rennen) {
     }
   }}
   <h4 class={class}>
-    Rennen {r.Nummer} - {r.Bezeichnung} {r.Zusatz}
+    Rennen {r.Nummer} - {r.Bezeichnung} {r.ZusatzStr()}
   </h4>
 }
 
@@ -31,8 +31,8 @@ templ rennenBody(r crud.Rennen) {
 
   <div id={r.Uuid.String()} class="px-2 py-0">
     <h5 class="font-semibold">
-      Erster Start {r.Startzeit} Uhr, Rennabstand {r.Rennabstand}
-      if r.Rennabstand > 1 {
+      Erster Start {r.StartzeitStr()} Uhr, Rennabstand {r.RennabstandStr()}
+      if r.RennabstandInt() > 1 {
         Minuten
       } else {
         Minute

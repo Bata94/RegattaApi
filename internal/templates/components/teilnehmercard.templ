@@ -28,7 +28,7 @@ templ TeilnehmerCard(a crud.Athlet, navOpt HXNavigationOptions) {
         <p
           class="card-text"
         >
-          Erster Start: {a.ErstesRennen.Tag.String()} {a.ErstesRennen.Startzeit} Uhr<br/>
+          Erster Start: {a.ErstesRennen.Tag.String()} {a.ErstesRennen.StartzeitStr()} Uhr<br/>
           {a.ErstesRennen.Nummer} - {a.ErstesRennen.BezeichnungLang}<br/>
         </p>
       }

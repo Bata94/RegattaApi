@@ -1,6 +1,7 @@
 package crud
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 	"time"
@@ -13,15 +14,20 @@ import (
 
 type Zeitnahme struct {
 	ID              int32      `json:"id"`
-	RennenNummer    *string    `json:"rennen_nummer"`
-	StartNummer     *string    `json:"start_nummer"`
-	TimeClient      *time.Time `json:"time_client"`
-	TimeServer      *time.Time `json:"time_server"`
-	MeasuredLatency *int       `json:"measured_latency"`
+	RennenNummer    *string    `json:"rennen_nummer,omitempty"`
+	StartNummer     *string    `json:"start_nummer,omitempty"`
+	TimeClient      *time.Time `json:"time_client,omitempty"`
+	TimeServer      *time.Time `json:"time_server,omitempty"`
+	MeasuredLatency *int       `json:"measured_latency,omitempty"`
 	Verarbeitet     bool       `json:"verarbeitet"`
 }
 
-func SqlcZeitnahmeStartToZeitnahme(z sqlc.ZeitnahmeStart) Zeitnahme {
+func (z Zeitnahme) MarshalJSON() ([]byte, error) {
+	type alias Zeitnahme
+	return json.Marshal(alias(z))
+}
+
+func ZeitnahmeFromSqlcStart(z sqlc.ZeitnahmeStart) Zeitnahme {
 	var rennenNummer, startNummer *string
 	var timeClient, timeServer *time.Time
 	var measuredLatency *int
@@ -56,7 +62,7 @@ func SqlcZeitnahmeStartToZeitnahme(z sqlc.ZeitnahmeStart) Zeitnahme {
 	}
 }
 
-func SqlcZeitnahmeZielToZeitnahme(z sqlc.ZeitnahmeZiel) Zeitnahme {
+func ZeitnahmeFromSqlcZiel(z sqlc.ZeitnahmeZiel) Zeitnahme {
 	var rennenNummer, startNummer *string
 	var timeClient, timeServer *time.Time
 	var measuredLatency *int
@@ -102,7 +108,7 @@ func GetOpenZeitnahmeStart() ([]Zeitnahme, error) {
 	}
 
 	for _, z := range q {
-		retLs = append(retLs, SqlcZeitnahmeStartToZeitnahme(z))
+		retLs = append(retLs, ZeitnahmeFromSqlcStart(z))
 	}
 
 	return retLs, nil
@@ -119,7 +125,7 @@ func GetZeitnahmeZiel(id int) (Zeitnahme, error) {
 		return Zeitnahme{}, err
 	}
 
-	return SqlcZeitnahmeZielToZeitnahme(q), nil
+	return ZeitnahmeFromSqlcZiel(q), nil
 }
 
 func GetOpenZeitnahmeZiel() ([]Zeitnahme, error) {
@@ -133,7 +139,7 @@ func GetOpenZeitnahmeZiel() ([]Zeitnahme, error) {
 
 	retLs := []Zeitnahme{}
 	for _, z := range q {
-		retLs = append(retLs, SqlcZeitnahmeZielToZeitnahme(z))
+		retLs = append(retLs, ZeitnahmeFromSqlcZiel(z))
 	}
 
 	return retLs, nil
@@ -181,7 +187,7 @@ func CreateZeitnahmeStart(rennNr *string, startNummern []string, timeClient time
 		if err != nil {
 			return retLs, err
 		}
-		retLs = append(retLs, SqlcZeitnahmeStartToZeitnahme(q))
+		retLs = append(retLs, ZeitnahmeFromSqlcStart(q))
 	}
 
 	return retLs, nil
@@ -228,50 +234,7 @@ func CreateZeitnahmeZiel(rennNr, startNr *string, timeClient time.Time, measured
 		return Zeitnahme{}, err
 	}
 
-	return SqlcZeitnahmeZielToZeitnahme(q), nil
-}
-
-func UpdateZeitnahmeZiel(z Zeitnahme, rennNr, startNr *string) (Zeitnahme, error) {
-	ctx, cancel := getCtxWithTo()
-	defer cancel()
-
-	rennenNummer, startNummer := pgtype.Text{Valid: false}, pgtype.Text{Valid: false}
-	if rennNr != nil {
-		rennenNummer = pgtype.Text{String: *rennNr, Valid: true}
-	} else if z.RennenNummer != nil {
-		rennenNummer = pgtype.Text{String: *z.RennenNummer, Valid: true}
-	}
-
-	if startNr != nil {
-		startNummer = pgtype.Text{String: *startNr, Valid: true}
-	} else if z.StartNummer != nil {
-		startNummer = pgtype.Text{String: *z.StartNummer, Valid: true}
-	}
-
-	p := sqlc.UpdateZeitnahmeZielParams{
-		ID:           z.ID,
-		RennenNummer: rennenNummer,
-		StartNummer:  startNummer,
-	}
-
-	q, err := DB.Queries.UpdateZeitnahmeZiel(ctx, p)
-	if err != nil {
-		return Zeitnahme{}, err
-	}
-
-	return SqlcZeitnahmeZielToZeitnahme(q), nil
-}
-
-func DeleteZeitnahmeZiel(z Zeitnahme) (Zeitnahme, error) {
-	ctx, cancel := getCtxWithTo()
-	defer cancel()
-
-	q, err := DB.Queries.DeleteZeitnahmeZiel(ctx, z.ID)
-	if err != nil {
-		return Zeitnahme{}, err
-	}
-
-	return SqlcZeitnahmeZielToZeitnahme(q), nil
+	return ZeitnahmeFromSqlcZiel(q), nil
 }
 
 func CreateZeitnahmeErgebnis(s, z Zeitnahme, meld Meldung) error {

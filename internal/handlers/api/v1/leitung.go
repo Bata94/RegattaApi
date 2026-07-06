@@ -70,13 +70,26 @@ func GetMeldeergebnisHtml(c *handler.Context) error {
 
 	rLsParsed := []pdf_templates.RennenMeldeergebnisPDF{}
 	for _, r := range rLs {
+		zusatz := ""
+		if v := r.GetZusatz(); v != nil {
+			zusatz = *v
+		}
+		startzeit := ""
+		if v := r.GetStartzeit(); v != nil {
+			startzeit = *v
+		}
+		rennabstand := 0
+		if v := r.GetRennabstand(); v != nil {
+			rennabstand = *v
+		}
+
 		rParsed := pdf_templates.RennenMeldeergebnisPDF{
 			Uuid:              r.Uuid.String(),
 			RennNr:            r.Nummer,
 			Bezeichnung:       r.Bezeichnung,
-			BezeichnungZusatz: r.Zusatz,
-			Startzeit:         r.Startzeit,
-			Rennabstand:       r.Rennabstand,
+			BezeichnungZusatz: zusatz,
+			Startzeit:         startzeit,
+			Rennabstand:       rennabstand,
 			Tag:               string(r.Tag),
 			NumMeldungen:      *r.NumMeldungen,
 			NumAbteilungen:    *r.NumAbteilungen,
@@ -89,11 +102,15 @@ func GetMeldeergebnisHtml(c *handler.Context) error {
 			rParsed.Abteilungen[i].Nummer = i + 1
 		}
 
-		if len(r.Meldungen) == 0 {
+		meldungen, err := r.GetMeldungen()
+		if err != nil {
+			return err
+		}
+		if len(meldungen) == 0 {
 			rLsParsed = append(rLsParsed, rParsed)
 			continue
 		}
-		for _, m := range r.Meldungen {
+		for _, m := range meldungen {
 			meldungEntry := pdf_templates.MeldungMeldeergebnisPDF{
 				StartNummer: int(m.StartNummer),
 				Bahn:        int(m.Bahn),
@@ -185,13 +202,26 @@ func GenerateErgebnisHtml(c *handler.Context) error {
 			break
 		}
 		if *r.NumMeldungen != 0 {
+			zusatz := ""
+			if v := r.GetZusatz(); v != nil {
+				zusatz = *v
+			}
+			startzeit := ""
+			if v := r.GetStartzeit(); v != nil {
+				startzeit = *v
+			}
+			rennabstand := 0
+			if v := r.GetRennabstand(); v != nil {
+				rennabstand = *v
+			}
+
 			rParsed := ErgebnisRennenPDF{
 				Uuid:              r.Uuid.String(),
 				RennNr:            r.Nummer,
 				Bezeichnung:       r.Bezeichnung,
-				BezeichnungZusatz: r.Zusatz,
-				Startzeit:         r.Startzeit,
-				Rennabstand:       r.Rennabstand,
+				BezeichnungZusatz: zusatz,
+				Startzeit:         startzeit,
+				Rennabstand:       rennabstand,
 				Tag:               string(r.Tag),
 				NumMeldungen:      *r.NumMeldungen,
 				NumAbteilungen:    *r.NumAbteilungen,
@@ -204,7 +234,11 @@ func GenerateErgebnisHtml(c *handler.Context) error {
 				rParsed.Abteilungen[i].Nummer = i + 1
 			}
 
-			for _, m := range r.Meldungen {
+			meldungen, err := r.GetMeldungen()
+			if err != nil {
+				return err
+			}
+			for _, m := range meldungen {
 				if m.Abgemeldet {
 					continue
 				}
@@ -710,7 +744,9 @@ func getKostenForMeld(rennen []crud.Rennen, m DrvEntries) (int32, error) {
 
 	for _, r := range rennen {
 		if r.Uuid == m.EventId {
-			kosten = int32(r.KostenEur)
+			if v := r.GetKostenEur(); v != nil {
+				kosten = int32(*v)
+			}
 		}
 	}
 

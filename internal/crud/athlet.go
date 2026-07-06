@@ -1,6 +1,7 @@
 package crud
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -13,11 +14,79 @@ import (
 
 type Athlet struct {
 	sqlc.Athlet
-	Rolle        *sqlc.Rolle `json:"rolle"`
-	Position     *int        `json:"position"`
-	Verein       *Verein     `json:"verein"`
-	Meldungen    []Meldung   `json:"meldungen"`
-	ErstesRennen *Rennen     `json:"erstes_rennen"`
+	Rolle        *sqlc.Rolle `json:"rolle,omitempty"`
+	Position     *int        `json:"position,omitempty"`
+	Verein       *Verein     `json:"verein,omitempty"`
+	Meldungen    []Meldung   `json:"meldungen,omitempty"`
+	ErstesRennen *Rennen     `json:"erstes_rennen,omitempty"`
+}
+
+func AthletFromSqlc(a sqlc.Athlet) Athlet {
+	return Athlet{Athlet: a}
+}
+
+func (a *Athlet) GetMeldungen() ([]Meldung, error) {
+	if a.Meldungen != nil {
+		return a.Meldungen, nil
+	}
+	return nil, nil
+}
+
+func (a *Athlet) GewichtStr() string {
+	if a.Gewicht.Valid {
+		return fmt.Sprintf("%d", a.Gewicht.Int32)
+	}
+	return ""
+}
+
+func (a *Athlet) GewichtInt() int {
+	if a.Gewicht.Valid {
+		return int(a.Gewicht.Int32)
+	}
+	return 0
+}
+
+type athletJSON struct {
+	Uuid            uuid.UUID `json:"uuid"`
+	Vorname         string    `json:"vorname"`
+	Name            string    `json:"name"`
+	Geschlecht      string    `json:"geschlecht"`
+	Jahrgang        string    `json:"jahrgang"`
+	Gewicht         *int      `json:"gewicht,omitempty"`
+	Startberechtigt bool      `json:"startberechtigt"`
+	VereinUuid      uuid.UUID `json:"verein_uuid"`
+	Rolle           *string   `json:"rolle,omitempty"`
+	Position        *int      `json:"position,omitempty"`
+	Verein          *Verein   `json:"verein,omitempty"`
+	Meldungen       []Meldung `json:"meldungen,omitempty"`
+	ErstesRennen    *Rennen   `json:"erstes_rennen,omitempty"`
+}
+
+func (a Athlet) MarshalJSON() ([]byte, error) {
+	j := athletJSON{
+		Uuid:            a.Uuid,
+		Vorname:         a.Vorname,
+		Name:            a.Name,
+		Geschlecht:      string(a.Geschlecht),
+		Jahrgang:        a.Jahrgang,
+		Startberechtigt: a.Startberechtigt,
+		VereinUuid:      a.VereinUuid,
+		Verein:          a.Verein,
+		Meldungen:       a.Meldungen,
+		ErstesRennen:    a.ErstesRennen,
+	}
+	if a.Rolle != nil {
+		r := string(*a.Rolle)
+		j.Rolle = &r
+	}
+	if a.Position != nil {
+		j.Position = a.Position
+	}
+	if a.Gewicht.Valid {
+		g := int(a.Gewicht.Int32)
+		j.Gewicht = &g
+	}
+	return json.Marshal(j)
 }
 
 func (ath *Athlet) AthletString() string {

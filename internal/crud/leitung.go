@@ -44,6 +44,11 @@ func SetZeitplan(param SetZeitplanParams) error {
 	fmt.Println("curStartTimeSo:", curStartTimeSo)
 
 	for _, r := range rLs {
+		rennAbstand := 10
+		if v := r.GetRennabstand(); v != nil {
+			rennAbstand = *v
+		}
+
 		switch r.Tag {
 		case TagSa:
 			saTimeStr := curStartTimeSa.Format("15:04")
@@ -56,9 +61,9 @@ func SetZeitplan(param SetZeitplanParams) error {
 				return err
 			}
 			if r.Wettkampf == sqlc.WettkampfLangstrecke {
-				curStartTimeSa = curStartTimeSa.Add(time.Minute * time.Duration(r.Rennabstand * *r.NumMeldungen))
+				curStartTimeSa = curStartTimeSa.Add(time.Minute * time.Duration(rennAbstand * *r.NumMeldungen))
 			} else {
-				curStartTimeSa = curStartTimeSa.Add(time.Minute * time.Duration(r.Rennabstand * *r.NumAbteilungen))
+				curStartTimeSa = curStartTimeSa.Add(time.Minute * time.Duration(rennAbstand * *r.NumAbteilungen))
 			}
 
 			for _, p := range pLs {
@@ -76,7 +81,7 @@ func SetZeitplan(param SetZeitplanParams) error {
 			if err != nil {
 				return err
 			}
-			curStartTimeSo = curStartTimeSo.Add(time.Minute * time.Duration(r.Rennabstand * *r.NumAbteilungen))
+			curStartTimeSo = curStartTimeSo.Add(time.Minute * time.Duration(rennAbstand * *r.NumAbteilungen))
 
 			for _, p := range pLs {
 				if p.NachRennenUuid == r.Uuid {
@@ -121,7 +126,11 @@ func SetStartnummern() error {
 	startNummerMap[TagSo] = 1
 
 	for _, r := range rLs {
-		for _, m := range r.Meldungen {
+		meldungen, err := r.GetMeldungen()
+		if err != nil {
+			return err
+		}
+		for _, m := range meldungen {
 			if m.Abgemeldet {
 				continue
 			}
