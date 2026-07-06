@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/bata94/RegattaApi/internal/crud"
@@ -103,7 +102,7 @@ func SetStartnummern(ctx context.Context) error {
 		return err
 	}
 	if !check {
-		return &handler.Error{StatusCode: http.StatusBadRequest, Message: "Setzung not done!"}
+		return handler.BadRequest("Setzung not done!")
 	}
 
 	check2, err := crud.CheckMeldungStartnummern(ctx)
@@ -111,7 +110,7 @@ func SetStartnummern(ctx context.Context) error {
 		return err
 	}
 	if check2 {
-		return &handler.Error{StatusCode: http.StatusBadRequest, Message: "Startnummern not done!"}
+		return handler.BadRequest("Startnummern not done!")
 	}
 
 	rLs, err := crud.GetAllRennen(ctx, crud.GetAllRennenParams{

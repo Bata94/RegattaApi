@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -112,7 +111,7 @@ func zeitplanCollapseBodyHandler(c *handler.Context) error {
 	wettkampfStr := c.Param("wettkampf")
 	wettkampf, err := crud.WettkampfFromString(wettkampfStr)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusNotFound, Message: "Wettkampf not found"}
+		return handler.NotFound("Wettkampf not found")
 	}
 	templ.Handler(ui_components.ZeitplanCollapseBody(wettkampf)).ServeHTTP(c.Writer, c.Request)
 	return nil
@@ -122,7 +121,7 @@ func ausschreibungRennenCollapseBodyHandler(c *handler.Context) error {
 	wettkampfStr := c.Param("wettkampf")
 	wettkampf, err := crud.WettkampfFromString(wettkampfStr)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusNotFound, Message: "Wettkampf not found"}
+		return handler.NotFound("Wettkampf not found")
 	}
 	templ.Handler(ui_pages.AusschreibungRennenCollapseBody(wettkampf)).ServeHTTP(c.Writer, c.Request)
 	return nil
@@ -132,7 +131,7 @@ func meldeergebnisCollapseBodyHandler(c *handler.Context) error {
 	wettkampfStr := c.Param("wettkampf")
 	wettkampf, err := crud.WettkampfFromString(wettkampfStr)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusNotFound, Message: "Wettkampf not found"}
+		return handler.NotFound("Wettkampf not found")
 	}
 	templ.Handler(ui_pages.MeldeergebnisCollapseBody(wettkampf)).ServeHTTP(c.Writer, c.Request)
 	return nil
@@ -208,7 +207,7 @@ func GetRouter() http.Handler {
 	baseLayoutHandler("/internal", func(c *handler.Context) (templ.Component, error) {
 		userToken, ok := c.GetLocals("user").(*jwt.Token)
 		if !ok {
-			return nil, &handler.Error{StatusCode: http.StatusUnauthorized, Message: "Nicht angemeldet"}
+			return nil, handler.Unauthorized("Nicht angemeldet")
 		}
 
 		claims := userToken.Claims.(jwt.MapClaims)
@@ -244,7 +243,7 @@ func GetRouter() http.Handler {
 	baseLayoutHandler("/internal/regattabuero/vereinswahl", func(c *handler.Context) (templ.Component, error) {
 		next := c.GetQueryParam("next")
 		if next == "" {
-				return ui_pages.Error(404, "Next param is required"), errors.New("Next param is required")
+			return nil, handler.BadRequest("Next param is required")
 		}
 		title := c.GetQueryParam("title")
 		nextUrl := "/internal/regattabuero/%s/" + next
@@ -263,7 +262,7 @@ func GetRouter() http.Handler {
 			vereine, err = crud.GetAllVerein(c.Request.Context(), )
 		}
 		if err != nil {
-			return ui_pages.Error(500, "Fehler beim Laden der Vereine"), errors.New("Fehler beim Laden der Vereine")
+			return nil, handler.InternalError("Fehler beim Laden der Vereine")
 		}
 
 		return ui_pages.InternalVereinswahl(nextUrl, title, vereine), nil
@@ -272,15 +271,15 @@ func GetRouter() http.Handler {
 		vereinUuidStr := c.Param("v_uuid")
 		vereinUuid, err := uuid.Parse(vereinUuidStr)
 		if err != nil {
-			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+			return nil, handler.NotAcceptable("Invalid UUID")
 		}
 		verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
 		if err != nil {
-			return ui_pages.Error(500, "Error while loading verein"), errors.New("Error while loading verein")
+			return nil, handler.InternalError("Error while loading verein")
 		}
 		meldungen, err := crud.GetAllMeldungForVerein(c.Request.Context(), vereinUuid)
 		if err != nil {
-			return ui_pages.Error(500, "Error while loading meldungen"), errors.New("Error while loading meldungen")
+			return nil, handler.InternalError("Error while loading meldungen")
 		}
 		return ui_pages.InternalRegattabueroAbmeldung(verein, meldungen), nil
 	})
@@ -288,25 +287,25 @@ func GetRouter() http.Handler {
 		vereinUuidStr := c.Param("v_uuid")
 		vereinUuid, err := uuid.Parse(vereinUuidStr)
 		if err != nil {
-			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+			return nil, handler.NotAcceptable("Invalid UUID")
 		}
 		meldungUuidStr := c.Param("m_uuid")
 		meldungUuid, err := uuid.Parse(meldungUuidStr)
 		if err != nil {
-			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+			return nil, handler.NotAcceptable("Invalid UUID")
 		}
 
 		verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
 		if err != nil {
-			return ui_pages.Error(500, "Error while loading verein"), errors.New("Error while loading verein")
+			return nil, handler.InternalError("Error while loading verein")
 		}
 		meldung, err := crud.GetMeldung(c.Request.Context(), meldungUuid)
 		if err != nil {
-			return ui_pages.Error(500, "Error while loading meldung"), errors.New("Error while loading meldung")
+			return nil, handler.InternalError("Error while loading meldung")
 		}
 
 		if meldung.VereinUuid != verein.Uuid {
-			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+			return nil, handler.NotAcceptable("Invalid UUID")
 		}
 
 		return ui_pages.InternalRegattabueroAbmeldungMeldung(verein, meldung), nil
@@ -316,15 +315,15 @@ func GetRouter() http.Handler {
 		vereinUuidStr := c.Param("v_uuid")
 		vereinUuid, err := uuid.Parse(vereinUuidStr)
 		if err != nil {
-			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+			return nil, handler.NotAcceptable("Invalid UUID")
 		}
 		verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
 		if err != nil {
-			return ui_pages.Error(500, "Error while loading verein"), errors.New("Error while loading verein")
+			return nil, handler.InternalError("Error while loading verein")
 		}
 		meldungen, err := crud.GetAllMeldungForVerein(c.Request.Context(), vereinUuid)
 		if err != nil {
-			return ui_pages.Error(500, "Error while loading meldungen"), errors.New("Error while loading meldungen")
+			return nil, handler.InternalError("Error while loading meldungen")
 		}
 		return ui_pages.InternalRegattabueroUmmeldung(verein, meldungen), nil
 	})
@@ -332,30 +331,30 @@ func GetRouter() http.Handler {
 		vereinUuidStr := c.Param("v_uuid")
 		vereinUuid, err := uuid.Parse(vereinUuidStr)
 		if err != nil {
-			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+			return nil, handler.NotAcceptable("Invalid UUID")
 		}
 		meldungUuidStr := c.Param("m_uuid")
 		meldungUuid, err := uuid.Parse(meldungUuidStr)
 		if err != nil {
-			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+			return nil, handler.NotAcceptable("Invalid UUID")
 		}
 
 		verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
 		if err != nil {
-			return ui_pages.Error(500, "Error while loading verein"), errors.New("Error while loading verein")
+			return nil, handler.InternalError("Error while loading verein")
 		}
 		meldung, err := crud.GetMeldung(c.Request.Context(), meldungUuid)
 		if err != nil {
-			return ui_pages.Error(500, "Error while loading meldung"), errors.New("Error while loading meldung")
+			return nil, handler.InternalError("Error while loading meldung")
 		}
 
 		if meldung.VereinUuid != verein.Uuid {
-			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+			return nil, handler.NotAcceptable("Invalid UUID")
 		}
 
 		athleten, err := crud.GetAllAthletenForVerein(c.Request.Context(), verein.Uuid)
 		if err != nil {
-			return ui_pages.Error(500, "Error while loading athleten"), errors.New("Error while loading athleten")
+			return nil, handler.InternalError("Error while loading athleten")
 		}
 
 		// TODO: Filter only viable athleten
@@ -366,11 +365,11 @@ func GetRouter() http.Handler {
 		vereinUuidStr := c.Param("v_uuid")
 		vereinUuid, err := uuid.Parse(vereinUuidStr)
 		if err != nil {
-			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+			return nil, handler.NotAcceptable("Invalid UUID")
 		}
 		verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
 		if err != nil {
-			return ui_pages.Error(500, "Error while loading verein"), errors.New("Error while loading verein")
+			return nil, handler.InternalError("Error while loading verein")
 		}
 		return ui_pages.InternalRegattabueroNachmeldung(verein), nil
 	})
@@ -378,26 +377,26 @@ func GetRouter() http.Handler {
 		vereinUuidStr := c.Param("v_uuid")
 		vereinUuid, err := uuid.Parse(vereinUuidStr)
 		if err != nil {
-			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+			return nil, handler.NotAcceptable("Invalid UUID")
 		}
 		rennenUuidStr := c.Param("r_uuid")
 		rennenUuid, err := uuid.Parse(rennenUuidStr)
 		if err != nil {
-			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+			return nil, handler.NotAcceptable("Invalid UUID")
 		}
 
 		verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
 		if err != nil {
-			return ui_pages.Error(500, "Error while loading verein"), errors.New("Error while loading verein")
+			return nil, handler.InternalError("Error while loading verein")
 		}
 		rennen, err := crud.GetRennen(c.Request.Context(), rennenUuid)
 		if err != nil {
-			return ui_pages.Error(500, "Error while loading rennen"), errors.New("Error while loading rennen")
+			return nil, handler.InternalError("Error while loading rennen")
 		}
 
 		athleten, err := crud.GetAllAthletenForVerein(c.Request.Context(), verein.Uuid)
 		if err != nil {
-			return ui_pages.Error(500, "Error while loading athleten"), errors.New("Error while loading athleten")
+			return nil, handler.InternalError("Error while loading athleten")
 		}
 
 		// TODO: Filter only viable athleten
@@ -408,11 +407,11 @@ func GetRouter() http.Handler {
 		meldungUuidStr := c.Param("m_uuid")
 		meldungUuid, err := uuid.Parse(meldungUuidStr)
 		if err != nil {
-			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+			return nil, handler.NotAcceptable("Invalid UUID")
 		}
 		m, err := crud.GetMeldung(c.Request.Context(), meldungUuid)
 		if err != nil {
-			return ui_pages.Error(500, "Error while loading meldung") , errors.New("Error while loading meldung")
+			return nil, handler.InternalError("Error while loading meldung")
 		}
 		return ui_pages.InternalRegattabueroNachmeldungSuccess(m), nil
 	})
@@ -420,15 +419,15 @@ func GetRouter() http.Handler {
 		vereinUuidStr := c.Param("v_uuid")
 		vereinUuid, err := uuid.Parse(vereinUuidStr)
 		if err != nil {
-			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+			return nil, handler.NotAcceptable("Invalid UUID")
 		}
 		verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
 		if err != nil {
-			return ui_pages.Error(500, "Error while loading verein"), errors.New("Error while loading verein")
+			return nil, handler.InternalError("Error while loading verein")
 		}
 		athleten, err := crud.GetAllAthletenForVereinWaage(c.Request.Context(), verein.Uuid)
 		if err != nil {
-			return ui_pages.Error(500, "Error while loading athleten"), errors.New("Error while loading athleten")
+			return nil, handler.InternalError("Error while loading athleten")
 		}
 
 		for i := range athleten {
@@ -441,25 +440,25 @@ func GetRouter() http.Handler {
 		vereinUuidStr := c.Param("v_uuid")
 		vereinUuid, err := uuid.Parse(vereinUuidStr)
 		if err != nil {
-			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+			return nil, handler.NotAcceptable("Invalid UUID")
 		}
 		athletUuidStr := c.Param("a_uuid")
 		athletUuid, err := uuid.Parse(athletUuidStr)
 		if err != nil {
-			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+			return nil, handler.NotAcceptable("Invalid UUID")
 		}
 
 		verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
 		if err != nil {
-			return ui_pages.Error(500, "Error while loading verein"), errors.New("Error while loading verein")
+			return nil, handler.InternalError("Error while loading verein")
 		}
 		athlet, err := crud.GetAthlet(c.Request.Context(), athletUuid)
 		if err != nil {
-			return ui_pages.Error(500, "Error while loading athlet"), errors.New("Error while loading athlet")
+			return nil, handler.InternalError("Error while loading athlet")
 		}
 
 		if athlet.VereinUuid != verein.Uuid {
-			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+			return nil, handler.NotAcceptable("Invalid UUID")
 		}
 
 		return ui_pages.InternalRegattabueroWaage(athlet), nil
@@ -469,15 +468,15 @@ func GetRouter() http.Handler {
 		vereinUuidStr := c.Param("v_uuid")
 		vereinUuid, err := uuid.Parse(vereinUuidStr)
 		if err != nil {
-			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+			return nil, handler.NotAcceptable("Invalid UUID")
 		}
 		verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
 		if err != nil {
-			return ui_pages.Error(500, "Error while loading verein"), errors.New("Error while loading verein")
+			return nil, handler.InternalError("Error while loading verein")
 		}
 		athleten, err := crud.GetAllAthletenForVereinMissStartber(c.Request.Context(), verein.Uuid)
 		if err != nil {
-			return ui_pages.Error(500, "Error while loading athleten"), errors.New("Error while loading athleten")
+			return nil, handler.InternalError("Error while loading athleten")
 		}
 
 		for i := range athleten {
@@ -490,25 +489,25 @@ func GetRouter() http.Handler {
 		vereinUuidStr := c.Param("v_uuid")
 		vereinUuid, err := uuid.Parse(vereinUuidStr)
 		if err != nil {
-			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+			return nil, handler.NotAcceptable("Invalid UUID")
 		}
 		athletUuidStr := c.Param("a_uuid")
 		athletUuid, err := uuid.Parse(athletUuidStr)
 		if err != nil {
-			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+			return nil, handler.NotAcceptable("Invalid UUID")
 		}
 
 		verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
 		if err != nil {
-			return ui_pages.Error(500, "Error while loading verein"), errors.New("Error while loading verein")
+			return nil, handler.InternalError("Error while loading verein")
 		}
 		athlet, err := crud.GetAthletMinimal(c.Request.Context(), athletUuid)
 		if err != nil {
-			return ui_pages.Error(500, "Error while loading athlet"), errors.New("Error while loading athlet")
+			return nil, handler.InternalError("Error while loading athlet")
 		}
 
 		if athlet.VereinUuid != verein.Uuid {
-			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+			return nil, handler.NotAcceptable("Invalid UUID")
 		}
 
 		return ui_pages.InternalRegattabueroStartberechtigung(athlet), nil
@@ -517,11 +516,11 @@ func GetRouter() http.Handler {
 		vereinUuidStr := c.Param("v_uuid")
 		vereinUuid, err := uuid.Parse(vereinUuidStr)
 		if err != nil {
-			return ui_pages.Error(406, "Invalid UUID"), errors.New("Invalid UUID")
+			return nil, handler.NotAcceptable("Invalid UUID")
 		}
 		verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
 		if err != nil {
-			return ui_pages.Error(500, "Error while loading verein"), errors.New("Error while loading verein")
+			return nil, handler.InternalError("Error while loading verein")
 		}
 		return ui_pages.InternalRegattabueroNewAthlet(verein), nil
 	})
@@ -725,21 +724,7 @@ func wrapHandler(h handler.Handler, needAuth bool) func(http.ResponseWriter, *ht
 			ctx.SetPathParams(p.(map[string]string))
 		}
 		if err := wrapped(ctx); err != nil {
-			headersWritten := false
-			if ht, ok := ctx.Writer.(handler.HeaderTracker); ok {
-				headersWritten = ht.HeadersWritten()
-			}
-			if he, ok := err.(*handler.Error); ok {
-				if !headersWritten {
-					ctx.Writer.WriteHeader(he.StatusCode)
-				}
-				ctx.Writer.Write([]byte(he.Message))
-			} else {
-				if !headersWritten {
-					ctx.Writer.WriteHeader(http.StatusInternalServerError)
-				}
-				ctx.Writer.Write([]byte(err.Error()))
-			}
+			handleAppError(ctx, err)
 		}
 	}
 }
@@ -768,16 +753,9 @@ func templHandler(h handler.Handler) http.HandlerFunc {
 			ctx.SetPathParams(p.(map[string]string))
 		}
 		if err := wrapped(ctx); err != nil {
-			http.Error(w, err.Error(), 500)
+			handleAppError(ctx, err)
 		}
 	}
-}
-
-func toastReturn(c *handler.Context, msg string, color ui_components.InputColor) error {
-	c.Writer.Header().Set("HX-Retarget", "#toast-container")
-	c.Writer.Header().Set("HX-Swap", "beforeend")
-	templ.Handler(ui_components.Toast(msg, color)).ServeHTTP(c.Writer, c.Request)
-	return nil
 }
 
 func wrapUIHandler(h handler.Handler) func(http.ResponseWriter, *http.Request) {
@@ -798,13 +776,7 @@ func wrapUIHandler(h handler.Handler) func(http.ResponseWriter, *http.Request) {
 			ctx.SetPathParams(p.(map[string]string))
 		}
 		if err := wrapped(ctx); err != nil {
-			if he, ok := err.(*handler.Error); ok {
-				w.WriteHeader(he.StatusCode)
-				w.Write([]byte(he.Message))
-			} else {
-				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(err.Error()))
-			}
+			handleAppError(ctx, err)
 		}
 	}
 }

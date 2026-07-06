@@ -1,7 +1,6 @@
 package api_v1
 
 import (
-	"net/http"
 	"strings"
 
 	"github.com/bata94/RegattaApi/internal/crud"
@@ -22,7 +21,7 @@ type NewAthletParams struct {
 func GetAthlet(c *handler.Context) error {
 	id, err := c.GetUUID("uuid")
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusBadRequest, Message: err.Error()}
+		return handler.BadRequest(err.Error())
 	}
 
 	a, err := crud.GetAthletMinimal(c.Request.Context(), id)
@@ -46,12 +45,12 @@ func CreateAthlet(c *handler.Context) error {
 	aParams := new(NewAthletParams)
 	err := c.BodyParser(&aParams)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusBadRequest, Message: err.Error()}
+		return handler.BadRequest(err.Error())
 	}
 
 	vereinUuid, err := uuid.Parse(aParams.VereinUUID)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusBadRequest, Message: err.Error()}
+		return handler.BadRequest(err.Error())
 	}
 
 	var geschlecht sqlc.Geschlecht

@@ -1,7 +1,6 @@
 package api_v1
 
 import (
-	"net/http"
 	"strconv"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -43,7 +42,7 @@ func GetPause(c *handler.Context) error {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusBadRequest, Message: "invalid id"}
+		return handler.BadRequest("invalid id")
 	}
 
 	p, err := crud.GetPause(c.Request.Context(), id)
@@ -57,7 +56,7 @@ func DeletePause(c *handler.Context) error {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusBadRequest, Message: "invalid id"}
+		return handler.BadRequest("invalid id")
 	}
 
 	err = crud.DeletePause(c.Request.Context(), int32(id))

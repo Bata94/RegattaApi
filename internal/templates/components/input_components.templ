@@ -45,10 +45,14 @@ templ SubmitButton(text string, color InputColor) {
   </div>
 }
 
-templ DropDown(name, label string, options, values []string, selectedValue string, required bool) {
+templ DropDown(name, label string, options, values []string, selectedValue string, required bool, errorMsg string) {
   {{
     if values == nil {
       values = options
+    }
+    inputClass := "select select-bordered w-full"
+    if errorMsg != "" {
+      inputClass += " select-error"
     }
   }}
   <div class="form-control mb-6 w-full">
@@ -57,7 +61,7 @@ templ DropDown(name, label string, options, values []string, selectedValue strin
     </label>
     <select
       name={name}
-      class="select select-bordered w-full"
+      class={inputClass}
       if required {
         required
       }
@@ -68,10 +72,19 @@ templ DropDown(name, label string, options, values []string, selectedValue strin
         }>{o}</option>
       }
     </select>
+    if errorMsg != "" {
+      <span class="text-error text-sm mt-1">{errorMsg}</span>
+    }
   </div>
 }
 
-templ LineInput(name, label, value, inpType string, required bool) {
+templ LineInput(name, label, value, inpType string, required bool, errorMsg string) {
+  {{
+    inputClass := "input input-bordered w-full"
+    if errorMsg != "" {
+      inputClass += " input-error"
+    }
+  }}
   <div class="form-control mb-6 w-full">
     <label class="label">
       <span class="label-text">{label}</span>
@@ -84,16 +97,25 @@ templ LineInput(name, label, value, inpType string, required bool) {
         type={inpType}
       }
       name={name}
-      class="input input-bordered w-full"
+      class={inputClass}
       value={value}
       if required {
         required
       }
     />
+    if errorMsg != "" {
+      <span class="text-error text-sm mt-1">{errorMsg}</span>
+    }
   </div>
 }
 
-templ FileUpload(name, label string, required bool) {
+templ FileUpload(name, label string, required bool, errorMsg string) {
+  {{
+    inputClass := "file-input file-input-bordered w-full"
+    if errorMsg != "" {
+      inputClass += " file-input-error"
+    }
+  }}
   <div class="form-control mb-6 w-full">
     <label class="label">
       <span class="label-text">{label}</span>
@@ -101,11 +123,14 @@ templ FileUpload(name, label string, required bool) {
     <input
       type="file"
       name={name}
-      class="file-input file-input-bordered w-full"
+      class={inputClass}
       if required {
         required
       }
     />
+    if errorMsg != "" {
+      <span class="text-error text-sm mt-1">{errorMsg}</span>
+    }
   </div>
 }
 

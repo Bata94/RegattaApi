@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -42,17 +41,17 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 func getProfilePage(c *handler.Context) (templ.Component, error) {
 	userToken, ok := c.GetLocals("user").(*jwt.Token)
 	if !ok {
-		return nil, &handler.Error{StatusCode: http.StatusUnauthorized, Message: "Nicht angemeldet"}
+		return nil, handler.Unauthorized("Nicht angemeldet")
 	}
 
 	claims := userToken.Claims.(jwt.MapClaims)
 	userUuidStr, ok := claims["user_id"].(string)
 	if !ok {
-		return nil, &handler.Error{StatusCode: http.StatusUnauthorized, Message: "Invalid token"}
+		return nil, handler.Unauthorized("Invalid token")
 	}
 	username, ok := claims["username"].(string)
 	if !ok {
-		return nil, &handler.Error{StatusCode: http.StatusUnauthorized, Message: "Invalid token"}
+		return nil, handler.Unauthorized("Invalid token")
 	}
 
 	userGroup := ""
@@ -77,7 +76,7 @@ func getProfilePage(c *handler.Context) (templ.Component, error) {
 
 	userUuid, err := uuid.Parse(userUuidStr)
 	if err != nil {
-		return nil, &handler.Error{StatusCode: http.StatusUnauthorized, Message: "Invalid token"}
+		return nil, handler.Unauthorized("Invalid token")
 	}
 
 	data := ui_pages.ProfilData{
@@ -95,20 +94,20 @@ func metricsPageHandler(c *handler.Context) (templ.Component, error) {
 
 	tokenString := c.Cookie("auth_token")
 	if tokenString == "" {
-		return nil, &handler.Error{StatusCode: http.StatusUnauthorized, Message: "Nicht angemeldet"}
+		return nil, handler.Unauthorized("Nicht angemeldet")
 	}
 
 	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (any, error) {
 		return []byte(secret), nil
 	})
 	if err != nil || !token.Valid {
-		return nil, &handler.Error{StatusCode: http.StatusUnauthorized, Message: "Ungültiges oder abgelaufenes Token"}
+		return nil, handler.Unauthorized("Ungültiges oder abgelaufenes Token")
 	}
 
 	claims := token.Claims.(jwt.MapClaims)
 	admin, ok := claims["allowed_admin"].(bool)
 	if !ok || !admin {
-		return nil, &handler.Error{StatusCode: http.StatusForbidden, Message: "Keine Admin-Berechtigung"}
+		return nil, handler.Forbidden("Keine Admin-Berechtigung")
 	}
 
 	return ui_pages.Metrics(), nil
@@ -162,7 +161,7 @@ func imageComponentHandler(c *handler.Context) error {
 	alt := queryParams.Get("alt")
 
 	if src == "" {
-		return &handler.Error{StatusCode: http.StatusNotFound, Message: "Image src is empty"}
+		return handler.NotFound("Image src is empty")
 	}
 
 	imgOpt := ui_components.DefaultImageOptions()
@@ -199,7 +198,7 @@ func imageComponentHandler(c *handler.Context) error {
 func userEditNewHandler(c *handler.Context) error {
 	var u *crud.User
 	if c.Param("uuid") == "" {
-		return &handler.Error{StatusCode: http.StatusNotFound, Message: "User not found"}
+		return handler.NotFound("User not found")
 	} else if c.Param("uuid") == "new" {
 		u = &crud.User{
 			User:      sqlc.User{},
@@ -208,11 +207,11 @@ func userEditNewHandler(c *handler.Context) error {
 	} else {
 		uuid, err := uuid.Parse(c.Param("uuid"))
 		if err != nil {
-			return &handler.Error{StatusCode: http.StatusNotAcceptable, Message: "Invalid UUID"}
+			return handler.NotAcceptable("Invalid UUID")
 		}
 		u, err = crud.GetUser(c.Request.Context(), uuid)
 		if err != nil {
-			return &handler.Error{StatusCode: http.StatusNotFound, Message: "User not found"}
+			return handler.NotFound("User not found")
 		}
 	}
 
@@ -238,7 +237,7 @@ func userEditNewHandlerPost(c *handler.Context) error {
 	groupUuid, errGroupUuid := uuid.Parse(groupUuidStr)
 
 	if err != nil || errGroupUuid != nil {
-		return &handler.Error{StatusCode: http.StatusNotAcceptable, Message: "Invalid UUID"}
+		return handler.NotAcceptable("Invalid UUID")
 	}
 
 	if uuidStr == "new" {
@@ -290,17 +289,17 @@ func userEditNewHandlerPost(c *handler.Context) error {
 func userGroupEditNewHandler(c *handler.Context) error {
 	var ug sqlc.UsersGroup
 	if c.Param("uuid") == "" {
-		return &handler.Error{StatusCode: http.StatusNotFound, Message: "UserGroup not found"}
+		return handler.NotFound("UserGroup not found")
 	} else if c.Param("uuid") == "new" {
 		ug = sqlc.UsersGroup{}
 	} else {
 		uuid, err := uuid.Parse(c.Param("uuid"))
 		if err != nil {
-			return &handler.Error{StatusCode: http.StatusNotAcceptable, Message: "Invalid UUID"}
+			return handler.NotAcceptable("Invalid UUID")
 		}
 		ug, err = crud.GetUsersGroupsMinimal(c.Request.Context(), uuid)
 		if err != nil {
-			return &handler.Error{StatusCode: http.StatusNotFound, Message: "UserGroup not found"}
+			return handler.NotFound("UserGroup not found")
 		}
 	}
 
@@ -318,7 +317,7 @@ func userGroupEditNewHandlerPost(c *handler.Context) error {
 	if uuidStr == "new" {
 		groupUuid, err = uuid.NewV7()
 		if err != nil {
-			return &handler.Error{StatusCode: http.StatusNotAcceptable, Message: "Bad Request"}
+			return handler.NotAcceptable("Bad Request")
 		}
 		_, err = crud.CreateUserGroup(c.Request.Context(), sqlc.CreateUserGroupParams{
 			Name:                  c.FormValue("name"),
@@ -329,12 +328,12 @@ func userGroupEditNewHandlerPost(c *handler.Context) error {
 			AllowedRegattaleitung: c.FormValue("allowed_regattaleitung") == "on",
 		})
 		if err != nil {
-			return &handler.Error{StatusCode: http.StatusInternalServerError, Message: "Error while updating user group"}
+			return handler.InternalError("Error while updating user group")
 		}
 	} else {
 		groupUuid, err = uuid.Parse(uuidStr)
 		if err != nil {
-			return &handler.Error{StatusCode: http.StatusNotAcceptable, Message: "Bad Request"}
+			return handler.NotAcceptable("Bad Request")
 		}
 		err = crud.UpdateUserGroup(c.Request.Context(), groupUuid, sqlc.UpdateUserGroupParams{
 			Name:                  c.FormValue("name"),
@@ -345,7 +344,7 @@ func userGroupEditNewHandlerPost(c *handler.Context) error {
 			AllowedRegattaleitung: c.FormValue("allowed_regattaleitung") == "on",
 		})
 		if err != nil {
-			return &handler.Error{StatusCode: http.StatusInternalServerError, Message: "Error while updating user group"}
+			return handler.InternalError("Error while updating user group")
 		}
 	}
 
@@ -359,7 +358,7 @@ func changePasswordGetHandler(c *handler.Context) error {
 	userUuid, err := uuid.Parse(userUuidStr)
 	user, err := crud.GetUser(c.Request.Context(), userUuid)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusNotFound, Message: "User not found"}
+		return handler.NotFound("User not found")
 	}
 
 	templ.Handler(ui_pages.ChangePasswordDialogBody(*user, "")).ServeHTTP(c.Writer, c.Request)
@@ -371,7 +370,7 @@ func changePasswordPostHandler(c *handler.Context) error {
 	userUuid, err := uuid.Parse(userUuidStr)
 	user, err := crud.GetUser(c.Request.Context(), userUuid)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusNotFound, Message: "User not found"}
+		return handler.NotFound("User not found")
 	}
 
 	currentPassword := c.FormValue("current_password")
@@ -395,7 +394,7 @@ func changePasswordPostHandler(c *handler.Context) error {
 
 	err = crud.UpdatePassword(c.Request.Context(), userUuid, newPassword1)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusInternalServerError, Message: "Error while updating password"}
+		return handler.InternalError("Error while updating password")
 	}
 
 	c.Writer.Header().Set("HX-Redirect", "/internal/profil")
@@ -406,28 +405,26 @@ func changePasswordPostHandler(c *handler.Context) error {
 func drvUploadPostHandler(c *handler.Context) error {
 	err := api_v1.DrvMeldungUpload(c)
 	if err != nil {
-		templ.Handler(ui_pages.InternalRegattaleitungDrvFileUpload(fmt.Sprintf("Ein Fehler ist aufgetreten! Bitte versuche es erneut. %s", err.Error()))).ServeHTTP(c.Writer, c.Request)
-		return nil
+		return handler.BadRequest(fmt.Sprintf("Ein Fehler ist aufgetreten! Bitte versuche es erneut."))
 	}
 
-	templ.Handler(ui_pages.InternalRegattaleitungDrvFileUpload("Upload erfolgreich!")).ServeHTTP(c.Writer, c.Request)
-	return nil
+	return handler.OK("Upload erfolgreich!")
 }
 
 func setzungsVerwaltungLosungPostHandler(c *handler.Context) error {
 	err := api_v1.SetzungsLosung(c)
 	if err != nil {
-		return toastReturn(c, fmt.Sprintf("Ein Fehler ist aufgetreten: %s", err.Error()), ui_components.Error)
+		return handler.BadRequest(fmt.Sprintf("Ein Fehler ist aufgetreten: %s", err.Error()))
 	}
-	return toastReturn(c, "Losung erfolgreich!", ui_components.Success)
+	return handler.OK("Losung erfolgreich!")
 }
 
 func setzungsVerwaltungLosungDeleteHandler(c *handler.Context) error {
 	err := api_v1.ResetSetzung(c)
 	if err != nil {
-		return toastReturn(c, fmt.Sprintf("Ein Fehler ist aufgetreten: %s", err.Error()), ui_components.Error)
+		return handler.BadRequest(fmt.Sprintf("Ein Fehler ist aufgetreten: %s", err.Error()))
 	}
-	return toastReturn(c, "Setzung erfolgreich zurückgesetzt!", ui_components.Success)
+	return handler.OK("Setzung erfolgreich zurückgesetzt!")
 }
 
 func setzungsVerwaltungAenderungRennenPostHandler(c *handler.Context) error {
@@ -439,32 +436,35 @@ func setzungsVerwaltungAenderungRennenPostHandler(c *handler.Context) error {
 
 	rUuid, err = uuid.Parse(c.Param("param"))
 	if err != nil {
-		return toastReturn(c, "406 - Invalid UUID", ui_components.Error)
+		return handler.NotAcceptable("Invalid UUID")
 	}
 
 	rennen, err = crud.GetRennen(c.Request.Context(), rUuid)
 	if err != nil {
-		return toastReturn(c, "404 - Rennen nicht gefunden", ui_components.Error)
+		return handler.NotFound("Rennen nicht gefunden")
 	}
 
 	payloadStr := c.FormValue("params")
 	payload := make(map[string]any)
 	err = json.Unmarshal([]byte(payloadStr), &payload)
 	if err != nil {
-		return toastReturn(c, "406 - Invalid JSON", ui_components.Error)
+		return handler.NotAcceptable("Invalid JSON")
 	}
 
-	meldOrderLs := payload["order"].([]any)
+	meldOrderLs, ok := payload["order"].([]any)
+	if !ok {
+		return handler.BadRequest("Order nicht gefunden")
+	}
 	abteilungParam := payload["abteilung"]
 	if abteilungParam == nil {
-		return toastReturn(c, "406 - Abteilung nicht gefunden", ui_components.Error)
+		return handler.NotAcceptable("Abteilung nicht gefunden")
 	}
 	targetAbteilung := int32(abteilungParam.(float64))
 
 	for i, m := range meldOrderLs {
 		mUuid, err := uuid.Parse(m.(string))
 		if err != nil {
-			return toastReturn(c, "406 - Invalid UUID", ui_components.Error)
+			return handler.NotAcceptable("Invalid UUID")
 		}
 
 		for _, meldung := range rennen.Meldungen {
@@ -477,21 +477,21 @@ func setzungsVerwaltungAenderungRennenPostHandler(c *handler.Context) error {
 					Bahn:      bahn,
 				})
 				if err != nil {
-					return toastReturn(c, "500 - Error while updating meldung setzung", ui_components.Error)
+					return handler.InternalError("Error while updating meldung setzung")
 				}
 				continue
 			}
 		}
 	}
 
-	return toastReturn(c, "Setzung erfolgreich!", ui_components.Success)
+	return handler.OK("Setzung erfolgreich!")
 }
 
 func pausenNewHandler(c *handler.Context) error {
 	nachRennenUuidStr := c.Param("nach_rennen_uuid")
 	nachRennenUuid, err := uuid.Parse(nachRennenUuidStr)
 	if err != nil {
-		return toastReturn(c, "406 - Invalid UUID", ui_components.Error)
+		return handler.NotAcceptable("Invalid UUID")
 	}
 	p := crud.Pause{Pause: sqlc.Pause{ID: int32(-2), NachRennenUuid: nachRennenUuid, Laenge: 45}}
 
@@ -504,19 +504,19 @@ func pausenPostHandler(c *handler.Context) error {
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		slog.Error(fmt.Sprintf("ID: %s - Error: %s", idStr, err.Error()))
-		return toastReturn(c, "406 - Invalid ID", ui_components.Error)
+		return handler.NotAcceptable("Invalid ID")
 	}
 	laengeStr := c.FormValue("laenge")
 	laenge, err := strconv.Atoi(laengeStr)
 	if err != nil || laenge < 0 || laenge > 120 {
 		slog.Error(fmt.Sprintf("Laenge: %s - Error: %s", laengeStr, err.Error()))
-		return toastReturn(c, "406 - Invalid laenge", ui_components.Error)
+		return handler.NotAcceptable("Invalid laenge")
 	}
 	nachRennenUuidStr := c.FormValue("nach_rennen_uuid")
 	nachRennenUuid, err := uuid.Parse(nachRennenUuidStr)
 	if err != nil {
 		slog.Error(fmt.Sprintf("UUID: %s - Error: %s", nachRennenUuidStr, err.Error()))
-		return toastReturn(c, "406 - Invalid UUID", ui_components.Error)
+		return handler.NotAcceptable("Invalid UUID")
 	}
 
 	if id == -2 {
@@ -525,7 +525,7 @@ func pausenPostHandler(c *handler.Context) error {
 			Laenge:         int32(laenge),
 		})
 		if err != nil {
-			return toastReturn(c, "500 - Error while creating pause", ui_components.Error)
+			return handler.InternalError("Error while creating pause")
 		}
 
 		templ.Handler(ui_pages.InternalRegattaleitungPausen()).ServeHTTP(c.Writer, c.Request)
@@ -536,7 +536,7 @@ func pausenPostHandler(c *handler.Context) error {
 			Laenge:         int32(laenge),
 		})
 		if err != nil {
-			return toastReturn(c, "500 - Error while updating pause", ui_components.Error)
+			return handler.InternalError("Error while updating pause")
 		}
 
 		templ.Handler(ui_pages.InternalRegattaleitungPausen()).ServeHTTP(c.Writer, c.Request)
@@ -549,12 +549,12 @@ func pausenDeleteHandler(c *handler.Context) error {
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		slog.Error(fmt.Sprintf("ID: %s - Error: %s", idStr, err.Error()))
-		return toastReturn(c, "406 - Invalid ID", ui_components.Error)
+		return handler.NotAcceptable("Invalid ID")
 	}
 
 	err = crud.DeletePause(c.Request.Context(), int32(id))
 	if err != nil {
-		return toastReturn(c, "500 - Error while deleting pause", ui_components.Error)
+		return handler.InternalError("Error while deleting pause")
 	}
 
 	templ.Handler(ui_pages.InternalRegattaleitungPausen()).ServeHTTP(c.Writer, c.Request)
@@ -565,12 +565,12 @@ func zeitplanPostHandler(c *handler.Context) error {
 	startzeit_saStr := c.FormValue("startzeit_sa")
 	startzeit_sa, err := strconv.Atoi(startzeit_saStr)
 	if err != nil || startzeit_sa < 0 || startzeit_sa > 24 {
-		return toastReturn(c, "406 - Invalid startzeit_sa", ui_components.Error)
+		return handler.NotAcceptable("Invalid startzeit_sa")
 	}
 	startzeit_soStr := c.FormValue("startzeit_so")
 	startzeit_so, err := strconv.Atoi(startzeit_soStr)
 	if err != nil || startzeit_so < 0 || startzeit_so > 24 {
-		return toastReturn(c, "406 - Invalid startzeit_so", ui_components.Error)
+		return handler.NotAcceptable("Invalid startzeit_so")
 	}
 
 	zeitplan := service.SetZeitplanParams{
@@ -580,32 +580,28 @@ func zeitplanPostHandler(c *handler.Context) error {
 
 	err = service.SetZeitplan(c.Request.Context(), zeitplan)
 	if err != nil {
-		return toastReturn(c, "500 - Error while creating zeitplan", ui_components.Error)
+		return handler.InternalError("Error while creating zeitplan")
 	}
 
-	return toastReturn(c, "Zeitplan erstellt", ui_components.Success)
+	return handler.OK("Zeitplan erstellt")
 }
 
 func startnummernVerteilenPostHandler(c *handler.Context) error {
 	err := service.SetStartnummern(c.Request.Context())
 	if err != nil {
-		var he *handler.Error
-		if errors.As(err, &he) {
-			return toastReturn(c, fmt.Sprintf("%d - %s", he.StatusCode, he.Message), ui_components.Error)
-		}
-		return toastReturn(c, "500 - Error while setting startnummern", ui_components.Error)
+		return handler.InternalError(fmt.Sprintf("Error while setting startnummern: %s", err.Error()))
 	}
 
-	return toastReturn(c, "Startnummern erfolgreich verteilt!", ui_components.Success)
+	return handler.OK("Startnummern erfolgreich verteilt!")
 }
 
 func startnummernVerteilenDeleteHandler(c *handler.Context) error {
 	err := service.ResetStartnummern(c.Request.Context())
 	if err != nil {
-		return toastReturn(c, "500 - Error while setting startnummern", ui_components.Error)
+		return handler.InternalError("Error while resetting startnummern")
 	}
 
-	return toastReturn(c, "Startnummern erfolgreich zurückgesetzt!", ui_components.Success)
+	return handler.OK("Startnummern erfolgreich zurückgesetzt!")
 }
 
 func pdfMeldeergebnisPostHandler(c *handler.Context) error {
@@ -618,7 +614,7 @@ func pdfMeldeergebnisPostHandler(c *handler.Context) error {
 	)
 	if err != nil {
 		os.Remove(fmt.Sprintf("%smeldeergebnis/%s", config.C.Paths.FilesDir, fileName))
-		return toastReturn(c, fmt.Sprintf("Fehler während PDF Erstellung: %s", err.Error()), ui_components.Error)
+		return handler.InternalError(fmt.Sprintf("Fehler während PDF Erstellung: %s", err.Error()))
 	}
 
 	templ.Handler(ui_pages.InternalRegattaleitungPdfMeldeergebnis(true)).ServeHTTP(c.Writer, c.Request)
@@ -629,30 +625,30 @@ func abmeldungDeleteHandler(c *handler.Context) error {
 	vereinUuidStr := c.Param("v_uuid")
 	vereinUuid, err := uuid.Parse(vereinUuidStr)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusNotAcceptable, Message: "Invalid UUID"}
+		return handler.NotAcceptable("Invalid UUID")
 	}
 	meldungUuidStr := c.Param("m_uuid")
 	meldungUuid, err := uuid.Parse(meldungUuidStr)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusNotAcceptable, Message: "Invalid UUID"}
+		return handler.NotAcceptable("Invalid UUID")
 	}
 
 	verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusInternalServerError, Message: "Error while loading verein"}
+		return handler.InternalError("Error while loading verein")
 	}
 	meldung, err := crud.GetMeldung(c.Request.Context(), meldungUuid)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusInternalServerError, Message: "Error while loading meldung"}
+		return handler.InternalError("Error while loading meldung")
 	}
 
 	if meldung.VereinUuid != verein.Uuid {
-		return &handler.Error{StatusCode: http.StatusNotAcceptable, Message: "Invalid UUID"}
+		return handler.NotAcceptable("Invalid UUID")
 	}
 
 	err = crud.Abmeldung(c.Request.Context(), meldungUuid)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusInternalServerError, Message: "Error while deleting meldung"}
+		return handler.InternalError("Error while deleting meldung")
 	}
 
 	c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("/internal/regattabuero/%s/abmeldung", verein.Uuid))
@@ -664,29 +660,29 @@ func ummeldungPostHandler(c *handler.Context) error {
 	vereinUuidStr := c.Param("v_uuid")
 	vereinUuid, err := uuid.Parse(vereinUuidStr)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusNotAcceptable, Message: "Invalid UUID"}
+		return handler.NotAcceptable("Invalid UUID")
 	}
 	meldungUuidStr := c.Param("m_uuid")
 	meldungUuid, err := uuid.Parse(meldungUuidStr)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusNotAcceptable, Message: "Invalid UUID"}
+		return handler.NotAcceptable("Invalid UUID")
 	}
 
 	verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusInternalServerError, Message: "Error while loading verein"}
+		return handler.InternalError("Error while loading verein")
 	}
 	meldung, err := crud.GetMeldung(c.Request.Context(), meldungUuid)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusInternalServerError, Message: "Error while loading meldung"}
+		return handler.InternalError("Error while loading meldung")
 	}
 
 	if meldung.VereinUuid != verein.Uuid {
-		return &handler.Error{StatusCode: http.StatusNotAcceptable, Message: "Invalid UUID"}
+		return handler.NotAcceptable("Invalid UUID")
 	}
 
 	if err := c.Request.ParseForm(); err != nil {
-		return &handler.Error{StatusCode: http.StatusBadRequest, Message: "Error parsing form"}
+		return handler.BadRequest("Error parsing form")
 	}
 
 	for i := range meldung.Athleten {
@@ -696,7 +692,7 @@ func ummeldungPostHandler(c *handler.Context) error {
 		}
 		athUuid, err := uuid.Parse(athUuidStr)
 		if err != nil {
-			return &handler.Error{StatusCode: http.StatusBadRequest, Message: fmt.Sprintf("Invalid athlete UUID at position %d", i)}
+			return handler.BadRequest(fmt.Sprintf("Invalid athlete UUID at position %d", i))
 		}
 		if athUuid == meldung.Athleten[i].Uuid {
 			continue
@@ -708,13 +704,13 @@ func ummeldungPostHandler(c *handler.Context) error {
 			AthletUuid:  athUuid,
 		})
 		if err != nil {
-			return &handler.Error{StatusCode: http.StatusInternalServerError, Message: fmt.Sprintf("Error updating athlete at position %d", i)}
+			return handler.InternalError(fmt.Sprintf("Error updating athlete at position %d", i))
 		}
 	}
 
 	meldungen, err := crud.GetAllMeldungForVerein(c.Request.Context(), verein.Uuid)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusInternalServerError, Message: "Error while loading meldungen"}
+		return handler.InternalError("Error while loading meldungen")
 	}
 
 	c.Writer.Header().Set("HX-Push-Url", fmt.Sprintf("/internal/regattabuero/%s/ummeldung", verein.Uuid))
@@ -727,16 +723,16 @@ func nachmeldungPostHandler(c *handler.Context) error {
 	rennenUuidStr := c.Param("r_uuid")
 	rennenUuid, err := uuid.Parse(rennenUuidStr)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusNotAcceptable, Message: "Invalid UUID"}
+		return handler.NotAcceptable("Invalid UUID")
 	}
 
 	rennen, err := crud.GetRennen(c.Request.Context(), rennenUuid)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusInternalServerError, Message: "Error while loading rennen"}
+		return handler.InternalError("Error while loading rennen")
 	}
 
 	if err := c.Request.ParseForm(); err != nil {
-		return &handler.Error{StatusCode: http.StatusBadRequest, Message: "Error parsing form"}
+		return handler.BadRequest("Error parsing form")
 	}
 
 	numAthletes, stmRequired := rennen.GetTeilnehmerMeldeParams()
@@ -771,11 +767,11 @@ func nachmeldungPostHandler(c *handler.Context) error {
 
 	m, err := api_v1.CreateNachmeldung(c.Request.Context(), params)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusInternalServerError, Message: "Error creating nachmeldung: " + err.Error()}
+		return handler.InternalError("Error creating nachmeldung: " + err.Error())
 	}
 	meldung, err := crud.GetMeldung(c.Request.Context(), m.Uuid)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusInternalServerError, Message: "Error while loading meldung"}
+		return handler.InternalError("Error while loading meldung")
 	}
 
 	c.Writer.Header().Set("HX-Push-Url", fmt.Sprintf("/internal/regattabuero/%s/nachmeldung/success/%s", vereinUuidStr, m.Uuid.String()))
@@ -787,7 +783,7 @@ func rennenTabHandler(c *handler.Context) error {
 	wettkampfStr := c.Param("wettkampf")
 	wettkampf, err := crud.WettkampfFromString(wettkampfStr)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusNotAcceptable, Message: "Invalid UUID"}
+		return handler.NotAcceptable("Invalid UUID")
 	}
 
 	showEmpty := c.GetQueryParam("show_empty") == "true"
@@ -835,15 +831,15 @@ func waagePostHandler(c *handler.Context) error {
 	vereinUuidStr := c.Param("v_uuid")
 	vereinUuid, err := uuid.Parse(vereinUuidStr)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusNotAcceptable, Message: "Invalid UUID"}
+		return handler.NotAcceptable("Invalid UUID")
 	}
 	verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusNotFound, Message: "Verein nicht gefunden"}
+		return handler.NotFound("Verein nicht gefunden")
 	}
 	athleten, err := crud.GetAllAthletenForVereinWaage(c.Request.Context(), verein.Uuid)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusInternalServerError, Message: "Error while loading athleten"}
+		return handler.InternalError("Error while loading athleten")
 	}
 
 	for i := range athleten {

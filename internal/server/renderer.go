@@ -64,12 +64,7 @@ func baseLayoutHandler(url string, getPage PageFunc) {
 			ctx.SetPathParams(p.(map[string]string))
 		}
 		if err := wrapped(ctx); err != nil {
-			if he, ok := err.(*handler.Error); ok {
-				w.WriteHeader(he.StatusCode)
-				w.Write([]byte(he.Message))
-			} else {
-				http.Error(w, err.Error(), 500)
-			}
+			handleAppError(ctx, err)
 		}
 	})
 }
@@ -102,12 +97,7 @@ func compHandler(url string, comp templ.Component) {
 			ctx.SetPathParams(p.(map[string]string))
 		}
 		if err := wrapped(ctx); err != nil {
-			if he, ok := err.(*handler.Error); ok {
-				w.WriteHeader(he.StatusCode)
-				w.Write([]byte(he.Message))
-			} else {
-				http.Error(w, err.Error(), 500)
-			}
+			handleAppError(ctx, err)
 		}
 	})
 }

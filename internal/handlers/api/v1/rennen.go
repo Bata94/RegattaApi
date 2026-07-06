@@ -1,8 +1,6 @@
 package api_v1
 
 import (
-	"net/http"
-
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/bata94/RegattaApi/internal/sqlc"
@@ -13,7 +11,7 @@ import (
 func GetRennen(c *handler.Context) error {
 	uuid, err := c.GetUUID("uuid")
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusBadRequest, Message: err.Error()}
+		return handler.BadRequest(err.Error())
 	}
 
 	r, err := crud.GetRennen(c.Request.Context(), uuid)
@@ -41,7 +39,7 @@ func GetAllRennen(c *handler.Context) error {
 	}
 
 	if getAthleten && !getMeld {
-		return &handler.Error{StatusCode: http.StatusBadRequest, Message: "Query param getAthleten requires getMeldungen to be true"}
+		return handler.BadRequest("Query param getAthleten requires getMeldungen to be true")
 	}
 
 	searchParams := crud.GetAllRennenParams{

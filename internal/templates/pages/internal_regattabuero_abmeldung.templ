@@ -202,7 +202,7 @@ templ InternalRegattabueroUmmeldungMeldung(v crud.Verein, m crud.Meldung, athlet
           <p class="text-xl">Startnummer: {m.StartNummer} Verein: {v.Name}</p>
           <p class="text-xl">Teilnehmer:</p>
           for i, a := range m.Athleten {
-            @ui_components.DropDown(fmt.Sprintf("athleten_%d", i), fmt.Sprintf("Athlet %d", i+1), athletLabels, athletValues, a.Uuid.String(), false)
+            @ui_components.DropDown(fmt.Sprintf("athleten_%d", i), fmt.Sprintf("Athlet %d", i+1), athletLabels, athletValues, a.Uuid.String(), false, "")
           }
         </div>
         <div class="flex flex-row gap-4">
@@ -302,11 +302,11 @@ templ InternalRegattabueroNachmeldungMeldung(v crud.Verein, r crud.Rennen, athle
             <div class="divider m-0 p-0"/>
             <p class="text-xl">Teilnehmer:</p>
             for i := range numAthletes {
-              @ui_components.DropDown(fmt.Sprintf("athleten_%d", i), fmt.Sprintf("Ruderer %d:", i+1), athletLabels, athletValues, "", true)
+              @ui_components.DropDown(fmt.Sprintf("athleten_%d", i), fmt.Sprintf("Ruderer %d:", i+1), athletLabels, athletValues, "", true, "")
             }
 
             if stmRequired {
-              @ui_components.DropDown("stm", "Stm.:", athletLabels, athletValues, "", true)
+              @ui_components.DropDown("stm", "Stm.:", athletLabels, athletValues, "", true, "")
             }
 
             @ui_components.Toggle("doppeltes_meldentgeld_befreiung", "Befreiung vom doppelten Meldeentgeld", false, false)

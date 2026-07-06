@@ -3,7 +3,6 @@ package middleware
 import (
 	"fmt"
 	"log/slog"
-	"net/http"
 	"strings"
 
 	"github.com/bata94/RegattaApi/internal/config"
@@ -26,11 +25,11 @@ func Auth() Middleware {
 
 			if tokenString == "" {
 				slog.Warn(fmt.Sprintf("Auth middleware: missing token for %s %s", c.Method(), c.Path()))
-				return &handler.Error{StatusCode: http.StatusUnauthorized, Message: "Missing authentication token"}
+				return handler.Unauthorized("Missing authentication token")
 			}
 
 			if strings.HasPrefix(tokenString, "Bearer ") {
-				return &handler.Error{StatusCode: http.StatusUnauthorized, Message: "Invalid token format"}
+				return handler.Unauthorized("Invalid token format")
 			}
 
 			token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
@@ -39,7 +38,7 @@ func Auth() Middleware {
 
 			if err != nil || !token.Valid {
 				slog.Warn(fmt.Sprintf("Auth middleware: invalid token for %s %s: %v", c.Method(), c.Path(), err))
-				return &handler.Error{StatusCode: http.StatusUnauthorized, Message: "Invalid or expired token"}
+				return handler.Unauthorized("Invalid or expired token")
 			}
 
 			extractAuthData(c, token)

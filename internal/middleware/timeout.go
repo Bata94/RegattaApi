@@ -21,7 +21,7 @@ func Timeout(timeout time.Duration, message string) Middleware {
 				return err
 			case <-time.After(timeout):
 				c.Status(http.StatusServiceUnavailable)
-				return &handler.Error{StatusCode: http.StatusServiceUnavailable, Message: message}
+				return handler.InternalError(message)
 			}
 		}
 	}

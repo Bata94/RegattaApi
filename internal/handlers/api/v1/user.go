@@ -1,8 +1,6 @@
 package api_v1
 
 import (
-	"net/http"
-
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handler"
 )
@@ -19,7 +17,7 @@ func GetAllUsers(c *handler.Context) error {
 func GetUser(c *handler.Context) error {
 	uuid, err := c.GetUUID("uuid")
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusBadRequest, Message: err.Error()}
+		return handler.BadRequest(err.Error())
 	}
 
 	u, err := crud.GetUser(c.Request.Context(), uuid)
@@ -33,7 +31,7 @@ func GetUser(c *handler.Context) error {
 func GetUserByName(c *handler.Context) error {
 	name := c.Param("name")
 	if name == "" {
-		return &handler.Error{StatusCode: http.StatusBadRequest, Message: "name parameter required"}
+		return handler.BadRequest("name parameter required")
 	}
 
 	u, err := crud.GetUserByUsername(c.Request.Context(), name)
@@ -71,7 +69,7 @@ func GetAllUsersGroups(c *handler.Context) error {
 func GetUsersGroup(c *handler.Context) error {
 	uuid, err := c.GetUUID("uuid")
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusBadRequest, Message: err.Error()}
+		return handler.BadRequest(err.Error())
 	}
 
 	ug, err := crud.GetUsersGroup(c.Request.Context(), uuid)
@@ -85,7 +83,7 @@ func GetUsersGroup(c *handler.Context) error {
 func GetUsersGroupByName(c *handler.Context) error {
 	name := c.Param("name")
 	if name == "" {
-		return &handler.Error{StatusCode: http.StatusBadRequest, Message: "name parameter required"}
+		return handler.BadRequest("name parameter required")
 	}
 
 	ug, err := crud.GetUsersGroupByName(c.Request.Context(), name)

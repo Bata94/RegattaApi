@@ -2,7 +2,6 @@ package api_v1
 
 import (
 	"log/slog"
-	"net/http"
 
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handler"
@@ -14,21 +13,21 @@ type AbmeldungsParams struct {
 }
 
 func StartnummernAusgabe(c *handler.Context) error {
-	return &handler.Error{StatusCode: http.StatusNotFound, Message: "Not found"}
+	return handler.NotFound("Not found")
 }
 
 func StartnummernWechsel(c *handler.Context) error {
-	return &handler.Error{StatusCode: http.StatusNotFound, Message: "Not found"}
+	return handler.NotFound("Not found")
 }
 
 func KasseEinzahlung(c *handler.Context) error {
-	return &handler.Error{StatusCode: http.StatusNotFound, Message: "Not found"}
+	return handler.NotFound("Not found")
 }
 
 func KasseCreateRechnungPDF(c *handler.Context) error {
 	uuid, err := c.GetUUID("uuid")
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusBadRequest, Message: err.Error()}
+		return handler.BadRequest(err.Error())
 	}
 
 	v, err := crud.GetVereinMinimal(c.Request.Context(), uuid)
@@ -115,7 +114,7 @@ func KasseCreateRechnungAllVereine(c *handler.Context) error {
 func KasseCreateRechnungHTML(c *handler.Context) error {
 	uuid, err := c.GetUUID("uuid")
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusBadRequest, Message: err.Error()}
+		return handler.BadRequest(err.Error())
 	}
 
 	v, err := crud.GetVereinMinimal(c.Request.Context(), uuid)
@@ -163,7 +162,7 @@ func KasseCreateRechnungHTML(c *handler.Context) error {
 	}
 
 	if len(entries) == 0 {
-		return &handler.Error{StatusCode: http.StatusNotFound, Message: "Keine Meldungen gefunden!"}
+		return handler.NotFound("Keine Meldungen gefunden!")
 	}
 
 	err = crud.CreateRechnung(c.Request.Context(), reNr, v.Uuid, sumPreis)

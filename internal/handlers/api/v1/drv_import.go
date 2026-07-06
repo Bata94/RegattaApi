@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -26,7 +25,7 @@ const writeFilePerms os.FileMode = 0o666
 func DrvMeldungUpload(c *handler.Context) error {
 	filename, content, err := c.FormFile("file")
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusBadRequest, Message: err.Error()}
+		return handler.BadRequest(err.Error())
 	}
 
 	fmt.Println("Uploaded:", filename)
@@ -34,18 +33,18 @@ func DrvMeldungUpload(c *handler.Context) error {
 
 	err = os.MkdirAll(uploadsDir, os.ModePerm)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusInternalServerError, Message: "Error while creating uploads directory"}
+		return handler.InternalError("Error while creating uploads directory")
 	}
 
 	dest := fmt.Sprintf("%s%s_%s.json", uploadsDir, "DrvMeldung", time.Now().Format("2006-01-02_15-04-05"))
 	err = c.SaveFile(dest, content)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusInternalServerError, Message: err.Error()}
+		return handler.InternalError(err.Error())
 	}
 
 	err = ImportDrvJson(c.Request.Context(), dest)
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusInternalServerError, Message: "An Error occurred while importing the JSON File! If you directly downloaded the File from DRV and uploaded it, without modifying it, please contact the Admin! Details: " + err.Error()}
+		return handler.InternalError("An Error occurred while importing the JSON File! If you directly downloaded the File from DRV and uploaded it, without modifying it, please contact the Admin! Details: " + err.Error())
 	}
 
 	if c.IsHtmxRequest() {
@@ -419,7 +418,7 @@ func ImportDrvJson(ctx context.Context, filePath string) error {
 				}
 				if aUuid == uuid.Nil {
 					fmt.Println( "uuid is still nil", aUuid)
-					return &handler.Error{StatusCode: http.StatusInternalServerError, Message: "Failed to find athlete UUID"}
+					return handler.InternalError("Failed to find athlete UUID")
 				}
 			}
 			var rolle sqlc.Rolle

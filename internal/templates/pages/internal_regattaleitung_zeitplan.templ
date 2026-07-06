@@ -50,8 +50,8 @@ templ InternalRegattaleitungZeitplan() {
             Startzeit in vollen Stunden (z.B. 9 -> 09:00)
           </h4>
           <div class="form-control">
-            @ui_components.LineInput("startzeit_sa", "Samstag", "9", "number", true)
-            @ui_components.LineInput("startzeit_so", "Sonntag", "9", "number", true)
+            @ui_components.LineInput("startzeit_sa", "Samstag", "9", "number", true, "")
+            @ui_components.LineInput("startzeit_so", "Sonntag", "9", "number", true, "")
           </div>
           <div class="w-fit mx-auto">
             @ui_components.SubmitButton("Zeitplan erstellen", ui_components.Success)

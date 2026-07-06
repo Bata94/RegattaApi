@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"fmt"
-	"net/http"
 	"strconv"
 	"sync"
 	"time"
@@ -63,7 +62,7 @@ func RateLimit() Middleware {
 				retryAfter := 1
 				c.Writer.Header().Set("Retry-After", strconv.Itoa(retryAfter))
 
-				return &handler.Error{StatusCode: http.StatusTooManyRequests, Message: "Too many requests"}
+				return handler.InternalError("Too many requests")
 			}
 
 			c.Writer.Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", globalLimiter.burst))

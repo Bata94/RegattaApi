@@ -43,7 +43,7 @@ templ InternalRegattaleitungDrvFileUpload(msg string) {
       hx-target="main"
       enctype="multipart/form-data"
     >
-      @ui_components.FileUpload("file", "DRV-Meldungsdatei", true)
+      @ui_components.FileUpload("file", "DRV-Meldungsdatei", true, "")
 
       @ui_components.SubmitButton("Hochladen", ui_components.Success)
     </form>

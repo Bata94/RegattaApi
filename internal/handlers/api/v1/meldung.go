@@ -3,7 +3,6 @@ package api_v1
 import (
 	"context"
 	"log/slog"
-	"net/http"
 	"strconv"
 
 	"github.com/bata94/RegattaApi/internal/crud"
@@ -28,7 +27,7 @@ func GetAllMeldung(c *handler.Context) error {
 func GetMeldung(c *handler.Context) error {
 	meldungUUID, err := c.GetUUID("uuid")
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusBadRequest, Message: err.Error()}
+		return handler.BadRequest(err.Error())
 	}
 
 	m, err := crud.GetMeldung(c.Request.Context(), meldungUUID)
@@ -281,7 +280,7 @@ func UpdateSetzungBatch(c *handler.Context) error {
 func GetAllMeldungForVerein(c *handler.Context) error {
 	vereinUuid, err := c.GetUUID("uuid")
 	if err != nil {
-		return &handler.Error{StatusCode: http.StatusBadRequest, Message: err.Error()}
+		return handler.BadRequest(err.Error())
 	}
 
 	meldungen, err := crud.GetAllMeldungForVerein(c.Request.Context(), vereinUuid)

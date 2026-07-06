@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"strconv"
 	"time"
 
@@ -93,11 +92,11 @@ func GenerateEndZeit(c *handler.Context) error {
 
 	if len(ziels) == 0 {
 		slog.Debug("0 Ziels")
-		return &handler.Error{StatusCode: http.StatusBadRequest, Message: "No ziels"}
+		return handler.BadRequest("No ziels")
 	}
 	if len(starts) == 0 {
 		slog.Debug("0 Starts")
-		return &handler.Error{StatusCode: http.StatusBadRequest, Message: "No starts"}
+		return handler.BadRequest("No starts")
 	}
 
 	for _, z := range ziels {
@@ -118,7 +117,7 @@ func GenerateEndZeit(c *handler.Context) error {
 				}
 				if meld.Uuid == uuid.Nil {
 					slog.Warn("GetMeldungByStartNrUndTag meld.Uuid is nil")
-					return &handler.Error{StatusCode: http.StatusBadRequest, Message: "Meldung not found"}
+					return handler.BadRequest("Meldung not found")
 				}
 
 				err = crud.CreateZeitnahmeErgebnis(c.Request.Context(), s, z, meld)

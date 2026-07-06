@@ -3,7 +3,6 @@ package api_v1
 import (
 	"fmt"
 	"math/rand/v2"
-	"net/http"
 
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handler"
@@ -142,7 +141,7 @@ func ResetSetzung(c *handler.Context) error {
 
 func SetStartnummern(c *handler.Context) error {
 	if err := service.SetStartnummern(c.Request.Context()); err != nil {
-		return &handler.Error{StatusCode: http.StatusInternalServerError, Message: fmt.Sprintf( "Error while setting startnummern: %s", err.Error())}
+		return handler.InternalError(fmt.Sprintf( "Error while setting startnummern: %s", err.Error()))
 	}
 
 	return c.JSON("Startnummern vergeben!")
