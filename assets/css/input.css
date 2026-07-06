@@ -45,3 +45,8 @@ html {
 .htmx-request.htmx-indicator {
   display: inline;
 }
+
+.input-error { @apply border-error; }
+.select-error { @apply border-error; }
+.file-input-error { @apply border-error; }
+.text-error { @apply text-error; }

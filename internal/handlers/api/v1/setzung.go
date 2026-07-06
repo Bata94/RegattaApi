@@ -6,7 +6,6 @@ import (
 
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handler"
-	"github.com/bata94/RegattaApi/internal/handlers/api"
 	"github.com/bata94/RegattaApi/internal/service"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 )
@@ -25,9 +24,8 @@ func SetzungsLosung(c *handler.Context) error {
 		return err
 	}
 	if check {
-		retErr := &api.BAD_REQUEST
-		retErr.Msg = "Setzung bereits erledigt! Vorher reseten um zu wiederholen!"
-		return retErr}
+		return handler.BadRequest("Setzung bereits erledigt! Vorher reseten um zu wiederholen!")
+	}
 
 	allRennen, err := crud.GetAllRennen(c.Request.Context(), crud.GetAllRennenParams{
 		GetMeldungen:  true,

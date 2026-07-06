@@ -52,3 +52,4 @@ caddy/
 bin/
 **/*.fiber.gz
 public/
+RegattaApi

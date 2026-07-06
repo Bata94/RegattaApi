@@ -18,13 +18,6 @@ func toAppError(err error) *handler.AppError {
 	switch e := err.(type) {
 	case *handler.AppError:
 		return e
-	case *handler.Error:
-		slog.Warn("deprecated handler.Error returned", "status", e.StatusCode, "msg", e.Message)
-		return &handler.AppError{
-			Code:       e.StatusCode,
-			StatusCode: e.StatusCode,
-			Message:    e.Message,
-		}
 	default:
 		slog.Error("unhandled error type", "error", err)
 		return handler.InternalError("Ein interner Fehler ist aufgetreten")

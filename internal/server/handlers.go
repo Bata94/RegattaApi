@@ -117,23 +117,13 @@ func loginPostHandler(c *handler.Context) error {
 	username := c.FormValue("username")
 	password := c.FormValue("password")
 
-	isHTMX := c.IsHtmxRequest()
-
 	if username == "" || password == "" {
-		if isHTMX {
-			templ.Handler(ui_pages.Login("Benutzername und Passwort erforderlich")).ServeHTTP(c.Writer, c.Request)
-			return nil
-		}
-		return c.Redirect("/login", http.StatusSeeOther)
+		return handler.BadRequest("Benutzername und Passwort erforderlich").WithForm(ui_pages.Login(""))
 	}
 
 	u, err := crud.AuthLogin(c.Request.Context(), crud.LoginParams{Username: username, Password: password})
 	if err != nil {
-		if isHTMX {
-			templ.Handler(ui_pages.Login("Benutzername oder Passwort ist falsch")).ServeHTTP(c.Writer, c.Request)
-			return nil
-		}
-		return c.Redirect("/login", http.StatusSeeOther)
+		return handler.BadRequest("Benutzername oder Passwort ist falsch").WithForm(ui_pages.Login(""))
 	}
 
 	secure := c.Request.TLS != nil
@@ -143,16 +133,13 @@ func loginPostHandler(c *handler.Context) error {
 		MaxAge:   72 * 60 * 60,
 		HttpOnly: true,
 		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
 		Path:     "/",
 	})
 
-	if isHTMX {
-		c.Writer.Header().Set("HX-Redirect", "/")
-		c.Writer.WriteHeader(http.StatusOK)
-		return nil
-	}
-
-	return c.Redirect("/", http.StatusSeeOther)
+	c.Writer.Header().Set("HX-Redirect", "/")
+	c.Writer.WriteHeader(http.StatusOK)
+	return nil
 }
 
 func imageComponentHandler(c *handler.Context) error {
@@ -256,8 +243,7 @@ func userEditNewHandlerPost(c *handler.Context) error {
 			Password:  c.FormValue("password"),
 		})
 		if err != nil {
-			templ.Handler(ui_components.UserEdit(*u, "Error while creating user, Err: "+err.Error())).ServeHTTP(c.Writer, c.Request)
-			return nil
+			return handler.BadRequest("Error while creating user, Err: " + err.Error()).WithForm(ui_components.UserEdit(*u, ""))
 		}
 
 		c.Writer.Header().Set("HX-Redirect", "/internal/admin/users")
@@ -267,8 +253,7 @@ func userEditNewHandlerPost(c *handler.Context) error {
 
 	u, err = crud.GetUser(c.Request.Context(), userUuid)
 	if err != nil {
-		templ.Handler(ui_components.UserEdit(*u, "Error while updating user, Err: "+err.Error())).ServeHTTP(c.Writer, c.Request)
-		return nil
+		return handler.BadRequest("Error while updating user, Err: " + err.Error()).WithForm(ui_components.UserEdit(*u, ""))
 	}
 
 	err = crud.UpdateUser(c.Request.Context(), u.Uuid, crud.UpdateUserParams{
@@ -277,8 +262,7 @@ func userEditNewHandlerPost(c *handler.Context) error {
 		GroupUuid: groupUuid,
 	})
 	if err != nil {
-		templ.Handler(ui_components.UserEdit(*u, "Error while updating user, Err: "+err.Error())).ServeHTTP(c.Writer, c.Request)
-		return nil
+		return handler.BadRequest("Error while updating user, Err: " + err.Error()).WithForm(ui_components.UserEdit(*u, ""))
 	}
 
 	c.Writer.Header().Set("HX-Redirect", "/internal/admin/users")
@@ -378,18 +362,15 @@ func changePasswordPostHandler(c *handler.Context) error {
 	newPassword2 := c.FormValue("new_password_2")
 
 	if currentPassword == "" || newPassword1 == "" || newPassword2 == "" {
-		templ.Handler(ui_pages.ChangePasswordDialogBody(*user, "Alle Felder müssen ausgefüllt werden")).ServeHTTP(c.Writer, c.Request)
-		return nil
+		return handler.BadRequest("Alle Felder müssen ausgefüllt werden").WithForm(ui_pages.ChangePasswordDialogBody(*user, ""))
 	}
 
 	if newPassword1 != newPassword2 {
-		templ.Handler(ui_pages.ChangePasswordDialogBody(*user, "Passwörter stimmen nicht überein")).ServeHTTP(c.Writer, c.Request)
-		return nil
+		return handler.BadRequest("Passwörter stimmen nicht überein").WithForm(ui_pages.ChangePasswordDialogBody(*user, ""))
 	}
 
 	if crud.CheckPasswordHash(currentPassword, user.HashedPassword) == false {
-		templ.Handler(ui_pages.ChangePasswordDialogBody(*user, "Aktuelles Passwort ist falsch")).ServeHTTP(c.Writer, c.Request)
-		return nil
+		return handler.BadRequest("Aktuelles Passwort ist falsch").WithForm(ui_pages.ChangePasswordDialogBody(*user, ""))
 	}
 
 	err = crud.UpdatePassword(c.Request.Context(), userUuid, newPassword1)

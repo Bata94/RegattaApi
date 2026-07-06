@@ -16,15 +16,6 @@ import (
 
 type Handler func(c *Context) error
 
-type Error struct {
-	StatusCode int
-	Message    string
-}
-
-func (e *Error) Error() string {
-	return e.Message
-}
-
 type AppError struct {
 	Code        int
 	StatusCode  int

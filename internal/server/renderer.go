@@ -10,7 +10,6 @@ import (
 
 	"github.com/bata94/RegattaApi/internal/templates/components"
 	"github.com/bata94/RegattaApi/internal/templates/layout"
-	"github.com/bata94/RegattaApi/internal/templates/pages"
 )
 
 type PageFunc func(c *handler.Context) (templ.Component, error)
@@ -69,35 +68,3 @@ func baseLayoutHandler(url string, getPage PageFunc) {
 	})
 }
 
-func compHandler(url string, comp templ.Component) {
-	h := func(c *handler.Context) error {
-		if 	c.IsHtmxRequest() {
-			templ.Handler(comp).ServeHTTP(c.Writer, c.Request)
-		} else {
-			templ.Handler(ui_pages.Error(404, c.Path()+" not found")).ServeHTTP(c.Writer, c.Request)
-		}
-		return nil
-	}
-
-	uiStack := []middleware.Middleware{
-		middleware.Recovery(),
-		middleware.Compression(),
-		middleware.Logging(),
-		middleware.CORS(),
-		middleware.RateLimit(),
-		middleware.OptionalAuth(),
-		middleware.Timeout(60*time.Second, "Request timeout"),
-	}
-
-	wrapped := middleware.Chain(h, uiStack...)
-
-	r.Handle("GET", url, func(w http.ResponseWriter, r *http.Request) {
-		ctx := handler.NewContext(w, r)
-		if p := r.Context().Value("pathParams"); p != nil {
-			ctx.SetPathParams(p.(map[string]string))
-		}
-		if err := wrapped(ctx); err != nil {
-			handleAppError(ctx, err)
-		}
-	})
-}
