@@ -22,7 +22,11 @@ templ TeilnehmerCard(a crud.Athlet, navOpt HXNavigationOptions) {
       <p
         class="card-text"
       >
-        Verein: {a.Verein.Name}
+        Verein: {a.Verein.Name}<br/>
+        Geschlecht: {a.GeschlechtStr()}<br/>
+        Jahrgang: {a.Jahrgang}<br/>
+        Startberechtigung: {a.StartberechtigungStr()}<br/>
+        Gewicht: {a.GewichtStr()}<br/>
       </p>
       if a.ErstesRennen != nil {
         <p

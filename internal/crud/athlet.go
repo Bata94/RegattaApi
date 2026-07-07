@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/bata94/RegattaApi/internal/db"
 	apierr "github.com/bata94/RegattaApi/internal/errors"
@@ -34,15 +35,15 @@ func (a *Athlet) GetMeldungen() ([]Meldung, error) {
 }
 
 func (a *Athlet) GewichtStr() string {
-	if a.Gewicht.Valid {
-		return fmt.Sprintf("%d", a.Gewicht.Int32)
+	if a.Gewicht.Valid && a.Gewicht.Int32 != 0 {
+		return strings.ReplaceAll(fmt.Sprintf("%.1f kg", a.GewichtFloat()), ".", ",")
 	}
-	return ""
+	return "Nicht verwogen!"
 }
 
-func (a *Athlet) GewichtInt() int {
+func (a *Athlet) GewichtFloat() float32 {
 	if a.Gewicht.Valid {
-		return int(a.Gewicht.Int32)
+		return float32(a.Gewicht.Int32 / 10)
 	}
 	return 0
 }
@@ -96,6 +97,26 @@ func (ath *Athlet) AthletString() string {
 
 func (ath *Athlet) FullName() string {
 	return fmt.Sprintf("%s %s", ath.Vorname, ath.Name)
+}
+
+func (ath *Athlet) GeschlechtStr() string {
+	switch ath.Geschlecht {
+	case sqlc.GeschlechtM:
+		return "Männlich"
+	case sqlc.GeschlechtW:
+		return "Weiblich"
+	case sqlc.GeschlechtX:
+		return "Unspezifisch"
+	default:
+		return "Unbekannt"
+	}
+}
+
+func (ath *Athlet) StartberechtigungStr() string {
+	if ath.Startberechtigt {
+		return "Ja"
+	}
+	return "Nein"
 }
 
 func (ath *Athlet) UpdateStartberechtigung(ctx context.Context, startberechtigt bool) error {

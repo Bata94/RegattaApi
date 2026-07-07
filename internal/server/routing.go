@@ -91,8 +91,14 @@ func GetRouter() http.Handler {
 	r.Handle("POST", "/internal/regattabuero/{v_uuid}/waage/{a_uuid}", wrapHandler(components.WaagePost, true))
 	baseLayoutHandler("/internal/regattabuero/{v_uuid}/startberechtigung", pages.InternalRegattabueroStartberechtigung)
 	baseLayoutHandler("/internal/regattabuero/{v_uuid}/startberechtigung/{a_uuid}", pages.InternalRegattabueroStartberechtigungAthlet)
+	r.Handle("POST", "/internal/regattabuero/{v_uuid}/startberechtigung/{a_uuid}", wrapHandler(components.StartberechtigungPost, true))
 	baseLayoutHandler("/internal/regattabuero/{v_uuid}/new_athlet", pages.InternalRegattabueroNewAthlet)
 	r.Handle("POST", "/internal/regattabuero/{v_uuid}/new_athlet", wrapHandler(components.NewAthletPost, true))
+	// TODO: Change Links in Pages to use "regattabuero" instead of "regattaleitung"
+	baseLayoutHandler("/internal/regattabuero/setzungsverwaltung/aenderung", pages.InternalRegattaleitungSetzungAenderung)
+	r.Handle("POST", "/internal/regattabuero/setzungsverwaltung/aenderung/rennen/{param}", wrapHandler(components.SetzungsVerwaltungAenderungRennenPost, true))
+	baseLayoutHandler("/internal/regattabuero/setzungsverwaltung/aenderung/rennen/{param}", pages.InternalRegattaleitungSetzungAenderungRennen)
+	baseLayoutHandler("/internal/regattabuero/setzungsverwaltung/aenderung", pages.InternalRegattaleitungSetzungAenderung)
 
 	baseLayoutHandler("/internal/regattaleitung", pages.InternalRegattaleitung)
 	baseLayoutHandler("/internal/regattaleitung/drvupload", pages.InternalRegattaleitungDrvUpload)

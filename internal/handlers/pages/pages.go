@@ -491,7 +491,7 @@ func InternalRegattabueroStartberechtigungAthlet(c *handler.Context) (templ.Comp
 	if err != nil {
 		return nil, handler.InternalError("Error while loading verein")
 	}
-	athlet, err := crud.GetAthletMinimal(c.Request.Context(), athletUuid)
+	athlet, err := crud.GetAthlet(c.Request.Context(), athletUuid)
 	if err != nil {
 		return nil, handler.InternalError("Error while loading athlet")
 	}

@@ -36,21 +36,27 @@ templ InternalVereinswahl(nextUrl string, title string, vereine []crud.Verein){
     @ui_components.PageHeader(titleStr)
     @ui_components.PageHeaderSubtext("")
     <div class="flex flex-col gap-4">
-      for _, v := range vereine {
-        <div
-          class="card bg-base-100 w-full shadow-sm hover:cursor-pointer"
-          hx-get={fmt.Sprintf(nextUrl, v.Uuid)}
-          hx-boost="true"
-          hx-target="main"
-          hx-push-url="true"
-          hy-boost="true"
-          href={fmt.Sprintf(nextUrl, v.Uuid)}
-          >
-          <div class="card-body">
-            <h5 class="card-title">{v.Kuerzel}</h5>
-            <p class="card-text">{v.Name}</p>
-          </div>
+      if len(vereine) == 0 {
+        <div class="alert alert-error">
+          <span>Keine Vereine gefunden</span>
         </div>
+      } else {
+        for _, v := range vereine {
+          <div
+            class="card bg-base-100 w-full shadow-sm hover:cursor-pointer"
+            hx-get={fmt.Sprintf(nextUrl, v.Uuid)}
+            hx-boost="true"
+            hx-target="main"
+            hx-push-url="true"
+            hy-boost="true"
+            href={fmt.Sprintf(nextUrl, v.Uuid)}
+            >
+            <div class="card-body">
+              <h5 class="card-title">{v.Kuerzel}</h5>
+              <p class="card-text">{v.Name}</p>
+            </div>
+          </div>
+        }
       }
     </div>
   }

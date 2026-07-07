@@ -1,6 +1,7 @@
 package components
 
 import (
+	"strings"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -944,6 +945,52 @@ func WaagePost(c *handler.Context) error {
 	c.Writer.Header().Set("HX-Push-Url", fmt.Sprintf("/internal/regattabuero/%s/waage", vereinUuidStr))
 	c.Writer.WriteHeader(http.StatusOK)
 	return ui_pages.InternalRegattabueroWaageWahl(verein, athleten).Render(context.Background(), c.Writer)
+}
+
+func StartberechtigungPost(c *handler.Context) error {
+	slog.Debug("StartberechtigungPost", "formVal", c.FormValue("startberechtigt"))
+
+	vereinUuidStr := c.Param("v_uuid")
+	vereinUuid, err := uuid.Parse(vereinUuidStr)
+	if err != nil {
+		return handler.NotAcceptable("Invalid UUID")
+	}
+	athletUuidStr := c.Param("a_uuid")
+	if athletUuidStr != c.FormValue("uuid") {
+		return handler.BadRequest("UUIDs stimmen nicht überein")
+	}
+	athletUuid, err := uuid.Parse(athletUuidStr)
+	if err != nil {
+		return handler.NotAcceptable("Invalid UUID")
+	}
+
+	verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
+	if err != nil {
+		return handler.InternalError("Error while loading verein")
+	}
+	athlet, err := crud.GetAthlet(c.Request.Context(), athletUuid)
+	if err != nil {
+		return handler.InternalError("Error while loading athlet")
+	}
+
+	if athlet.VereinUuid != verein.Uuid {
+		return handler.NotAcceptable("Invalid UUID")
+	}
+	formVal := c.FormValue("startberechtigt")
+	formVal = strings.ToLower(formVal)
+	if formVal != "on" && formVal != "true" {
+		return handler.BadRequest("Bitte aktivieren Sie die Ärztliche Bescheinigung")
+	}
+
+	err = athlet.UpdateStartberechtigung(c.Request.Context(), true)
+	if err != nil {
+		slog.Error("UpdateStartberechtigung error", "err", err)
+		return handler.InternalError("Error while updating startberechtigung")
+	}
+
+	c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("/internal/regattabuero/%s/startberechtigung", vereinUuidStr))
+	c.Writer.WriteHeader(http.StatusOK)
+	return nil
 }
 
 func ZeitplanCollapseBody(c *handler.Context) error {
