@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -13,6 +15,12 @@ func Timeout(timeout time.Duration, message string) Middleware {
 			done := make(chan error, 1)
 
 			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						slog.Error(fmt.Sprintf("[PANIC] %v", r))
+						done <- handler.InternalError("Internal Server Error")
+					}
+				}()
 				done <- next(c)
 			}()
 

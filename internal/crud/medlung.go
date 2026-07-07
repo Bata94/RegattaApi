@@ -214,6 +214,10 @@ func GetMeldung(ctx context.Context, uuid uuid.UUID) (Meldung, error) {
 		return Meldung{}, err
 	}
 
+	if len(q) == 0 {
+		return Meldung{}, &apierr.NOT_FOUND
+	}
+
 	athleten := []Athlet{}
 	rennen := RennenFromSqlc(q[0].Rennen, 0, 0)
 
