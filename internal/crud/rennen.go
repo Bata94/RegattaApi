@@ -84,15 +84,15 @@ type Rennen struct {
 }
 
 func (r *Rennen) GetZusatz() *string {
-	if r.Rennen.Zusatz.Valid {
-		return &r.Rennen.Zusatz.String
+	if r.Zusatz.Valid {
+		return &r.Zusatz.String
 	}
 	return nil
 }
 
 func (r *Rennen) GetKostenEur() *int {
-	if r.Rennen.KostenEur.Valid {
-		v := int(r.Rennen.KostenEur.Int32)
+	if r.KostenEur.Valid {
+		v := int(r.KostenEur.Int32)
 		return &v
 	}
 	return nil
@@ -106,16 +106,16 @@ func (r *Rennen) KostenEurStr() string {
 }
 
 func (r *Rennen) GetRennabstand() *int {
-	if r.Rennen.Rennabstand.Valid {
-		v := int(r.Rennen.Rennabstand.Int32)
+	if r.Rennabstand.Valid {
+		v := int(r.Rennabstand.Int32)
 		return &v
 	}
 	return nil
 }
 
 func (r *Rennen) GetStartzeit() *string {
-	if r.Rennen.Startzeit.Valid {
-		return &r.Rennen.Startzeit.String
+	if r.Startzeit.Valid {
+		return &r.Startzeit.String
 	}
 	return nil
 }
@@ -331,13 +331,10 @@ func GetAllRennen(ctx context.Context, p GetAllRennenParams) ([]Rennen, error) {
 	retLs := []Rennen{}
 
 	for _, r := range rLs {
-		if p.GetMeldungen == false {
+		if !p.GetMeldungen {
 			r.Meldungen = nil
 		}
-		if p.ShowStarted == false {
-			// TODO: Implement!
-		}
-		if p.ShowEmpty == false && *r.NumMeldungen == 0 {
+		if !p.ShowEmpty && *r.NumMeldungen == 0 {
 			continue
 		}
 
@@ -486,53 +483,30 @@ func GetRennen(ctx context.Context, uuidParam uuid.UUID) (Rennen, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	q, err := DB.Queries.GetRennen(ctx, uuidParam)
+	rSqlc, err := DB.Queries.GetRennenMinimal(ctx, uuidParam)
 	if err != nil {
 		if isNoRowError(err) {
 			return Rennen{}, apierr.ErrNotFound
 		}
 		return Rennen{}, err
 	}
-	if len(q) == 0 {
-		return Rennen{}, apierr.ErrNotFound
+
+	r := RennenFromSqlc(rSqlc, 0, int32(0))
+
+	meldungen, err := GetRennenMeldungen(ctx, uuidParam)
+	if err != nil {
+		return Rennen{}, err
 	}
+	r.Meldungen = meldungen
 
-	r := RennenFromSqlc(q[0].Rennen, 0, int32(0))
-	r.Meldungen = []Meldung{}
-
-	numAbt := 0
-	if q[0].Meldung.Uuid != uuid.Nil {
-		for i, row := range q {
-			meld := row.Meldung
-			if numAbt < int(meld.Abteilung) {
-				numAbt = int(meld.Abteilung)
-			}
-			if i == 0 || meld.Uuid != q[i-1].Meldung.Uuid {
-				verein := Verein{Verein: row.Verein}
-				r.Meldungen = append(
-					r.Meldungen,
-					Meldung{
-						Meldung:  meld,
-						Verein:   &verein,
-						Athleten: []Athlet{},
-					},
-				)
-			}
-
-			athlet := row.Athlet
-			if athlet.Uuid != uuid.Nil {
-				lastMeldIndex := len(r.Meldungen) - 1
-				position := int(row.LinkMeldungAthlet.Position)
-				r.Meldungen[lastMeldIndex].Athleten = append(r.Meldungen[lastMeldIndex].Athleten, Athlet{
-					Athlet:   athlet,
-					Rolle:    &row.LinkMeldungAthlet.Rolle,
-					Position: &position,
-				})
-			}
-		}
-	}
 	numMeldungen := len(r.Meldungen)
 	r.NumMeldungen = &numMeldungen
+	numAbt := int32(0)
+	for _, m := range r.Meldungen {
+		if m.Abteilung > numAbt {
+			numAbt = m.Abteilung
+		}
+	}
 	numAbteilungen := int(numAbt)
 	r.NumAbteilungen = &numAbteilungen
 

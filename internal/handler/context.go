@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -17,6 +18,10 @@ import (
 type Handler func(c *Context) error
 
 type AppError = apierr.AppError
+
+type CtxKey string
+
+const CtxKeyPathParams CtxKey = "pathParams"
 
 func NotFound(msg string) *AppError {
 	return apierr.NotFound(msg)
@@ -105,7 +110,7 @@ func (c *Context) Param(key string) string {
 	if v, ok := c.pathParams[key]; ok {
 		return v
 	}
-	if p := c.Request.Context().Value("pathParams"); p != nil {
+	if p := c.Request.Context().Value(CtxKeyPathParams); p != nil {
 		return p.(map[string]string)[key]
 	}
 	return ""
@@ -127,7 +132,11 @@ func (c *Context) FormFile(key string) (string, []byte, error) {
 	if err != nil {
 		return "", nil, err
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			slog.Error("Error closing uploaded file", "err", err)
+		}
+	}()
 
 	content, err := io.ReadAll(file)
 	if err != nil {

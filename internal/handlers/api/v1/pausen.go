@@ -22,7 +22,7 @@ func GetAllPausen(c *handler.Context) error {
 		}
 	}
 
-	wettLs := []sqlc.Wettkampf{}
+	var wettLs []sqlc.Wettkampf
 	if len(showWettkampfStr) == 0 {
 		wettLs = crud.AllWettkampf
 	} else {

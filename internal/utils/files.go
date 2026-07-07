@@ -13,7 +13,9 @@ func GetFilenames(dir string) ([]string, error) {
 	var files []string
 	path := filepath.Join(config.C.Paths.FilesDir, dir)
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		os.MkdirAll(fmt.Sprint(path), os.ModePerm)
+		if err := os.MkdirAll(fmt.Sprint(path), os.ModePerm); err != nil {
+			return nil, err
+		}
 
 	}
 

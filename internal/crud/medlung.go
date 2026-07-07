@@ -193,7 +193,7 @@ func GetMeldungByStartNrUndTag(ctx context.Context, startNummer int, tag Tag) (M
 	}
 
 	if len(q) > 1 {
-		return Meldung{}, errors.New("Multiple Startnummern")
+		return Meldung{}, errors.New("multiple startnummern")
 	} else if len(q) == 0 {
 		slog.Info("No Meldung found", "startNummer", startNummer)
 		return Meldung{}, apierr.ErrNotFound
@@ -405,7 +405,7 @@ func GetStartnummerLast(ctx context.Context, tag Tag) (int32, error) {
 
 	retInt, ok := lastStartNr.(int32)
 	if !ok {
-		return 0, errors.New("Last Startnummer nicht umwandelbar!")
+		return 0, errors.New("last startnummer nicht umwandelbar")
 	}
 
 	return retInt, nil

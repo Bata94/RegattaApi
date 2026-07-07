@@ -320,6 +320,9 @@ func UserGroupEditNewPost(c *handler.Context) error {
 func ChangePasswordGet(c *handler.Context) error {
 	userUuidStr := c.Param("uuid")
 	userUuid, err := uuid.Parse(userUuidStr)
+	if err != nil {
+		return handler.NotAcceptable("Invalid UUID")
+	}
 	user, err := crud.GetUser(c.Request.Context(), userUuid)
 	if err != nil {
 		return handler.NotFound("User not found")
@@ -332,6 +335,9 @@ func ChangePasswordGet(c *handler.Context) error {
 func ChangePasswordPost(c *handler.Context) error {
 	userUuidStr := c.Param("uuid")
 	userUuid, err := uuid.Parse(userUuidStr)
+	if err != nil {
+		return handler.NotAcceptable("Invalid UUID")
+	}
 	user, err := crud.GetUser(c.Request.Context(), userUuid)
 	if err != nil {
 		return handler.NotFound("User not found")
@@ -360,7 +366,7 @@ func ChangePasswordPost(c *handler.Context) error {
 		fieldErrors["new_password_2"] = "Passwörter stimmen nicht überein"
 		topMsg = "Passwörter stimmen nicht überein"
 	}
-	if currentPassword != "" && crud.CheckPasswordHash(currentPassword, user.HashedPassword) == false {
+	if currentPassword != "" && !crud.CheckPasswordHash(currentPassword, user.HashedPassword) {
 		fieldErrors["current_password"] = "Aktuelles Passwort ist falsch"
 		topMsg = "Aktuelles Passwort ist falsch"
 	}
@@ -596,7 +602,9 @@ func PdfMeldeergebnisPost(c *handler.Context) error {
 		true,
 	)
 	if err != nil {
-		os.Remove(fmt.Sprintf("%smeldeergebnis/%s", config.C.Paths.FilesDir, fileName))
+		if rmErr := os.Remove(fmt.Sprintf("%smeldeergebnis/%s", config.C.Paths.FilesDir, fileName)); rmErr != nil {
+			slog.Error("Error removing failed PDF file", "err", rmErr)
+		}
 		return handler.InternalError(fmt.Sprintf("Fehler während PDF Erstellung: %s", err.Error()))
 	}
 

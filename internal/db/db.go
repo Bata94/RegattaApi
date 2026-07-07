@@ -2,7 +2,6 @@ package DB
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -102,7 +101,7 @@ func getCustomDataTypes(ctx context.Context, pool *pgxpool.Pool) ([]*pgtype.Type
 	for _, typeName := range dataTypeNames {
 		dataType, err := conn.Conn().LoadType(ctx, typeName)
 		if err != nil {
-			return nil, errors.New(fmt.Sprintf("failed to load type %s: %v", typeName, err))
+			return nil, fmt.Errorf("failed to load type %s: %v", typeName, err)
 		}
 		// You need to register only for this connection too, otherwise the array type will look for the register element type.
 		conn.Conn().TypeMap().RegisterType(dataType)

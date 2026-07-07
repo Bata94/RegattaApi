@@ -25,10 +25,16 @@ func main() {
 		Name:     config.C.DB.Name,
 		Sslmode:  config.C.DB.SSLMode,
 	})
-	defer DB.ShutdownConnection()
+	defer func() {
+		if err := DB.ShutdownConnection(); err != nil {
+			log.Printf("Error shutting down DB connection: %v", err)
+		}
+	}()
 
 	utils.InitEmail()
-	os.MkdirAll(config.C.Paths.PublicDir, os.ModePerm)
+	if err := os.MkdirAll(config.C.Paths.PublicDir, os.ModePerm); err != nil {
+		log.Printf("Error creating public dir: %v", err)
+	}
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -36,7 +42,9 @@ func main() {
 		for sig := range c {
 			log.Println("Received signal:", sig)
 			if sig == os.Interrupt {
-				DB.ShutdownConnection()
+				if err := DB.ShutdownConnection(); err != nil {
+					log.Printf("Error shutting down DB connection: %v", err)
+				}
 				os.Exit(0)
 			}
 		}

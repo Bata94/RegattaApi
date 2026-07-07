@@ -59,11 +59,13 @@ func writeSuccessToast(c *handler.Context, ae *handler.AppError) {
 func writeAPIError(c *handler.Context, ae *handler.AppError) {
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(ae.StatusCode)
-	json.NewEncoder(c.Writer).Encode(map[string]any{
+	if err := json.NewEncoder(c.Writer).Encode(map[string]any{
 		"code":    ae.Code,
 		"status":  ae.StatusCode,
 		"message": ae.Message,
-	})
+	}); err != nil {
+		slog.Error("Error encoding JSON error response", "err", err)
+	}
 }
 
 func writePageError(c *handler.Context, ae *handler.AppError) {
@@ -76,7 +78,9 @@ func writeHTMXError(c *handler.Context, ae *handler.AppError) {
 
 	if ae.FormComp != nil && (method == "POST" || method == "PUT" || method == "PATCH" || method == "DELETE") {
 		c.Writer.WriteHeader(http.StatusOK)
-		ae.FormComp.Render(context.Background(), c.Writer)
+		if err := ae.FormComp.Render(context.Background(), c.Writer); err != nil {
+			slog.Error("Error rendering form component", "err", err)
+		}
 		writeOOBToast(c, ae.Message, ui_components.Error)
 		return
 	}
@@ -115,5 +119,7 @@ func writeOOBToast(c *handler.Context, msg string, color ui_components.InputColo
 		`<div hx-swap-oob="beforeend:#toast-container"><div class="alert %s flex flex-row justify-between items-center gap-2"><span>%s</span><button class="btn btn-sm btn-circle btn-ghost" onclick="this.parentElement.remove()">✕</button></div></div>`,
 		alertColor, msg,
 	)
-	fmt.Fprint(c.Writer, oobHTML)
+	if _, err := fmt.Fprint(c.Writer, oobHTML); err != nil {
+		slog.Error("Error writing OOB toast", "err", err)
+	}
 }

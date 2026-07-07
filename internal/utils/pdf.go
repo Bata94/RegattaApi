@@ -27,9 +27,15 @@ func SavePDFfromHTML(htmlUrl, subDir, filename string, footer bool) (string, err
 	multipartWriter := multipart.NewWriter(&requestBody)
 
 	// Add the URL parameter
-	multipartWriter.WriteField("url", config.C.AppInternalURL+"/api/v1/"+htmlUrl)
-	multipartWriter.WriteField("paperWidth", paperWidth)
-	multipartWriter.WriteField("paperHeight", paperHeight)
+	if err := multipartWriter.WriteField("url", config.C.AppInternalURL+"/api/v1/"+htmlUrl); err != nil {
+		return "", err
+	}
+	if err := multipartWriter.WriteField("paperWidth", paperWidth); err != nil {
+		return "", err
+	}
+	if err := multipartWriter.WriteField("paperHeight", paperHeight); err != nil {
+		return "", err
+	}
 
 	if footer {
 		// Get Footerfile
@@ -38,7 +44,11 @@ func SavePDFfromHTML(htmlUrl, subDir, filename string, footer bool) (string, err
 		if footerReqError != nil {
 			return "", footerReqError
 		}
-		defer footerReq.Body.Close()
+		defer func() {
+			if err := footerReq.Body.Close(); err != nil {
+				slog.Error("Error closing footer request body", "err", err)
+			}
+		}()
 		footerContent, _ := io.ReadAll(footerReq.Body)
 
 		// Add the footer file to the multipart form data
@@ -52,7 +62,9 @@ func SavePDFfromHTML(htmlUrl, subDir, filename string, footer bool) (string, err
 		}
 	}
 
-	multipartWriter.Close()
+	if err := multipartWriter.Close(); err != nil {
+		return "", err
+	}
 
 	req, err := http.NewRequest("POST", config.C.GotenbergURL+"/forms/chromium/convert/url", &requestBody)
 	if err != nil {
@@ -69,7 +81,11 @@ func SavePDFfromHTML(htmlUrl, subDir, filename string, footer bool) (string, err
 		slog.Error("Error in HttpRequest Status")
 		return "", errors.New("gotenberg error: " + resp.Status)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			slog.Error("Error closing response body", "err", err)
+		}
+	}()
 
 	if !strings.HasSuffix(filename, pdfSuffix) {
 		filename += pdfSuffix
@@ -82,7 +98,15 @@ func SavePDFfromHTML(htmlUrl, subDir, filename string, footer bool) (string, err
 	}
 	filePath := filepath.Join(basePath, filename)
 	outputFile, err := os.Create(filePath)
-	defer outputFile.Close()
+	if err != nil {
+		slog.Error("Error in creation of file")
+		return "", err
+	}
+	defer func() {
+		if err := outputFile.Close(); err != nil {
+			slog.Error("Error closing output file", "err", err)
+		}
+	}()
 	if err != nil {
 		slog.Error("Error in creation of file")
 		return "", err

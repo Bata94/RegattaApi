@@ -15,7 +15,9 @@ func Recovery() Middleware {
 				if r := recover(); r != nil {
 					slog.Error(fmt.Sprintf("[PANIC] %v", r))
 					c.Status(http.StatusInternalServerError)
-					c.SendString("Internal Server Error")
+					if err := c.SendString("Internal Server Error"); err != nil {
+						slog.Error("Error sending recovery response", "err", err)
+					}
 				}
 			}()
 			return next(c)

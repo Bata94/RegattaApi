@@ -31,7 +31,9 @@ func WsZeitnahmeZiel(c *handler.Context) error {
 	if err != nil {
 		errStr := fmt.Sprint("Error getting open ZnZiel... ", err)
 		slog.Error(errStr)
-		c.Writer.Write([]byte(errStr))
+		if _, err := c.Writer.Write([]byte(errStr)); err != nil {
+			slog.Error("Error writing response", "err", err)
+		}
 		return nil
 	}
 
@@ -39,10 +41,14 @@ func WsZeitnahmeZiel(c *handler.Context) error {
 	if err != nil {
 		errStr := fmt.Sprint("Error getting open ZnZiel... ", err)
 		slog.Error(errStr)
-		c.Writer.Write([]byte(errStr))
+		if _, err := c.Writer.Write([]byte(errStr)); err != nil {
+			slog.Error("Error writing response", "err", err)
+		}
 		return nil
 	}
-	c.Writer.Write(qJson)
+	if _, err := c.Writer.Write(qJson); err != nil {
+		slog.Error("Error writing response", "err", err)
+	}
 	return nil
 }
 

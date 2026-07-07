@@ -50,22 +50,22 @@ func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	handler := methodHandlers[req.URL.Path]
+	h := methodHandlers[req.URL.Path]
 	var params map[string]string
-	if handler == nil {
-		handler, params = r.matchWildcard(req.Method, req.URL.Path)
+	if h == nil {
+		h, params = r.matchWildcard(req.Method, req.URL.Path)
 	}
-	if handler == nil {
+	if h == nil {
 		http.NotFound(w, req)
 		return
 	}
 
 	if params != nil {
-		ctx := context.WithValue(req.Context(), "pathParams", params)
+		ctx := context.WithValue(req.Context(), handler.CtxKeyPathParams, params)
 		req = req.WithContext(ctx)
 	}
 
-	handler(w, req)
+	h(w, req)
 }
 
 func (r *router) matchWildcard(method, path string) (http.HandlerFunc, map[string]string) {
@@ -127,7 +127,7 @@ func wrapHandler(h handler.Handler, needAuth bool) func(http.ResponseWriter, *ht
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := handler.NewContext(w, r)
-		if p := r.Context().Value("pathParams"); p != nil {
+		if p := r.Context().Value(handler.CtxKeyPathParams); p != nil {
 			ctx.SetPathParams(p.(map[string]string))
 		}
 		if err := wrapped(ctx); err != nil {
@@ -156,7 +156,7 @@ func templHandler(h handler.Handler) http.HandlerFunc {
 			return
 		}
 
-		if p := r.Context().Value("pathParams"); p != nil {
+		if p := r.Context().Value(handler.CtxKeyPathParams); p != nil {
 			ctx.SetPathParams(p.(map[string]string))
 		}
 		if err := wrapped(ctx); err != nil {
@@ -179,7 +179,7 @@ func wrapUIHandler(h handler.Handler) func(http.ResponseWriter, *http.Request) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := handler.NewContext(w, r)
-		if p := r.Context().Value("pathParams"); p != nil {
+		if p := r.Context().Value(handler.CtxKeyPathParams); p != nil {
 			ctx.SetPathParams(p.(map[string]string))
 		}
 		if err := wrapped(ctx); err != nil {

@@ -5,6 +5,7 @@ import (
 	"image"
 	_ "image/jpeg"
 	_ "image/png"
+	"log/slog"
 	"os"
 
 	"github.com/chai2010/webp"
@@ -37,7 +38,11 @@ func ConvertAndResizeImage(src, dst string, p ConvertResizeParams) error {
 	if err != nil {
 		return err
 	}
-	defer inputFile.Close()
+	defer func() {
+		if err := inputFile.Close(); err != nil {
+			slog.Error("Error closing input file", "err", err)
+		}
+	}()
 
 	img, _, err := image.Decode(inputFile)
 	if err != nil {
@@ -54,7 +59,11 @@ func ConvertAndResizeImage(src, dst string, p ConvertResizeParams) error {
 	if err != nil {
 		return err
 	}
-	defer outputFile.Close()
+	defer func() {
+		if err := outputFile.Close(); err != nil {
+			slog.Error("Error closing output file", "err", err)
+		}
+	}()
 
 	fmt.Println("Converting -  Quality:", p.Quality, "Lossless:", p.Lossless)
 	if p.Quality <= 0.0 || p.Quality > 100.0 {

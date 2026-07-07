@@ -118,7 +118,7 @@ func (verein *Verein) GetNextRechnungsnummer(ctx context.Context) (string, error
 		}
 
 		if fwdNr == 0 {
-			return "", errors.New("Fehler beim erzeugen der neuen RechnungsNummer...")
+			return "", errors.New("fehler beim erzeugen der neuen rechnungsnummer")
 		}
 
 		fwdNr += 1
@@ -172,11 +172,11 @@ func GetVerein(ctx context.Context, uuid uuid.UUID) (Verein, error) {
 
 	gesKostenI64, ok := q.GesKosten.(int64)
 	if !ok {
-		return Verein{}, errors.New("Error while converting Gesamt Kosten to int")
+		return Verein{}, errors.New("error while converting gesamt kosten to int")
 	}
 	gesZahlungenI64, ok := q.GesZahlungen.(int64)
 	if !ok {
-		return Verein{}, errors.New("Error while converting Gesamt Zahlung to int")
+		return Verein{}, errors.New("error while converting gesamt zahlung to int")
 	}
 	gesKosten := int(gesKostenI64)
 	gesZahlungen := int(gesZahlungenI64)
@@ -226,7 +226,7 @@ func GetForAllVereineMissingAthlet(athletType MissingAthletType) ([]Verein, erro
 	case Startberechtigt:
 		queryFunc = GetAllAthletenForVereinMissStartber
 	default:
-		return vLs, errors.New("Unknown athlet type")
+		return vLs, errors.New("unknown athlet type")
 	}
 
 	for _, v := range vLs {

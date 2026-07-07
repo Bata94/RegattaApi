@@ -40,7 +40,9 @@ func GetMeldung(c *handler.Context) error {
 
 func PostAbmeldung(c *handler.Context) error {
 	params := new(AbmeldungsParams)
-	c.BodyParser(params)
+	if err := c.BodyParser(params); err != nil {
+		return handler.BadRequest("Invalid request body")
+	}
 
 	meldungUUID, err := uuid.Parse(params.Uuid)
 	if err != nil {
@@ -62,7 +64,9 @@ type PostUmmeldungsParams struct {
 
 func PostUmmeldung(c *handler.Context) error {
 	params := new(PostUmmeldungsParams)
-	c.BodyParser(params)
+	if err := c.BodyParser(params); err != nil {
+		return handler.BadRequest("Invalid request body")
+	}
 	meldungUuid, err := uuid.Parse(params.MeldungUuid)
 	if err != nil {
 		return err
@@ -167,20 +171,6 @@ func CreateNachmeldung(ctx context.Context, params PostNachmeldungParams) (*crud
 			maxBahn = 2
 		case sqlc.WettkampfSlalom:
 			maxBahn = 3
-		}
-		if *rennen.NumMeldungen < maxBahn {
-			abteilung = int32(1)
-			bahn = int32(*rennen.NumMeldungen + 1)
-		}
-		for i, m := range rennen.Meldungen {
-			if i == 0 {
-				continue
-			}
-			if m.Bahn == 1 && rennen.Meldungen[i-1].Abteilung != m.Abteilung && rennen.Meldungen[i-1].Bahn < int32(maxBahn) {
-				bahn = int32(rennen.Meldungen[i-1].Bahn + 1)
-				abteilung = int32(rennen.Meldungen[i-1].Abteilung)
-				break
-			}
 		}
 		if rennen.Meldungen[len(rennen.Meldungen)-1].Bahn == int32(maxBahn) {
 			bahn = int32(1)

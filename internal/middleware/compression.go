@@ -3,6 +3,7 @@ package middleware
 import (
 	"compress/gzip"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -82,7 +83,11 @@ func Compression() Middleware {
 			}
 
 			gw := gzip.NewWriter(c.Writer)
-			defer gw.Close()
+			defer func() {
+				if err := gw.Close(); err != nil {
+					slog.Error("Error closing gzip writer", "err", err)
+				}
+			}()
 
 			c.Writer.Header().Set("Content-Encoding", "gzip")
 			c.Writer.Header().Set("Vary", "Accept-Encoding")
@@ -97,8 +102,12 @@ func Compression() Middleware {
 
 			err := next(c)
 
-			gw.Flush()
-			gw.Close()
+			if err := gw.Flush(); err != nil {
+				slog.Error("Error flushing gzip writer", "err", err)
+			}
+			if err := gw.Close(); err != nil {
+				slog.Error("Error closing gzip writer", "err", err)
+			}
 
 			c.Writer = originalWriter
 
@@ -139,7 +148,9 @@ func (g *gzipResponseWriter) HeadersWritten() bool {
 }
 
 func (g *gzipResponseWriter) Flush() {
-	g.gw.Flush()
+	if err := g.gw.Flush(); err != nil {
+		slog.Error("Error flushing gzip writer", "err", err)
+	}
 	if flusher, ok := g.ResponseWriter.(http.Flusher); ok {
 		flusher.Flush()
 	}

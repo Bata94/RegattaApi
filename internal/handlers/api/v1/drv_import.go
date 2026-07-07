@@ -180,7 +180,9 @@ func ImportDrvJson(ctx context.Context, filePath string) error {
 		fmt.Println("Marshal Error:", err)
 		return err
 	}
-	os.WriteFile(fmt.Sprintf("%sImported_DrvMeldung_%s.json", config.C.Paths.UploadDir, time.Now().Format("15-04-05")), o, writeFilePerms)
+	if err := os.WriteFile(fmt.Sprintf("%sImported_DrvMeldung_%s.json", config.C.Paths.UploadDir, time.Now().Format("15-04-05")), o, writeFilePerms); err != nil {
+		fmt.Println("Error writing debug JSON:", err)
+	}
 
 	// TODO: Use a Transaction here!
 
@@ -480,7 +482,7 @@ func getKostenForMeld(rennen []crud.Rennen, m DrvEntries) (int32, error) {
 
 	if kosten == 0 {
 		fmt.Println(m.EventId)
-		return 0, errors.New("RennenUUID von Meldung nicht gefunden!")
+		return 0, errors.New("rennenUUID von meldung nicht gefunden")
 	}
 
 	return kosten, nil
@@ -539,7 +541,7 @@ func getRennInfo(regattaDays []string, event DrvEvents) (*sqlc.Wettkampf, *sqlc.
 			rennabstand = staffelAbstand
 		}
 	default:
-		return nil, nil, 0, errors.New("Could not find valid Date")
+		return nil, nil, 0, errors.New("could not find valid date")
 	}
 
 	return &wettkampf, &tag, rennabstand, nil

@@ -360,29 +360,33 @@ func InternalRegattabueroNachmeldungRennen(c *handler.Context) (templ.Component,
 	vereinUuidStr := c.Param("v_uuid")
 	vereinUuid, err := uuid.Parse(vereinUuidStr)
 	if err != nil {
+		slog.Error("Invalid verein UUID", "err", err)
 		return nil, handler.NotAcceptable("Invalid UUID")
 	}
 	rennenUuidStr := c.Param("r_uuid")
 	rennenUuid, err := uuid.Parse(rennenUuidStr)
 	if err != nil {
+		slog.Error("Invalid rennen UUID", "err", err)
 		return nil, handler.NotAcceptable("Invalid UUID")
 	}
 
 	verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
 	if err != nil {
+		slog.Error("Error loading verein", "err", err)
 		return nil, handler.InternalError("Error while loading verein")
 	}
 	rennen, err := crud.GetRennen(c.Request.Context(), rennenUuid)
 	if err != nil {
+		slog.Error("Error loading rennen", "err", err)
 		return nil, handler.InternalError("Error while loading rennen")
 	}
 
 	athleten, err := crud.GetAllAthletenForVerein(c.Request.Context(), verein.Uuid)
 	if err != nil {
+		slog.Error("Error loading athleten", "err", err)
 		return nil, handler.InternalError("Error while loading athleten")
 	}
 
-	// TODO: Filter only viable athleten
 	return ui_pages.InternalRegattabueroNachmeldungMeldung(verein, rennen, athleten, "", nil), nil
 }
 

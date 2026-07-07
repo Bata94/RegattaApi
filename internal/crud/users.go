@@ -124,17 +124,6 @@ func ParseUUID(s string) (uuid.UUID, error) {
 	return uuid.Parse(s)
 }
 
-func validUser(ctx context.Context, id uuid.UUID, p string) bool {
-	user, err := GetUser(ctx, id)
-	if err != nil {
-		return false
-	}
-	if !CheckPasswordHash(p, user.HashedPassword) {
-		return false
-	}
-	return true
-}
-
 func GetAllUsers(ctx context.Context) ([]sqlc.User, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
@@ -247,12 +236,12 @@ func AuthLogin(ctx context.Context, l LoginParams) (*ReturnUserWithJWT, error) {
 		return nil, err
 	}
 
-	if u.IsActive == false {
+	if !u.IsActive {
 		return nil, apierr.ErrAuthLoginUserNotActive
 	}
 
 	tokenStr := ""
-	tokenExp := time.Now()
+	var tokenExp time.Time
 	if CheckPasswordHash(l.Password, u.HashedPassword) {
 		tokenStr, tokenExp, err = genJWT(u.User, u.UserGroup)
 		if err != nil {
@@ -263,16 +252,16 @@ func AuthLogin(ctx context.Context, l LoginParams) (*ReturnUserWithJWT, error) {
 	}
 
 	if tokenStr == "" {
-		return nil, errors.New("Unkown Error!")
+		return nil, errors.New("unknown error")
 	}
 
 	return &ReturnUserWithJWT{
-		Uuid: u.User.Uuid,
+		Uuid: u.Uuid,
 		Jwt: JWT{
 			Token:      tokenStr,
 			Expiration: tokenExp,
 		},
-		Username:  u.User.Username,
+		Username:  u.Username,
 		UserGroup: u.UserGroup,
 	}, nil
 }

@@ -59,7 +59,7 @@ func baseLayoutHandler(url string, getPage PageFunc) {
 
 		wrapped := middleware.Chain(h, uiStack...)
 
-		if p := r.Context().Value("pathParams"); p != nil {
+		if p := r.Context().Value(handler.CtxKeyPathParams); p != nil {
 			ctx.SetPathParams(p.(map[string]string))
 		}
 		if err := wrapped(ctx); err != nil {
