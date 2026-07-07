@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -70,7 +71,14 @@ func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 func (r *router) matchWildcard(method, path string) (http.HandlerFunc, map[string]string) {
 	methodHandlers := r.handlers[method]
+	patterns := make([]string, 0, len(methodHandlers))
 	for pattern := range methodHandlers {
+		patterns = append(patterns, pattern)
+	}
+	sort.Slice(patterns, func(i, j int) bool {
+		return len(patterns[i]) > len(patterns[j])
+	})
+	for _, pattern := range patterns {
 		params, ok := matchPath(pattern, path)
 		if ok {
 			return methodHandlers[pattern], params
