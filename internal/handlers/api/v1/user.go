@@ -6,7 +6,7 @@ import (
 )
 
 func GetAllUsers(c *handler.Context) error {
-	uLs, err := crud.GetAllUsers(c.Request.Context(), )
+	uLs, err := crud.GetAllUsers(c.Request.Context())
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func CreateUser(c *handler.Context) error {
 }
 
 func GetAllUsersGroups(c *handler.Context) error {
-	ugLs, err := crud.GetAllUsersGroups(c.Request.Context(), )
+	ugLs, err := crud.GetAllUsersGroups(c.Request.Context())
 	if err != nil {
 		return err
 	}

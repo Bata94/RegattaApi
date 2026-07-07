@@ -8,16 +8,16 @@ import (
 var C Config
 
 type Config struct {
-	Server           ServerConfig
-	DB               DBConfig
-	Auth             AuthConfig
-	CORS             CORSConfig
-	Rate             RateConfig
-	Email            EmailConfig
-	Paths            PathsConfig
-	GotenbergURL     string
-	AppInternalURL   string
-	AppPublicURL     string
+	Server         ServerConfig
+	DB             DBConfig
+	Auth           AuthConfig
+	CORS           CORSConfig
+	Rate           RateConfig
+	Email          EmailConfig
+	Paths          PathsConfig
+	GotenbergURL   string
+	AppInternalURL string
+	AppPublicURL   string
 }
 
 type ServerConfig struct {

@@ -6,7 +6,7 @@ import (
 )
 
 func GetAllVerein(c *handler.Context) error {
-	vLs, err := crud.GetAllVerein(c.Request.Context(), )
+	vLs, err := crud.GetAllVerein(c.Request.Context())
 	if err != nil {
 		return err
 	}

@@ -16,9 +16,9 @@ import (
 
 const (
 	writeFilePerms os.FileMode = 0o666
-	paperWidth                  = "8.27"
-	paperHeight                 = "11.69"
-	pdfSuffix                   = ".pdf"
+	paperWidth                 = "8.27"
+	paperHeight                = "11.69"
+	pdfSuffix                  = ".pdf"
 )
 
 func SavePDFfromHTML(htmlUrl, subDir, filename string, footer bool) (string, error) {

@@ -12,14 +12,14 @@ import (
 
 func shuffle(array []crud.Meldung) []crud.Meldung {
 	for i := range array {
-		j := rand.IntN( i + 1)
+		j := rand.IntN(i + 1)
 		array[i], array[j] = array[j], array[i]
 	}
 	return array
 }
 
 func SetzungsLosung(c *handler.Context) error {
-	check, err := crud.CheckMeldungSetzung(c.Request.Context(), )
+	check, err := crud.CheckMeldungSetzung(c.Request.Context())
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func SetzungsLosung(c *handler.Context) error {
 }
 
 func ResetSetzung(c *handler.Context) error {
-	mLs, err := crud.GetAllMeldungen(c.Request.Context(), )
+	mLs, err := crud.GetAllMeldungen(c.Request.Context())
 	if err != nil {
 		return err
 	}
@@ -139,7 +139,7 @@ func ResetSetzung(c *handler.Context) error {
 
 func SetStartnummern(c *handler.Context) error {
 	if err := service.SetStartnummern(c.Request.Context()); err != nil {
-		return handler.InternalError(fmt.Sprintf( "Error while setting startnummern: %s", err.Error()))
+		return handler.InternalError(fmt.Sprintf("Error while setting startnummern: %s", err.Error()))
 	}
 
 	return c.JSON("Startnummern vergeben!")

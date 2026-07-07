@@ -188,7 +188,7 @@ func ImportDrvJson(ctx context.Context, filePath string) error {
 		verein, err := crud.GetVereinMinimal(ctx, v.Id)
 		if err != nil {
 			if !errors.Is(err, pgx.ErrNoRows) {
-				fmt.Println( "Crud get Error:", err)
+				fmt.Println("Crud get Error:", err)
 				return err
 			}
 			if verein.Uuid != uuid.Nil {
@@ -207,7 +207,7 @@ func ImportDrvJson(ctx context.Context, filePath string) error {
 		}
 		_, err = crud.CreateVerein(ctx, newVerein)
 		if err != nil {
-			fmt.Println( "Crud create Error:", err)
+			fmt.Println("Crud create Error:", err)
 			return err
 		}
 
@@ -230,7 +230,7 @@ func ImportDrvJson(ctx context.Context, filePath string) error {
 		}
 	}
 
-	allNNAthleten, err := crud.GetAllNNAthleten(ctx, )
+	allNNAthleten, err := crud.GetAllNNAthleten(ctx)
 	if err != nil {
 		return err
 	}
@@ -239,16 +239,16 @@ func ImportDrvJson(ctx context.Context, filePath string) error {
 		rennen, err := crud.GetRennenMinimal(ctx, r.Id)
 		if err != nil {
 			if !errors.Is(err, pgx.ErrNoRows) {
-				fmt.Println( "Crud get Error:", err)
+				fmt.Println("Crud get Error:", err)
 				return err
 			}
 			if rennen.Uuid != uuid.Nil {
-				fmt.Printf( "Rennen already exists: %s - %s\n", rennen.Nummer, rennen.BezeichnungLang)
+				fmt.Printf("Rennen already exists: %s - %s\n", rennen.Nummer, rennen.BezeichnungLang)
 				continue
 			}
 		}
 		if rennen.Uuid != uuid.Nil {
-			fmt.Printf( "Rennen already exists: %s - %s\n", rennen.Nummer, rennen.BezeichnungLang)
+			fmt.Printf("Rennen already exists: %s - %s\n", rennen.Nummer, rennen.BezeichnungLang)
 			continue
 		}
 
@@ -262,13 +262,13 @@ func ImportDrvJson(ctx context.Context, filePath string) error {
 		if r.Sex == "" {
 			sex = "x"
 		} else {
-			sex = strings.ToLower( r.Sex)
+			sex = strings.ToLower(r.Sex)
 		}
 
 		sortOrder := int32(r.Days[0].SortOrder)
 
 		if r.Days[0].Date == "2024-09-29" {
-			fmt.Println( "SortOrder Sonntag!")
+			fmt.Println("SortOrder Sonntag!")
 			sortOrder += 500
 		}
 
@@ -280,7 +280,7 @@ func ImportDrvJson(ctx context.Context, filePath string) error {
 			BezeichnungLang:  r.Name,
 			Zusatz:           pgtype.Text{String: r.Addition, Valid: true},
 			Leichtgewicht:    r.Weighed,
-			Geschlecht:       sqlc.Geschlecht( sex),
+			Geschlecht:       sqlc.Geschlecht(sex),
 			Bootsklasse:      r.BoatType.Code,
 			BootsklasseLang:  r.BoatType.Name,
 			Altersklasse:     r.Category.Code,
@@ -293,7 +293,7 @@ func ImportDrvJson(ctx context.Context, filePath string) error {
 
 		_, err = crud.CreateRennen(ctx, newRennen)
 		if err != nil {
-			fmt.Println( "Crud create Error:", err)
+			fmt.Println("Crud create Error:", err)
 			return err
 		}
 	}
@@ -307,13 +307,13 @@ func ImportDrvJson(ctx context.Context, filePath string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println( "Len All Rennen:", len(allRennen))
+	fmt.Println("Len All Rennen:", len(allRennen))
 
 	for _, a := range drvMeldung.ClubMembers {
 		athlet, err := crud.GetAthletMinimal(ctx, a.Id)
 		if err != nil {
 			if !errors.Is(err, pgx.ErrNoRows) {
-				fmt.Println( "Crud get Error:", err)
+				fmt.Println("Crud get Error:", err)
 				return err
 			}
 			if athlet.Uuid != uuid.Nil {
@@ -332,59 +332,59 @@ func ImportDrvJson(ctx context.Context, filePath string) error {
 			Vorname:         a.Person.Firstname,
 			Jahrgang:        a.Person.YearOfBirth,
 			Startberechtigt: startberechtigt,
-			Geschlecht:      sqlc.Geschlecht( strings.ToLower(a.Person.Sex)),
+			Geschlecht:      sqlc.Geschlecht(strings.ToLower(a.Person.Sex)),
 		}
 
 		_, err = crud.CreateAthlet(ctx, newAthlet)
 		if err != nil {
-			fmt.Println( "Crud create Error:", err)
+			fmt.Println("Crud create Error:", err)
 			return err
 		}
 	}
 
-	fmt.Println( "Import Entries Loop...")
+	fmt.Println("Import Entries Loop...")
 	for _, m := range drvMeldung.Entries {
 		meldung, err := crud.GetMeldungMinimal(ctx, m.Id)
 		if err != nil {
 			if !errors.Is(err, pgx.ErrNoRows) {
-				fmt.Println( "Crud get Error:", err)
+				fmt.Println("Crud get Error:", err)
 				return err
 			}
 			if meldung.Uuid != uuid.Nil {
 				if meldung.DrvRevisionUuid.ClockSequence() == m.RevisionId.ClockSequence() {
-					fmt.Println( "Meldung exists in DB, skipping...")
+					fmt.Println("Meldung exists in DB, skipping...")
 					continue
 				}
 
-				fmt.Println( "MeldUuid:", meldung.Uuid)
-				fmt.Println( "Meld in DB Rev:", meldung.DrvRevisionUuid.ClockSequence())
-				fmt.Println( "Meld in JSON Rev:", m.RevisionId.ClockSequence())
+				fmt.Println("MeldUuid:", meldung.Uuid)
+				fmt.Println("Meld in DB Rev:", meldung.DrvRevisionUuid.ClockSequence())
+				fmt.Println("Meld in JSON Rev:", m.RevisionId.ClockSequence())
 
 				if meldung.DrvRevisionUuid.ClockSequence() > m.RevisionId.ClockSequence() {
-					fmt.Printf( "Meldung in DB is newer than in JSON! MeldungID: %s\n", m.Id)
+					fmt.Printf("Meldung in DB is newer than in JSON! MeldungID: %s\n", m.Id)
 					continue
 				}
 
-				fmt.Printf( "Min. eine Meldung in JSON is newer than in DB! MeldungID: %s\n", m.Id)
+				fmt.Printf("Min. eine Meldung in JSON is newer than in DB! MeldungID: %s\n", m.Id)
 				continue
 			}
 		}
 		if meldung.Uuid != uuid.Nil {
 			if meldung.DrvRevisionUuid.ClockSequence() == m.RevisionId.ClockSequence() {
-				fmt.Println( "Meldung exists in DB, skipping...")
+				fmt.Println("Meldung exists in DB, skipping...")
 				continue
 			}
 
-			fmt.Println( "MeldUuid:", meldung.Uuid)
-			fmt.Println( "Meld in DB Rev:", meldung.DrvRevisionUuid.ClockSequence())
-			fmt.Println( "Meld in JSON Rev:", m.RevisionId.ClockSequence())
+			fmt.Println("MeldUuid:", meldung.Uuid)
+			fmt.Println("Meld in DB Rev:", meldung.DrvRevisionUuid.ClockSequence())
+			fmt.Println("Meld in JSON Rev:", m.RevisionId.ClockSequence())
 
 			if meldung.DrvRevisionUuid.ClockSequence() > m.RevisionId.ClockSequence() {
-				fmt.Printf( "Meldung in DB is newer than in JSON! MeldungID: %s\n", m.Id)
+				fmt.Printf("Meldung in DB is newer than in JSON! MeldungID: %s\n", m.Id)
 				continue
 			}
 
-			fmt.Printf( "Min. eine Meldung in JSON is newer than in DB! MeldungID: %s\n", m.Id)
+			fmt.Printf("Min. eine Meldung in JSON is newer than in DB! MeldungID: %s\n", m.Id)
 			continue
 		}
 
@@ -398,17 +398,17 @@ func ImportDrvJson(ctx context.Context, filePath string) error {
 		athleten := []crud.CreateMeldungAthletParams{}
 
 		if m.AltEventID != uuid.Nil {
-			fmt.Println( "Alternativ Meldung gefunden! Status:", m.Status)
-			typ += fmt.Sprintf( " - Alternative zu RennenUUID: %s", m.AltEventID.String())
+			fmt.Println("Alternativ Meldung gefunden! Status:", m.Status)
+			typ += fmt.Sprintf(" - Alternative zu RennenUUID: %s", m.AltEventID.String())
 			abgemeldet = true
 			kosten = int32(0)
 		}
 
 		for _, a := range m.Members {
-			role := strings.ToLower( a.Role)
+			role := strings.ToLower(a.Role)
 			aUuid := a.ClubMemberId
 			if aUuid == uuid.Nil {
-				fmt.Println( "uuid is nil", aUuid)
+				fmt.Println("uuid is nil", aUuid)
 				for _, nnA := range allNNAthleten {
 					if nnA.VereinUuid == m.ClubId {
 						aUuid = nnA.Uuid
@@ -416,7 +416,7 @@ func ImportDrvJson(ctx context.Context, filePath string) error {
 					}
 				}
 				if aUuid == uuid.Nil {
-					fmt.Println( "uuid is still nil", aUuid)
+					fmt.Println("uuid is still nil", aUuid)
 					return handler.InternalError("Failed to find athlete UUID")
 				}
 			}
@@ -429,7 +429,7 @@ func ImportDrvJson(ctx context.Context, filePath string) error {
 			} else if role == "rower" {
 				rolle = sqlc.RolleRuderer
 			} else {
-				fmt.Println( "Unknown Role:", a.Role)
+				fmt.Println("Unknown Role:", a.Role)
 				continue
 			}
 			athleten = append(athleten, crud.CreateMeldungAthletParams{
@@ -439,7 +439,7 @@ func ImportDrvJson(ctx context.Context, filePath string) error {
 			})
 		}
 
-		fmt.Println( "Members done... Creating Meldung")
+		fmt.Println("Members done... Creating Meldung")
 		newMeldung := crud.CreateMeldungParams{
 			CreateMeldungParams: sqlc.CreateMeldungParams{
 				Uuid:            m.Id,
@@ -459,7 +459,7 @@ func ImportDrvJson(ctx context.Context, filePath string) error {
 
 		_, err = crud.CreateMeldung(ctx, newMeldung)
 		if err != nil {
-			fmt.Println( "Crud create Error", err)
+			fmt.Println("Crud create Error", err)
 			return err
 		}
 	}
@@ -479,23 +479,23 @@ func getKostenForMeld(rennen []crud.Rennen, m DrvEntries) (int32, error) {
 	}
 
 	if kosten == 0 {
-		fmt.Println( m.EventId)
-		return 0, errors.New( "RennenUUID von Meldung nicht gefunden!")
+		fmt.Println(m.EventId)
+		return 0, errors.New("RennenUUID von Meldung nicht gefunden!")
 	}
 
 	return kosten, nil
 }
 
 const (
-	slalomRennNrThreshold    = 100
-	staffelRennNrThreshold   = 310
-	specialStaffelRennNr     = 321
-	langstreckeAbstand       = 1
-	slalomAlter9bis11Abstand = 5
+	slalomRennNrThreshold     = 100
+	staffelRennNrThreshold    = 310
+	specialStaffelRennNr      = 321
+	langstreckeAbstand        = 1
+	slalomAlter9bis11Abstand  = 5
 	slalomAlter12bis13Abstand = 4
-	slalomAb14Abstand        = 3
-	kurzstreckeAbstand       = 3
-	staffelAbstand           = 10
+	slalomAb14Abstand         = 3
+	kurzstreckeAbstand        = 3
+	staffelAbstand            = 10
 )
 
 func getRennInfo(regattaDays []string, event DrvEvents) (*sqlc.Wettkampf, *sqlc.Tag, int32, error) {
@@ -506,7 +506,7 @@ func getRennInfo(regattaDays []string, event DrvEvents) (*sqlc.Wettkampf, *sqlc.
 		rennabstand int32
 		err         error
 	)
-	rennNr, err = strconv.ParseInt( event.Number, 10, 32)
+	rennNr, err = strconv.ParseInt(event.Number, 10, 32)
 	if err != nil {
 		return nil, nil, 0, err
 	}
@@ -520,9 +520,9 @@ func getRennInfo(regattaDays []string, event DrvEvents) (*sqlc.Wettkampf, *sqlc.
 			rennabstand = langstreckeAbstand
 		} else {
 			wettkampf = sqlc.WettkampfSlalom
-			if strings.Contains( event.Category.Code, "9") || strings.Contains( event.Category.Code, "10") || strings.Contains( event.Category.Code, "11") {
+			if strings.Contains(event.Category.Code, "9") || strings.Contains(event.Category.Code, "10") || strings.Contains(event.Category.Code, "11") {
 				rennabstand = slalomAlter9bis11Abstand
-			} else if strings.Contains( event.Category.Code, "12") || strings.Contains( event.Category.Code, "13") {
+			} else if strings.Contains(event.Category.Code, "12") || strings.Contains(event.Category.Code, "13") {
 				rennabstand = slalomAlter12bis13Abstand
 			} else {
 				rennabstand = slalomAb14Abstand
@@ -539,7 +539,7 @@ func getRennInfo(regattaDays []string, event DrvEvents) (*sqlc.Wettkampf, *sqlc.
 			rennabstand = staffelAbstand
 		}
 	default:
-		return nil, nil, 0, errors.New( "Could not find valid Date")
+		return nil, nil, 0, errors.New("Could not find valid Date")
 	}
 
 	return &wettkampf, &tag, rennabstand, nil

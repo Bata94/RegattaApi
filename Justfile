@@ -115,3 +115,15 @@ down:
 lint-docker:
   @echo "Linting Dockerfile..."
   hadolint Dockerfile
+
+check:
+  just fmt
+  just lint
+  just test
+  just build
+
+fmt:
+	go fmt ./...
+
+lint:
+	golangci-lint run

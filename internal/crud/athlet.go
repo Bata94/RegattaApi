@@ -141,7 +141,7 @@ func GetAthlet(ctx context.Context, uuid uuid.UUID) (Athlet, error) {
 		return Athlet{}, err
 	}
 	if len(rows) == 0 {
-		return Athlet{}, &apierr.NOT_FOUND
+		return Athlet{}, apierr.ErrNotFound
 	}
 
 	verein := VereinFromSqlc(rows[0].Verein, 0)
@@ -169,7 +169,7 @@ func GetAthletMinimal(ctx context.Context, uuid uuid.UUID) (Athlet, error) {
 	a, err := DB.Queries.GetAthletMinimal(ctx, uuid)
 	if err != nil {
 		if isNoRowError(err) {
-			return Athlet{}, &apierr.NOT_FOUND
+			return Athlet{}, apierr.ErrNotFound
 		}
 		return Athlet{}, err
 	}
@@ -177,7 +177,7 @@ func GetAthletMinimal(ctx context.Context, uuid uuid.UUID) (Athlet, error) {
 	return Athlet{Athlet: a}, nil
 }
 
-func GetAllAthlet(ctx context.Context, ) ([]Athlet, error) {
+func GetAllAthlet(ctx context.Context) ([]Athlet, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
@@ -196,7 +196,7 @@ func GetAllAthlet(ctx context.Context, ) ([]Athlet, error) {
 	return aLs, err
 }
 
-func GetAllNNAthleten(ctx context.Context, ) ([]Athlet, error) {
+func GetAllNNAthleten(ctx context.Context) ([]Athlet, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 

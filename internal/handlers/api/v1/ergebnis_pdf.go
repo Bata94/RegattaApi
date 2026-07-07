@@ -21,7 +21,7 @@ func GetPdfFooter(c *handler.Context) error {
 }
 
 func GetMeldeergebnisList(c *handler.Context) error {
-	files, err := utils.GetFilenames( "meldeergebnis")
+	files, err := utils.GetFilenames("meldeergebnis")
 	if err != nil {
 		return err
 	}
@@ -29,14 +29,14 @@ func GetMeldeergebnisList(c *handler.Context) error {
 }
 
 func GetMeldeergebnisFilename(c *handler.Context) error {
-	filename := c.Param( "filename")
+	filename := c.Param("filename")
 	filePath := filepath.Join(config.C.Paths.FilesDir, "meldeergebnis", filename)
-	http.ServeFile( c.Writer, c.Request, filePath)
+	http.ServeFile(c.Writer, c.Request, filePath)
 	return nil
 }
 
 func GetMeldeergebnisHtml(c *handler.Context) error {
-	pLs, err := crud.GetAllPausen(c.Request.Context(), )
+	pLs, err := crud.GetAllPausen(c.Request.Context())
 	if err != nil {
 		return err
 	}
@@ -63,15 +63,15 @@ func GetMeldeergebnisHtml(c *handler.Context) error {
 	rLsParsed := []pdf_templates.RennenMeldeergebnisPDF{}
 	for _, r := range rLs {
 		zusatz := ""
-		if v := r.GetZusatz( ); v != nil {
+		if v := r.GetZusatz(); v != nil {
 			zusatz = *v
 		}
 		startzeit := ""
-		if v := r.GetStartzeit( ); v != nil {
+		if v := r.GetStartzeit(); v != nil {
 			startzeit = *v
 		}
 		rennabstand := 0
-		if v := r.GetRennabstand( ); v != nil {
+		if v := r.GetRennabstand(); v != nil {
 			rennabstand = *v
 		}
 
@@ -94,7 +94,7 @@ func GetMeldeergebnisHtml(c *handler.Context) error {
 			rParsed.Abteilungen[i].Nummer = i + 1
 		}
 
-		meldungen, err := r.GetMeldungen(c.Request.Context(), )
+		meldungen, err := r.GetMeldungen(c.Request.Context())
 		if err != nil {
 			return err
 		}
@@ -106,7 +106,7 @@ func GetMeldeergebnisHtml(c *handler.Context) error {
 			meldungEntry := pdf_templates.MeldungMeldeergebnisPDF{
 				StartNummer: int(m.StartNummer),
 				Bahn:        int(m.Bahn),
-				Teilnehmer:  m.TeilnehmerString( ),
+				Teilnehmer:  m.TeilnehmerString(),
 				Verein:      m.Verein.Name,
 			}
 
@@ -123,24 +123,24 @@ func GetMeldeergebnisHtml(c *handler.Context) error {
 		rLsParsed = append(rLsParsed, rParsed)
 	}
 
-	return handlers.RenderPdf( 
+	return handlers.RenderPdf(
 		c,
-		fmt.Sprintf( "Meldeergebnis_%s", time.Now().Format("2006-01-02_15-04-05")),
+		fmt.Sprintf("Meldeergebnis_%s", time.Now().Format("2006-01-02_15-04-05")),
 		pdf_templates.MeldeErgebnis(rLsParsed, pLsParsed),
 	)
 }
 
 func GenerateMeldeergebnis(c *handler.Context) error {
-	fp, err := utils.SavePDFfromHTML( 
+	fp, err := utils.SavePDFfromHTML(
 		"leitung/meldeergebnis",
 		"meldeergebnis",
-		fmt.Sprintf( "Meldeergebnis_%s", time.Now().Format("2006-01-02_15-04-05")),
+		fmt.Sprintf("Meldeergebnis_%s", time.Now().Format("2006-01-02_15-04-05")),
 		true,
 	)
 	if err != nil {
 		return err
 	}
-	http.ServeFile( c.Writer, c.Request, fp)
+	http.ServeFile(c.Writer, c.Request, fp)
 	return nil
 }
 
@@ -163,15 +163,15 @@ func GenerateErgebnisHtml(c *handler.Context) error {
 		}
 		if *r.NumMeldungen != 0 {
 			zusatz := ""
-			if v := r.GetZusatz( ); v != nil {
+			if v := r.GetZusatz(); v != nil {
 				zusatz = *v
 			}
 			startzeit := ""
-			if v := r.GetStartzeit( ); v != nil {
+			if v := r.GetStartzeit(); v != nil {
 				startzeit = *v
 			}
 			rennabstand := 0
-			if v := r.GetRennabstand( ); v != nil {
+			if v := r.GetRennabstand(); v != nil {
 				rennabstand = *v
 			}
 
@@ -194,7 +194,7 @@ func GenerateErgebnisHtml(c *handler.Context) error {
 				rParsed.Abteilungen[i].Nummer = i + 1
 			}
 
-			meldungen, err := r.GetMeldungen(c.Request.Context(), )
+			meldungen, err := r.GetMeldungen(c.Request.Context())
 			if err != nil {
 				return err
 			}
@@ -214,9 +214,9 @@ func GenerateErgebnisHtml(c *handler.Context) error {
 					}
 
 					if *a.Rolle == sqlc.RolleStm {
-						athletenStr += fmt.Sprintf( "\nStm.: %s %s (%s)", a.Vorname, a.Name, a.Jahrgang)
+						athletenStr += fmt.Sprintf("\nStm.: %s %s (%s)", a.Vorname, a.Name, a.Jahrgang)
 					} else {
-						athletenStr += fmt.Sprintf( "%s %s (%s)", a.Vorname, a.Name, a.Jahrgang)
+						athletenStr += fmt.Sprintf("%s %s (%s)", a.Vorname, a.Name, a.Jahrgang)
 					}
 				}
 
@@ -231,12 +231,12 @@ func GenerateErgebnisHtml(c *handler.Context) error {
 					continue
 				}
 
-				endZeit := time.Duration( ergebnis.Endzeit * float64(time.Second))
+				endZeit := time.Duration(ergebnis.Endzeit * float64(time.Second))
 				minutes := int(endZeit / time.Minute)
 				secondsPart := int((endZeit % time.Minute) / time.Second)
 				milliseconds := int((endZeit % time.Second) / time.Millisecond)
 
-				endZeitStr := fmt.Sprintf( "%02d:%02d.%03d\n", minutes, secondsPart, milliseconds)
+				endZeitStr := fmt.Sprintf("%02d:%02d.%03d\n", minutes, secondsPart, milliseconds)
 
 				meldungEntry := ErgebnisMeldungPDF{
 					StartNummer: int(m.StartNummer),
@@ -254,7 +254,7 @@ func GenerateErgebnisHtml(c *handler.Context) error {
 			}
 
 			for i, abt := range rParsed.Abteilungen {
-				sort.Slice( abt.Meldungen, func(i, j int) bool {
+				sort.Slice(abt.Meldungen, func(i, j int) bool {
 					return abt.Meldungen[i].Endzeit < abt.Meldungen[j].Endzeit
 				})
 
@@ -272,16 +272,16 @@ func GenerateErgebnisHtml(c *handler.Context) error {
 }
 
 func GenerateErgebnis(c *handler.Context) error {
-	fp, err := utils.SavePDFfromHTML( 
+	fp, err := utils.SavePDFfromHTML(
 		"leitung/ergebnis",
 		"ergebnis",
-		fmt.Sprintf( "ergebnis_%s", time.Now().Format("2006-01-02_15-04-05")),
+		fmt.Sprintf("ergebnis_%s", time.Now().Format("2006-01-02_15-04-05")),
 		true,
 	)
 	if err != nil {
 		return err
 	}
-	http.ServeFile( c.Writer, c.Request, fp)
+	http.ServeFile(c.Writer, c.Request, fp)
 	return nil
 }
 

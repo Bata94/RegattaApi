@@ -33,7 +33,7 @@ func GetAthlet(c *handler.Context) error {
 }
 
 func GetAllAthlet(c *handler.Context) error {
-	aLs, err := crud.GetAllAthlet(c.Request.Context(), )
+	aLs, err := crud.GetAllAthlet(c.Request.Context())
 	if err != nil {
 		return err
 	}

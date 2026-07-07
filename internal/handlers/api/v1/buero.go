@@ -79,7 +79,7 @@ func KasseCreateRechnungPDF(c *handler.Context) error {
 }
 
 func KasseCreateRechnungAllVereine(c *handler.Context) error {
-	vereine, err := crud.GetAllVerein(c.Request.Context(), )
+	vereine, err := crud.GetAllVerein(c.Request.Context())
 	if err != nil {
 		return err
 	}

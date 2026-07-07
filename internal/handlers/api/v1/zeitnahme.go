@@ -27,7 +27,7 @@ func WsZeitnahmeZiel(c *handler.Context) error {
 
 	handlers.Register <- nil
 
-	q, err := crud.GetOpenZeitnahmeZiel(c.Request.Context(), )
+	q, err := crud.GetOpenZeitnahmeZiel(c.Request.Context())
 	if err != nil {
 		errStr := fmt.Sprint("Error getting open ZnZiel... ", err)
 		slog.Error(errStr)
@@ -69,7 +69,7 @@ func PostZeitnahmeStart(c *handler.Context) error {
 }
 
 func GetOpenStarts(c *handler.Context) error {
-	q, err := crud.GetOpenZeitnahmeStart(c.Request.Context(), )
+	q, err := crud.GetOpenZeitnahmeStart(c.Request.Context())
 	if err != nil {
 		return err
 	}
@@ -78,13 +78,13 @@ func GetOpenStarts(c *handler.Context) error {
 }
 
 func GenerateEndZeit(c *handler.Context) error {
-	starts, err := crud.GetOpenZeitnahmeStart(c.Request.Context(), )
+	starts, err := crud.GetOpenZeitnahmeStart(c.Request.Context())
 	if err != nil {
 		slog.Debug("GetOpenZeitnahmeStart")
 		return err
 	}
 
-	ziels, err := crud.GetOpenZeitnahmeZiel(c.Request.Context(), )
+	ziels, err := crud.GetOpenZeitnahmeZiel(c.Request.Context())
 	if err != nil {
 		slog.Debug("GetOpenZeitnahmeZiel")
 		return err

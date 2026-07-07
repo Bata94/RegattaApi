@@ -135,7 +135,7 @@ func validUser(ctx context.Context, id uuid.UUID, p string) bool {
 	return true
 }
 
-func GetAllUsers(ctx context.Context, ) ([]sqlc.User, error) {
+func GetAllUsers(ctx context.Context) ([]sqlc.User, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
@@ -158,7 +158,7 @@ func GetUser(ctx context.Context, id uuid.UUID) (*User, error) {
 	u, err := DB.Queries.GetUser(ctx, id)
 	if err != nil {
 		if isNoRowError(err) {
-			return nil, &apierr.NOT_FOUND
+			return nil, apierr.ErrNotFound
 		}
 		return nil, err
 	}
@@ -230,8 +230,8 @@ func UpdatePassword(ctx context.Context, u uuid.UUID, p string) error {
 		return err
 	}
 
-	err = DB.Queries.UpdatePassword(ctx,  sqlc.UpdatePasswordParams{
-		Uuid: u,
+	err = DB.Queries.UpdatePassword(ctx, sqlc.UpdatePasswordParams{
+		Uuid:           u,
 		HashedPassword: hp,
 	})
 	if err != nil {
@@ -248,7 +248,7 @@ func AuthLogin(ctx context.Context, l LoginParams) (*ReturnUserWithJWT, error) {
 	}
 
 	if u.IsActive == false {
-		return nil, &apierr.AUTH_LOGIN_USER_NOT_ACTIVE
+		return nil, apierr.ErrAuthLoginUserNotActive
 	}
 
 	tokenStr := ""
@@ -256,12 +256,10 @@ func AuthLogin(ctx context.Context, l LoginParams) (*ReturnUserWithJWT, error) {
 	if CheckPasswordHash(l.Password, u.HashedPassword) {
 		tokenStr, tokenExp, err = genJWT(u.User, u.UserGroup)
 		if err != nil {
-			retErr := &apierr.TOKEN_GENERATION_ERROR
-			retErr.Details = err.Error()
-			return nil, retErr
+			return nil, apierr.ErrTokenGeneration.WithDetails(err.Error())
 		}
 	} else {
-		return nil, &apierr.AUTH_LOGIN_WRONG_PASSWORD
+		return nil, apierr.ErrAuthLoginWrongPassword
 	}
 
 	if tokenStr == "" {

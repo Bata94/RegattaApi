@@ -49,7 +49,7 @@ func baseLayoutHandler(url string, getPage PageFunc) {
 				LoggedIn: loggedIn,
 			}
 
-			if 	c.IsHtmxRequest() {
+			if c.IsHtmxRequest() {
 				templ.Handler(pageBody).ServeHTTP(c.Writer, c.Request)
 			} else {
 				templ.Handler(ui_layouts.BaseLayout(pageBody, navbarCfg)).ServeHTTP(c.Writer, c.Request)
@@ -67,4 +67,3 @@ func baseLayoutHandler(url string, getPage PageFunc) {
 		}
 	})
 }
-

@@ -23,5 +23,3 @@ func TestHandler(c *handler.Context) error {
 
 	return c.JSON("success")
 }
-
-

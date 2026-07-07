@@ -54,7 +54,7 @@ func (v *Verein) GetAthleten() ([]Athlet, error) {
 	return v.loadAthleten(context.Background())
 }
 
-func (v *Verein) loadAthleten(ctx context.Context, ) ([]Athlet, error) {
+func (v *Verein) loadAthleten(ctx context.Context) ([]Athlet, error) {
 	loaded, err := GetAllAthletenForVerein(ctx, v.Uuid)
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func VereinFromSqlc(v sqlc.Verein, gesKosten int) Verein {
 	}
 }
 
-func (verein *Verein) GetRechnungsnummern(ctx context.Context, ) ([]string, error) {
+func (verein *Verein) GetRechnungsnummern(ctx context.Context) ([]string, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
@@ -93,7 +93,7 @@ func (verein *Verein) GetRechnungsnummern(ctx context.Context, ) ([]string, erro
 	return retLs, nil
 }
 
-func (verein *Verein) GetNextRechnungsnummer(ctx context.Context, ) (string, error) {
+func (verein *Verein) GetNextRechnungsnummer(ctx context.Context) (string, error) {
 	rechnungsNummern, err := verein.GetRechnungsnummern(ctx)
 	if err != nil {
 		return "", err
@@ -136,7 +136,7 @@ func (verein *Verein) GetNextRechnungsnummer(ctx context.Context, ) (string, err
 	return reNr, nil
 }
 
-func GetAllVerein(ctx context.Context, ) ([]Verein, error) {
+func GetAllVerein(ctx context.Context) ([]Verein, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
@@ -165,7 +165,7 @@ func GetVerein(ctx context.Context, uuid uuid.UUID) (Verein, error) {
 	q, err := DB.Queries.GetVerein(ctx, uuid)
 	if err != nil {
 		if isNoRowError(err) {
-			return Verein{}, &apierr.NOT_FOUND
+			return Verein{}, apierr.ErrNotFound
 		}
 		return Verein{}, err
 	}
@@ -197,7 +197,7 @@ func GetVereinMinimal(ctx context.Context, uuid uuid.UUID) (Verein, error) {
 	v, err := DB.Queries.GetVereinMinimal(ctx, uuid)
 	if err != nil {
 		if isNoRowError(err) {
-			return Verein{}, &apierr.NOT_FOUND
+			return Verein{}, apierr.ErrNotFound
 		}
 		return Verein{}, err
 	}

@@ -37,7 +37,7 @@ func Ergebnisse(c *handler.Context) (templ.Component, error) {
 }
 
 func Login(c *handler.Context) (templ.Component, error) {
-	return ui_pages.Login(""), nil
+	return ui_pages.Login("", nil), nil
 }
 
 func Datenschutz(c *handler.Context) (templ.Component, error) {

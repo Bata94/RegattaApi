@@ -17,7 +17,7 @@ type UsersGroupWithUsers struct {
 	Users []ReturnUserMinimal
 }
 
-func GetAllUsersGroups(ctx context.Context, ) ([]sqlc.UsersGroup, error) {
+func GetAllUsersGroups(ctx context.Context) ([]sqlc.UsersGroup, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
@@ -40,7 +40,7 @@ func GetUsersGroupsMinimal(ctx context.Context, id uuid.UUID) (sqlc.UsersGroup, 
 	ug, err := DB.Queries.GetUserGroupMinimal(ctx, id)
 	if err != nil {
 		if isNoRowError(err) {
-			return sqlc.UsersGroup{}, &apierr.NOT_FOUND
+			return sqlc.UsersGroup{}, apierr.ErrNotFound
 		}
 		return sqlc.UsersGroup{}, err
 	}
@@ -82,7 +82,7 @@ func GetUsersGroup(ctx context.Context, id uuid.UUID) (UsersGroupWithUsers, erro
 	q, err := DB.Queries.GetUserGroup(ctx, id)
 	if err != nil {
 		if isNoRowError(err) {
-			return UsersGroupWithUsers{}, &apierr.NOT_FOUND
+			return UsersGroupWithUsers{}, apierr.ErrNotFound
 		}
 		return UsersGroupWithUsers{}, err
 	}
@@ -119,12 +119,12 @@ func UpdateUserGroup(ctx context.Context, uuid uuid.UUID, uParams sqlc.UpdateUse
 	defer cancel()
 
 	err := DB.Queries.UpdateUserGroup(ctx, sqlc.UpdateUserGroupParams{
-		Uuid: uuid,
-		Name: uParams.Name,
-		AllowedAdmin: uParams.AllowedAdmin,
-		AllowedZeitnahme: uParams.AllowedZeitnahme,
-		AllowedStartlisten: uParams.AllowedStartlisten,
-		AllowedRegattabuero: uParams.AllowedRegattabuero,
+		Uuid:                  uuid,
+		Name:                  uParams.Name,
+		AllowedAdmin:          uParams.AllowedAdmin,
+		AllowedZeitnahme:      uParams.AllowedZeitnahme,
+		AllowedStartlisten:    uParams.AllowedStartlisten,
+		AllowedRegattabuero:   uParams.AllowedRegattabuero,
 		AllowedRegattaleitung: uParams.AllowedRegattaleitung,
 	})
 	if err != nil {

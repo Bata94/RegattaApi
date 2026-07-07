@@ -11,7 +11,7 @@ type Pause struct {
 	sqlc.Pause
 }
 
-func GetAllPausen(ctx context.Context, ) ([]Pause, error) {
+func GetAllPausen(ctx context.Context) ([]Pause, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
@@ -60,7 +60,7 @@ func GetPause(ctx context.Context, id int) (Pause, error) {
 	p, err := DB.Queries.GetPause(ctx, int32(id))
 	if err != nil {
 		if isNoRowError(err) {
-			return Pause{}, &apierr.NOT_FOUND
+			return Pause{}, apierr.ErrNotFound
 		}
 		return Pause{}, err
 	}

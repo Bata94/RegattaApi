@@ -1,9 +1,9 @@
 package api_v1
 
 import (
-	"strconv"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+	"strconv"
 
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handler"

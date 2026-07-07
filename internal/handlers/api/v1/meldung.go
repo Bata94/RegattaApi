@@ -13,7 +13,7 @@ import (
 )
 
 func GetAllMeldung(c *handler.Context) error {
-	mLs, err := crud.GetAllMeldungen(c.Request.Context(), )
+	mLs, err := crud.GetAllMeldungen(c.Request.Context())
 	if err != nil {
 		return err
 	}

@@ -146,7 +146,7 @@ type CreateMeldungAthletParams struct {
 	Rolle    sqlc.Rolle `json:"rolle"`
 }
 
-func GetAllMeldungen(ctx context.Context, ) ([]Meldung, error) {
+func GetAllMeldungen(ctx context.Context) ([]Meldung, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
@@ -172,7 +172,7 @@ func GetMeldungMinimal(ctx context.Context, uuid uuid.UUID) (Meldung, error) {
 	m, err := DB.Queries.GetMeldungMinimal(ctx, uuid)
 	if err != nil {
 		if isNoRowError(err) {
-			return Meldung{}, &apierr.NOT_FOUND
+			return Meldung{}, apierr.ErrNotFound
 		}
 		return Meldung{}, err
 	}
@@ -196,7 +196,7 @@ func GetMeldungByStartNrUndTag(ctx context.Context, startNummer int, tag Tag) (M
 		return Meldung{}, errors.New("Multiple Startnummern")
 	} else if len(q) == 0 {
 		slog.Info("No Meldung found", "startNummer", startNummer)
-		return Meldung{}, &apierr.NOT_FOUND
+		return Meldung{}, apierr.ErrNotFound
 	}
 
 	return Meldung{Meldung: q[0]}, nil
@@ -209,13 +209,13 @@ func GetMeldung(ctx context.Context, uuid uuid.UUID) (Meldung, error) {
 	q, err := DB.Queries.GetMeldung(ctx, uuid)
 	if err != nil {
 		if isNoRowError(err) {
-			return Meldung{}, &apierr.NOT_FOUND
+			return Meldung{}, apierr.ErrNotFound
 		}
 		return Meldung{}, err
 	}
 
 	if len(q) == 0 {
-		return Meldung{}, &apierr.NOT_FOUND
+		return Meldung{}, apierr.ErrNotFound
 	}
 
 	athleten := []Athlet{}
@@ -238,7 +238,7 @@ func GetMeldung(ctx context.Context, uuid uuid.UUID) (Meldung, error) {
 	}, nil
 }
 
-func CheckMeldungSetzung(ctx context.Context, ) (bool, error) {
+func CheckMeldungSetzung(ctx context.Context) (bool, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
@@ -253,7 +253,7 @@ func CheckMeldungSetzung(ctx context.Context, ) (bool, error) {
 	return true, nil
 }
 
-func CheckMeldungStartnummern(ctx context.Context, ) (bool, error) {
+func CheckMeldungStartnummern(ctx context.Context) (bool, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
@@ -287,13 +287,13 @@ func CreateMeldung(ctx context.Context, mParams CreateMeldungParams) (Meldung, e
 		})
 
 		if err != nil {
-			retErr := apierr.INTERNAL_SERVER_ERROR
-			retErr.Details = fmt.Sprintf("Error linking MeldungAthlet: %s \nMeldung-ID: %s \nAthlet-ID: %s",
-				err,
-				m.Uuid.String(),
-				a.Uuid.String(),
+			return Meldung{}, apierr.ErrInternal.WithDetails(
+				fmt.Sprintf("Error linking MeldungAthlet: %s \nMeldung-ID: %s \nAthlet-ID: %s",
+					err,
+					m.Uuid.String(),
+					a.Uuid.String(),
+				),
 			)
-			return Meldung{}, &retErr
 		}
 	}
 
@@ -309,7 +309,7 @@ func UpdateMeldungSetzung(ctx context.Context, p sqlc.UpdateMeldungSetzungParams
 
 func UpdateSetzungBatch(ctx context.Context, p UpdateSetzungBatchParams) error {
 	if len(p.Meldungen) == 0 {
-		return &apierr.BAD_REQUEST
+		return apierr.ErrBadRequest
 	}
 
 	for _, m := range p.Meldungen {

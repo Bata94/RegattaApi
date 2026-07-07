@@ -99,7 +99,7 @@ func ZeitnahmeFromSqlcZiel(z sqlc.ZeitnahmeZiel) Zeitnahme {
 	}
 }
 
-func GetOpenZeitnahmeStart(ctx context.Context, ) ([]Zeitnahme, error) {
+func GetOpenZeitnahmeStart(ctx context.Context) ([]Zeitnahme, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 	retLs := []Zeitnahme{}
@@ -130,7 +130,7 @@ func GetZeitnahmeZiel(ctx context.Context, id int) (Zeitnahme, error) {
 	return ZeitnahmeFromSqlcZiel(q), nil
 }
 
-func GetOpenZeitnahmeZiel(ctx context.Context, ) ([]Zeitnahme, error) {
+func GetOpenZeitnahmeZiel(ctx context.Context) ([]Zeitnahme, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 

@@ -13,7 +13,7 @@ import (
 
 const (
 	WEBP_DEFAULT_QUALITY = 75.0
-	WEBP_SMALL_QUALITY = 50.0
+	WEBP_SMALL_QUALITY   = 50.0
 )
 
 type ConvertResizeParams struct {

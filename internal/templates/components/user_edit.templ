@@ -6,18 +6,24 @@ import (
 	"github.com/bata94/RegattaApi/internal/sqlc"
 )
 
-templ UserEdit(u crud.User, msg string) {
+templ UserEdit(u crud.User, msg string, fieldErrors map[string]string) {
   {{
     var title, uuidStr string
-    if u.Uuid != uuid.Nil {
-      title = "Nutzer bearbeiten"
-      uuidStr = u.Uuid.String()
-    } else {
+    isNew := u.Uuid == uuid.Nil
+    if isNew {
       title = "Neuer Nutzer"
       uuidStr = "new"
+    } else {
+      title = "Nutzer bearbeiten"
+      uuidStr = u.Uuid.String()
     }
 
     userGroups, errUserGroups := crud.GetAllUsersGroups(ctx)
+
+    selectClass := "select select-bordered w-full"
+    if fieldErrors["user_group_uuid"] != "" {
+      selectClass += " select-error"
+    }
   }}
   if errUserGroups != nil {
     @ErrorBody(500, errUserGroups.Error())
@@ -40,29 +46,9 @@ templ UserEdit(u crud.User, msg string) {
       }
 
       <div class="flex flex-col gap-4">
-        <div class="form-control mb-6">
-          <label class="input w-full">
-            <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            <input type="text" name="username" class="grow" placeholder="Benutzername" value={u.Username} required />
-          </label>
-        </div>
+        @LineInput("username", "Benutzername", u.Username, "text", true, fieldErrors["username"])
 
-        <div class="form-control mb-6">
-          <label class="input w-full">
-            <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-            <input
-              type="password"
-              name="password"
-              class="grow"
-              placeholder="Passwort"
-              if uuidStr  == "new" {
-                required
-              } else {
-                disabled
-              }
-            />
-          </label>
-        </div>
+        @LineInput("password", "Passwort", "", "password", isNew, fieldErrors["password"])
 
         <div class="mb-6 flex flex-row justify-between">
           <label class="">
@@ -72,18 +58,25 @@ templ UserEdit(u crud.User, msg string) {
             name="is_not_active"
             type="checkbox"
             class="toggle"
-            if uuidStr  != "new" && !u.IsActive {
+            if !isNew && !u.IsActive {
               checked
             }
           />
         </div>
 
-        <div class="form-control mb-6">
-          <select class="select" name="user_group_uuid" required>
-            if u.Uuid != uuid.Nil {
-              <option disabled >Nutzergruppe</option>
-            } else {
+        <div class="form-control mb-6 w-full">
+          <label class="label">
+            <span class="label-text">Nutzergruppe</span>
+          </label>
+          <select
+            name="user_group_uuid"
+            class={selectClass}
+            required
+          >
+            if isNew {
               <option disabled selected>Nutzergruppe</option>
+            } else {
+              <option disabled>Nutzergruppe</option>
             }
             for _, ug := range userGroups {
               if ug.Uuid == u.UserGroup.Uuid {
@@ -93,6 +86,9 @@ templ UserEdit(u crud.User, msg string) {
               }
             }
           </select>
+          if fieldErrors["user_group_uuid"] != "" {
+            <span class="text-error text-sm mt-1">{fieldErrors["user_group_uuid"]}</span>
+          }
         </div>
       </div>
       @SubmitButton("Speichern", Success)

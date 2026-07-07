@@ -10,65 +10,44 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/a-h/templ"
+	"github.com/bata94/RegattaApi/internal/errors"
 	"github.com/google/uuid"
 )
 
 type Handler func(c *Context) error
 
-type AppError struct {
-	Code        int
-	StatusCode  int
-	Message     string
-	Details     string
-	FieldErrors map[string]string
-	FormComp    templ.Component
-}
-
-func (e *AppError) Error() string {
-	return e.Message
-}
-
-func (e *AppError) WithForm(comp templ.Component) *AppError {
-	e.FormComp = comp
-	return e
-}
-
-func (e *AppError) WithDetails(details string) *AppError {
-	e.Details = details
-	return e
-}
+type AppError = apierr.AppError
 
 func NotFound(msg string) *AppError {
-	return &AppError{Code: 404, StatusCode: http.StatusNotFound, Message: msg}
+	return apierr.NotFound(msg)
 }
 
 func BadRequest(msg string) *AppError {
-	return &AppError{Code: 400, StatusCode: http.StatusBadRequest, Message: msg}
+	return apierr.BadRequest(msg)
 }
 
 func Unauthorized(msg string) *AppError {
-	return &AppError{Code: 401, StatusCode: http.StatusUnauthorized, Message: msg}
+	return apierr.Unauthorized(msg)
 }
 
 func Forbidden(msg string) *AppError {
-	return &AppError{Code: 403, StatusCode: http.StatusForbidden, Message: msg}
+	return apierr.Forbidden(msg)
 }
 
 func NotAcceptable(msg string) *AppError {
-	return &AppError{Code: 406, StatusCode: http.StatusNotAcceptable, Message: msg}
+	return apierr.NotAcceptable(msg)
 }
 
 func InternalError(msg string) *AppError {
-	return &AppError{Code: 500, StatusCode: http.StatusInternalServerError, Message: msg}
+	return apierr.InternalError(msg)
 }
 
 func ValidationError(fieldErrors map[string]string) *AppError {
-	return &AppError{Code: 1000, StatusCode: http.StatusBadRequest, Message: "Validation error", FieldErrors: fieldErrors}
+	return apierr.ValidationError(fieldErrors)
 }
 
 func OK(msg string) *AppError {
-	return &AppError{Code: 200, StatusCode: http.StatusOK, Message: msg}
+	return apierr.OK(msg)
 }
 
 type statusResponseWriter struct {

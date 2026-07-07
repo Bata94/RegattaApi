@@ -1,8 +1,8 @@
 package crud
 
 import (
-	"context"
 	"cmp"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -37,7 +37,7 @@ func WettkampfFromString(str string) (sqlc.Wettkampf, error) {
 		}
 	}
 
-	return "", &apierr.NOT_FOUND
+	return "", apierr.ErrNotFound
 }
 
 type GetAllRennenParams struct {
@@ -120,7 +120,7 @@ func (r *Rennen) GetStartzeit() *string {
 	return nil
 }
 
-func (r *Rennen) GetMeldungen(ctx context.Context, ) ([]Meldung, error) {
+func (r *Rennen) GetMeldungen(ctx context.Context) ([]Meldung, error) {
 	if r.Meldungen != nil {
 		return r.Meldungen, nil
 	}
@@ -293,7 +293,7 @@ func GetZeitplanung(ctx context.Context, wettkampf []sqlc.Wettkampf) (Zeitplaung
 		return Zeitplaung{}, err
 	}
 	if len(q) == 0 {
-		return Zeitplaung{}, &apierr.NOT_FOUND
+		return Zeitplaung{}, apierr.ErrNotFound
 	}
 
 	return ZeitplaungFromSqlc(q), nil
@@ -443,9 +443,9 @@ func sqlcRennenToCrudRennen(q []sqlc.GetAllRennenWithMeldRow, getEmptyRennen boo
 			}
 			verein := Verein{Verein: v}
 			curRennen.Meldungen = append(curRennen.Meldungen, Meldung{
-				Meldung: m,
-				Rennen:  &Rennen{},
-				Verein:  &verein,
+				Meldung:  m,
+				Rennen:   &Rennen{},
+				Verein:   &verein,
 				Athleten: []Athlet{},
 			})
 		}
@@ -474,7 +474,7 @@ func GetRennenMinimal(ctx context.Context, uuid uuid.UUID) (Rennen, error) {
 	r, err := DB.Queries.GetRennenMinimal(ctx, uuid)
 	if err != nil {
 		if isNoRowError(err) {
-			return Rennen{}, &apierr.NOT_FOUND
+			return Rennen{}, apierr.ErrNotFound
 		}
 		return Rennen{}, err
 	}
@@ -489,12 +489,12 @@ func GetRennen(ctx context.Context, uuidParam uuid.UUID) (Rennen, error) {
 	q, err := DB.Queries.GetRennen(ctx, uuidParam)
 	if err != nil {
 		if isNoRowError(err) {
-			return Rennen{}, &apierr.NOT_FOUND
+			return Rennen{}, apierr.ErrNotFound
 		}
 		return Rennen{}, err
 	}
 	if len(q) == 0 {
-		return Rennen{}, &apierr.NOT_FOUND
+		return Rennen{}, apierr.ErrNotFound
 	}
 
 	r := RennenFromSqlc(q[0].Rennen, 0, int32(0))

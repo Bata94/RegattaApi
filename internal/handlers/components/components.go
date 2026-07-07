@@ -28,12 +28,19 @@ func LoginPost(c *handler.Context) error {
 	password := c.FormValue("password")
 
 	if username == "" || password == "" {
-		return handler.BadRequest("Benutzername und Passwort erforderlich").WithForm(ui_pages.Login(""))
+		fieldErrors := make(map[string]string)
+		if username == "" {
+			fieldErrors["username"] = "Benutzername erforderlich"
+		}
+		if password == "" {
+			fieldErrors["password"] = "Passwort erforderlich"
+		}
+		return handler.BadRequest("Bitte alle Felder ausfüllen").WithForm(ui_pages.Login("", fieldErrors))
 	}
 
 	u, err := crud.AuthLogin(c.Request.Context(), crud.LoginParams{Username: username, Password: password})
 	if err != nil {
-		return handler.BadRequest("Benutzername oder Passwort ist falsch").WithForm(ui_pages.Login(""))
+		return handler.BadRequest("Benutzername oder Passwort ist falsch").WithForm(ui_pages.Login("", nil))
 	}
 
 	secure := c.Request.TLS != nil
@@ -112,7 +119,7 @@ func UserEditNew(c *handler.Context) error {
 		}
 	}
 
-	templ.Handler(ui_components.UserEdit(*u, "")).ServeHTTP(c.Writer, c.Request)
+	templ.Handler(ui_components.UserEdit(*u, "", nil)).ServeHTTP(c.Writer, c.Request)
 	return nil
 }
 
@@ -130,18 +137,44 @@ func UserEditNewPost(c *handler.Context) error {
 		userUuid, err = uuid.Parse(uuidStr)
 	}
 
-	groupUuidStr := c.FormValue("user_group_uuid")
-	groupUuid, errGroupUuid := uuid.Parse(groupUuidStr)
+	username := c.FormValue("username")
+	groupUuid, errGroupUuid := uuid.Parse(c.FormValue("user_group_uuid"))
 
 	if err != nil || errGroupUuid != nil {
 		return handler.NotAcceptable("Invalid UUID")
+	}
+
+	fieldErrors := make(map[string]string)
+	if username == "" {
+		fieldErrors["username"] = "Benutzername erforderlich"
+	}
+	if groupUuid == uuid.Nil {
+		fieldErrors["user_group_uuid"] = "Nutzergruppe erforderlich"
+	}
+	if uuidStr == "new" {
+		password := c.FormValue("password")
+		if password == "" {
+			fieldErrors["password"] = "Passwort erforderlich"
+		}
+	}
+	if len(fieldErrors) > 0 {
+		u = &crud.User{
+			User: sqlc.User{
+				Uuid:     userUuid,
+				Username: username,
+			},
+			UserGroup: &sqlc.UsersGroup{
+				Uuid: groupUuid,
+			},
+		}
+		return handler.BadRequest("Bitte alle Pflichtfelder ausfüllen").WithForm(ui_components.UserEdit(*u, "", fieldErrors))
 	}
 
 	if uuidStr == "new" {
 		u = &crud.User{
 			User: sqlc.User{
 				Uuid:     userUuid,
-				Username: c.FormValue("username"),
+				Username: username,
 			},
 			UserGroup: &sqlc.UsersGroup{
 				Uuid: groupUuid,
@@ -149,11 +182,11 @@ func UserEditNewPost(c *handler.Context) error {
 		}
 		_, err = crud.CreateUser(c.Request.Context(), crud.CreateUserParams{
 			GroupUuid: groupUuid,
-			Username:  c.FormValue("username"),
+			Username:  username,
 			Password:  c.FormValue("password"),
 		})
 		if err != nil {
-			return handler.BadRequest("Error while creating user, Err: " + err.Error()).WithForm(ui_components.UserEdit(*u, ""))
+			return handler.BadRequest("Error while creating user, Err: " + err.Error()).WithForm(ui_components.UserEdit(*u, "", nil))
 		}
 
 		c.Writer.Header().Set("HX-Redirect", "/internal/admin/users")
@@ -163,16 +196,16 @@ func UserEditNewPost(c *handler.Context) error {
 
 	u, err = crud.GetUser(c.Request.Context(), userUuid)
 	if err != nil {
-		return handler.BadRequest("Error while updating user, Err: " + err.Error()).WithForm(ui_components.UserEdit(*u, ""))
+		return handler.BadRequest("Error while updating user, Err: " + err.Error()).WithForm(ui_components.UserEdit(*u, "", nil))
 	}
 
 	err = crud.UpdateUser(c.Request.Context(), u.Uuid, crud.UpdateUserParams{
-		Username:  c.FormValue("username"),
+		Username:  username,
 		IsActive:  c.FormValue("is_not_active") != "on",
 		GroupUuid: groupUuid,
 	})
 	if err != nil {
-		return handler.BadRequest("Error while updating user, Err: " + err.Error()).WithForm(ui_components.UserEdit(*u, ""))
+		return handler.BadRequest("Error while updating user, Err: " + err.Error()).WithForm(ui_components.UserEdit(*u, "", nil))
 	}
 
 	c.Writer.Header().Set("HX-Redirect", "/internal/admin/users")
@@ -255,7 +288,7 @@ func ChangePasswordGet(c *handler.Context) error {
 		return handler.NotFound("User not found")
 	}
 
-	templ.Handler(ui_pages.ChangePasswordDialogBody(*user, "")).ServeHTTP(c.Writer, c.Request)
+	templ.Handler(ui_pages.ChangePasswordDialogBody(*user, "", nil)).ServeHTTP(c.Writer, c.Request)
 	return nil
 }
 
@@ -271,16 +304,31 @@ func ChangePasswordPost(c *handler.Context) error {
 	newPassword1 := c.FormValue("new_password_1")
 	newPassword2 := c.FormValue("new_password_2")
 
-	if currentPassword == "" || newPassword1 == "" || newPassword2 == "" {
-		return handler.BadRequest("Alle Felder müssen ausgefüllt werden").WithForm(ui_pages.ChangePasswordDialogBody(*user, ""))
+	fieldErrors := make(map[string]string)
+	topMsg := ""
+	if currentPassword == "" {
+		fieldErrors["current_password"] = "Aktuelles Passwort erforderlich"
+		topMsg = "Bitte alle Felder ausfüllen"
 	}
-
-	if newPassword1 != newPassword2 {
-		return handler.BadRequest("Passwörter stimmen nicht überein").WithForm(ui_pages.ChangePasswordDialogBody(*user, ""))
+	if newPassword1 == "" {
+		fieldErrors["new_password_1"] = "Neues Passwort erforderlich"
+		topMsg = "Bitte alle Felder ausfüllen"
 	}
-
-	if crud.CheckPasswordHash(currentPassword, user.HashedPassword) == false {
-		return handler.BadRequest("Aktuelles Passwort ist falsch").WithForm(ui_pages.ChangePasswordDialogBody(*user, ""))
+	if newPassword2 == "" {
+		fieldErrors["new_password_2"] = "Neues Passwort erneut erforderlich"
+		topMsg = "Bitte alle Felder ausfüllen"
+	}
+	if newPassword1 != "" && newPassword2 != "" && newPassword1 != newPassword2 {
+		fieldErrors["new_password_1"] = "Passwörter stimmen nicht überein"
+		fieldErrors["new_password_2"] = "Passwörter stimmen nicht überein"
+		topMsg = "Passwörter stimmen nicht überein"
+	}
+	if currentPassword != "" && crud.CheckPasswordHash(currentPassword, user.HashedPassword) == false {
+		fieldErrors["current_password"] = "Aktuelles Passwort ist falsch"
+		topMsg = "Aktuelles Passwort ist falsch"
+	}
+	if len(fieldErrors) > 0 {
+		return handler.BadRequest(topMsg).WithForm(ui_pages.ChangePasswordDialogBody(*user, "", fieldErrors))
 	}
 
 	err = crud.UpdatePassword(c.Request.Context(), userUuid, newPassword1)
@@ -423,8 +471,8 @@ func PausenPost(c *handler.Context) error {
 		return nil
 	} else {
 		_, err = crud.UpdatePause(c.Request.Context(), sqlc.UpdatePauseParams{
-			ID:             int32(id),
-			Laenge:         int32(laenge),
+			ID:     int32(id),
+			Laenge: int32(laenge),
 		})
 		if err != nil {
 			return handler.InternalError("Error while updating pause")
@@ -629,10 +677,10 @@ func NachmeldungPost(c *handler.Context) error {
 	numAthletes, stmRequired := rennen.GetTeilnehmerMeldeParams()
 
 	params := api_v1.PostNachmeldungParams{
-		VereinUuid: c.Request.FormValue("verein_uuid"),
-		RennenUuid: c.Request.FormValue("rennen_uuid"),
+		VereinUuid:                    c.Request.FormValue("verein_uuid"),
+		RennenUuid:                    c.Request.FormValue("rennen_uuid"),
 		DoppeltesMeldentgeldBefreiung: c.Request.FormValue("doppeltes_meldentgeld_befreiung") != "",
-		Athleten: []api_v1.PostNachmeldungAthletParams{},
+		Athleten:                      []api_v1.PostNachmeldungAthletParams{},
 	}
 
 	for i := range numAthletes {
@@ -689,7 +737,7 @@ func WaagePost(c *handler.Context) error {
 	err := c.Request.ParseForm()
 	if err != nil {
 		slog.Error("ParseForm error", "err", err)
-		return err
+		return handler.BadRequest("Fehler beim Verarbeiten der Anfrage")
 	}
 
 	idStr := c.Request.FormValue("uuid")
@@ -697,14 +745,14 @@ func WaagePost(c *handler.Context) error {
 	gewichtFloat, err := strconv.ParseFloat(gewichtStr, 32)
 	if err != nil {
 		slog.Error("ParseFloat error", "err", err)
-		return err
+		return handler.NotAcceptable("Ungültiges Gewicht")
 	}
 	gewicht := int(gewichtFloat * 10)
 
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		slog.Error("Parse UUID error", "err", err)
-		return err
+		return handler.NotAcceptable("Ungültige UUID")
 	}
 
 	ath, err := crud.GetAthletMinimal(c.Request.Context(), id)
@@ -716,7 +764,7 @@ func WaagePost(c *handler.Context) error {
 	err = ath.UpdateGewicht(c.Request.Context(), gewicht)
 	if err != nil {
 		slog.Error("UpdateGewicht error", "err", err)
-		return err
+		return handler.InternalError("Fehler beim Aktualisieren des Gewichts")
 	}
 
 	vereinUuidStr := c.Param("v_uuid")
