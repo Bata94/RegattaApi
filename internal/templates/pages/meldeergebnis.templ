@@ -4,6 +4,8 @@ import (
   "github.com/bata94/RegattaApi/internal/templates/components"
   "github.com/bata94/RegattaApi/internal/sqlc"
   "github.com/bata94/RegattaApi/internal/crud"
+	"github.com/bata94/RegattaApi/internal/utils"
+	"fmt"
 )
 
 // TODO: Add dynamic PDF embedding/Linking
@@ -134,26 +136,35 @@ templ MeldeergebnisCollapseBody(w sqlc.Wettkampf) {
   }
 }
 
-templ meldeergebnisHeader() {
+templ meldeergebnisHeader(pdfUrl string) {
   <p class="">
     Das eingebundene Meldeergebnis ist live und hat dadurch die aktuellsten
     Änderungen. Die
     <a
-      href="#"
+      href={pdfUrl}
       target="_blank"
     >
-      PDF Version findest du hier
+      PDF Version findest du hier.
     </a>
-    . Diese enthält alle Änderungen zu dem angeben Zeitpunkt.
+    Diese enthält alle Änderungen zu dem angegebenen Zeitpunkt.
   </p>
 }
 
 templ Meldeergebnis() {
+  {{
+    pdfLS, errFiles := utils.GetFilenames("meldeergebnis")
+    var pdfUrl string
+    if errFiles != nil {
+      pdfUrl = "#"
+    } else {
+      pdfUrl = fmt.Sprintf("/files/meldeergebnis/%s", pdfLS[len(pdfLS)-1])
+    }
+  }}
   @ui_components.LandingPageDivCol() {
     @ui_components.PageHeader(
       "Meldeergebnis",
     )
-    @ui_components.PageHeaderSubtextComp(meldeergebnisHeader())
+    @ui_components.PageHeaderSubtextComp(meldeergebnisHeader(pdfUrl))
 
     <div id="wettkampfNav" class="flex flex-col md:flex-row mx-auto w-fit gap-4 md:gap-8">
       <a class="btn btn-primary m-2" href="#Langstrecke">Langstrecke</a>

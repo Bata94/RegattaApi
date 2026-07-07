@@ -37,7 +37,7 @@ func WsZeitnahmeZiel(c *handler.Context) error {
 		return nil
 	}
 
-	qJson, err := json.Marshal(map[string]interface{}{"list": q})
+	qJson, err := json.Marshal(map[string]any{"list": q})
 	if err != nil {
 		errStr := fmt.Sprint("Error getting open ZnZiel... ", err)
 		slog.Error(errStr)
