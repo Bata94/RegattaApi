@@ -272,6 +272,10 @@ func GetAllAthletenForVereinMissStartber(ctx context.Context, vUuid uuid.UUID) (
 
 	for i, r := range q {
 		if len(retLs) == 0 || (q[i-1].Athlet.Vorname != r.Athlet.Vorname && q[i-1].Athlet.Name != r.Athlet.Name) {
+			if r.Athlet.Vorname == "No" && r.Athlet.Name == "Name" {
+				continue
+			}
+
 			rennen := RennenFromSqlc(r.Rennen, 0, 0)
 			retLs = append(retLs, Athlet{
 				Athlet:       r.Athlet,

@@ -319,7 +319,7 @@ templ InternalRegattabueroNachmeldungMeldung(v crud.Verein, r crud.Rennen, athle
               @ui_components.DropDown("stm", "Stm.:", athletLabels, athletValues, "", true, "", "")
             }
 
-            @ui_components.Toggle("doppeltes_meldentgeld_befreiung", "Befreiung vom doppelten Meldeentgeld", false, false)
+            @ui_components.Toggle("doppeltes_meldentgeld_befreiung", "Befreiung vom doppelten Meldeentgeld", false, false, "")
             <input type="hidden" name="verein_uuid" value={v.Uuid.String()}/>
             <input type="hidden" name="rennen_uuid" value={r.Uuid.String()}/>
           </div>

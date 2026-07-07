@@ -220,6 +220,7 @@ func GetForAllVereineMissingAthlet(athletType MissingAthletType) ([]Verein, erro
 	}
 	retLs := []Verein{}
 
+	// TODO: Change SQL Query to just return Vereine with Athlets missing Startberechtigung, exclude No Name Athleten
 	var queryFunc func(context.Context, uuid.UUID) ([]Athlet, error)
 	switch athletType {
 	case Waage:

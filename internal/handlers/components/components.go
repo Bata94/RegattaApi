@@ -822,6 +822,68 @@ func RennenTab(c *handler.Context) error {
 	return nil
 }
 
+func NewAthletPost(c *handler.Context) error {
+	vereinUuidStr := c.Param("v_uuid")
+	vereinUuid, err := uuid.Parse(vereinUuidStr)
+	if err != nil {
+		return handler.NotAcceptable("Invalid UUID")
+	}
+
+	verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
+	if err != nil {
+		return handler.InternalError("Error while loading verein")
+	}
+
+	vorname := c.FormValue("vorname")
+	name := c.FormValue("name")
+	jahrgang := c.FormValue("jahrgang")
+	geschlecht := c.FormValue("geschlecht")
+	startberechtigt := c.FormValue("startberechtigt") == "on"
+
+	fieldErrors := make(map[string]string)
+	if vorname == "" {
+		fieldErrors["vorname"] = "Vorname erforderlich"
+	}
+	if name == "" {
+		fieldErrors["name"] = "Name erforderlich"
+	}
+	if jahrgang == "" {
+		fieldErrors["jahrgang"] = "Jahrgang erforderlich"
+	}
+	if geschlecht != "m" && geschlecht != "w" && geschlecht != "x" {
+		fieldErrors["geschlecht"] = "Geschlecht erforderlich"
+	}
+
+	if len(fieldErrors) > 0 {
+		return handler.BadRequest("Bitte alle Pflichtfelder ausfüllen").WithForm(
+			ui_pages.InternalRegattabueroNewAthlet(verein, "", fieldErrors),
+		)
+	}
+
+	athletUuid, err := uuid.NewV7()
+	if err != nil {
+		return handler.InternalError("Error generating UUID")
+	}
+
+	a, err := crud.CreateAthlet(c.Request.Context(), sqlc.CreateAthletParams{
+		Uuid:            athletUuid,
+		VereinUuid:      vereinUuid,
+		Name:            name,
+		Vorname:         vorname,
+		Jahrgang:        jahrgang,
+		Startberechtigt: startberechtigt,
+		Geschlecht:      sqlc.Geschlecht(geschlecht),
+	})
+	if err != nil {
+		return handler.InternalError("Fehler beim Anlegen des Athleten").WithForm(
+			ui_pages.InternalRegattabueroNewAthlet(verein, "", nil),
+		)
+	}
+
+	a.Verein = &verein
+	return ui_pages.InternalRegattabueroNewAthletSuccess(a).Render(context.Background(), c.Writer)
+}
+
 func WaagePost(c *handler.Context) error {
 	err := c.Request.ParseForm()
 	if err != nil {

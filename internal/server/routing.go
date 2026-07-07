@@ -92,6 +92,7 @@ func GetRouter() http.Handler {
 	baseLayoutHandler("/internal/regattabuero/{v_uuid}/startberechtigung", pages.InternalRegattabueroStartberechtigung)
 	baseLayoutHandler("/internal/regattabuero/{v_uuid}/startberechtigung/{a_uuid}", pages.InternalRegattabueroStartberechtigungAthlet)
 	baseLayoutHandler("/internal/regattabuero/{v_uuid}/new_athlet", pages.InternalRegattabueroNewAthlet)
+	r.Handle("POST", "/internal/regattabuero/{v_uuid}/new_athlet", wrapHandler(components.NewAthletPost, true))
 
 	baseLayoutHandler("/internal/regattaleitung", pages.InternalRegattaleitung)
 	baseLayoutHandler("/internal/regattaleitung/drvupload", pages.InternalRegattaleitungDrvUpload)

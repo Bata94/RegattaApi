@@ -472,7 +472,7 @@ func InternalRegattabueroStartberechtigung(c *handler.Context) (templ.Component,
 		athleten[i].Verein = &verein
 	}
 
-	return ui_pages.InternalRegattabueroWaageWahl(verein, athleten), nil
+	return ui_pages.InternalRegattabueroStartberechtigungWahl(verein, athleten), nil
 }
 
 func InternalRegattabueroStartberechtigungAthlet(c *handler.Context) (templ.Component, error) {
@@ -500,7 +500,8 @@ func InternalRegattabueroStartberechtigungAthlet(c *handler.Context) (templ.Comp
 		return nil, handler.NotAcceptable("Invalid UUID")
 	}
 
-	return ui_pages.InternalRegattabueroStartberechtigung(athlet), nil
+	// TODO: Implement Form Errors
+	return ui_pages.InternalRegattabueroStartberechtigung(athlet, "", nil), nil
 }
 
 func InternalRegattabueroNewAthlet(c *handler.Context) (templ.Component, error) {
@@ -513,7 +514,7 @@ func InternalRegattabueroNewAthlet(c *handler.Context) (templ.Component, error) 
 	if err != nil {
 		return nil, handler.InternalError("Error while loading verein")
 	}
-	return ui_pages.InternalRegattabueroNewAthlet(verein), nil
+	return ui_pages.InternalRegattabueroNewAthlet(verein, "", nil), nil
 }
 
 func InternalRegattaleitungSetzungAenderungRennen(c *handler.Context) (templ.Component, error) {
