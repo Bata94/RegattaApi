@@ -45,7 +45,7 @@ templ SubmitButton(text string, color InputColor) {
   </div>
 }
 
-templ DropDown(name, label string, options, values []string, selectedValue string, required bool, errorMsg string) {
+templ DropDown(name, label string, options, values []string, selectedValue string, required bool, errorMsg string, placeholder string) {
   {{
     if values == nil {
       values = options
@@ -66,6 +66,9 @@ templ DropDown(name, label string, options, values []string, selectedValue strin
         required
       }
     >
+      if placeholder != "" {
+        <option value="" disabled selected>{placeholder}</option>
+      }
       for i, o := range options {
         <option value={values[i]} if values[i] == selectedValue {
           selected
@@ -163,7 +166,7 @@ templ RangeStepInput(name, label string, value, min, max, step int, required boo
   </div>
 }
 
-templ Toggle(name, label string, value bool, required bool) {
+templ Toggle(name, label string, checked bool, required bool) {
   <div class="form-control w-full flex flex-row justify-between">
     <label class="label">
       <span class="label-text">{label}</span>
@@ -172,7 +175,10 @@ templ Toggle(name, label string, value bool, required bool) {
       type="checkbox"
       name={name}
       class="toggle toggle-primary"
-      value={value}
+      value="on"
+      if checked {
+        checked
+      }
       if required {
         required
       }

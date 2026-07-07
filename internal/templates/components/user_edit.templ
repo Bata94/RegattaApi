@@ -20,9 +20,11 @@ templ UserEdit(u crud.User, msg string, fieldErrors map[string]string) {
 
     userGroups, errUserGroups := crud.GetAllUsersGroups(ctx)
 
-    selectClass := "select select-bordered w-full"
-    if fieldErrors["user_group_uuid"] != "" {
-      selectClass += " select-error"
+    dropDownOptions := make([]string, 0, len(userGroups))
+    dropDownValues := make([]string, 0, len(userGroups))
+    for _, ug := range userGroups {
+      dropDownOptions = append(dropDownOptions, ug.Name)
+      dropDownValues = append(dropDownValues, ug.Uuid.String())
     }
   }}
   if errUserGroups != nil {
@@ -50,53 +52,16 @@ templ UserEdit(u crud.User, msg string, fieldErrors map[string]string) {
 
         @LineInput("password", "Passwort", "", "password", isNew, fieldErrors["password"])
 
-        <div class="mb-6 flex flex-row justify-between">
-          <label class="">
-            Nutzer gesperrt?
-          </label>
-          <input
-            name="is_not_active"
-            type="checkbox"
-            class="toggle"
-            if !isNew && !u.IsActive {
-              checked
-            }
-          />
-        </div>
+        @Toggle("is_not_active", "Nutzer gesperrt?", !isNew && !u.IsActive, false)
 
-        <div class="form-control mb-6 w-full">
-          <label class="label">
-            <span class="label-text">Nutzergruppe</span>
-          </label>
-          <select
-            name="user_group_uuid"
-            class={selectClass}
-            required
-          >
-            if isNew {
-              <option disabled selected>Nutzergruppe</option>
-            } else {
-              <option disabled>Nutzergruppe</option>
-            }
-            for _, ug := range userGroups {
-              if ug.Uuid == u.UserGroup.Uuid {
-                <option value={ug.Uuid.String()} selected>{ug.Name}</option>
-              } else {
-                <option value={ug.Uuid.String()}>{ug.Name}</option>
-              }
-            }
-          </select>
-          if fieldErrors["user_group_uuid"] != "" {
-            <span class="text-error text-sm mt-1">{fieldErrors["user_group_uuid"]}</span>
-          }
-        </div>
+        @DropDown("user_group_uuid", "Nutzergruppe", dropDownOptions, dropDownValues, u.UserGroup.Uuid.String(), true, fieldErrors["user_group_uuid"], "Nutzergruppe")
       </div>
       @SubmitButton("Speichern", Success)
     </form>
   </div>
 }
 
-templ UserGroupEdit(ug sqlc.UsersGroup, msg string) {
+templ UserGroupEdit(ug sqlc.UsersGroup, msg string, fieldErrors map[string]string) {
   {{
     var title, uuidStr string
     if ug.Uuid != uuid.Nil {
@@ -123,91 +88,18 @@ templ UserGroupEdit(ug sqlc.UsersGroup, msg string) {
         </div>
       }
       <div class="flex flex-col gap-4">
-        <div class="form-control mb-6">
-          Gruppenname:
-          <label class="input w-full">
-            <input
-              type="text"
-              name="name"
-              class="grow"
-              placeholder="Gruppenname"
-              value={ug.Name}
-              required
-            />
-          </label>
-        </div>
-      </div>
+        @LineInput("name", "Gruppenname", ug.Name, "text", true, fieldErrors["name"])
 
-      <div class="mb-6 flex flex-row justify-between">
-        <label class="">
-          Admin Berechtigung?
-        </label>
-        <input
-          name="allowed_admin"
-          type="checkbox"
-          class="toggle"
-          if uuidStr  != "new" && ug.AllowedAdmin{
-            checked
-          }
-        />
-      </div>
+        @Toggle("allowed_admin", "Admin Berechtigung?", uuidStr != "new" && ug.AllowedAdmin, false)
 
-      <div class="mb-6 flex flex-row justify-between">
-        <label class="">
-          Zeitnahme Berechtigung?
-        </label>
-        <input
-          name="allowed_zeitnahme"
-          type="checkbox"
-          class="toggle"
-          if uuidStr  != "new" && ug.AllowedZeitnahme{
-            checked
-          }
-        />
-      </div>
+        @Toggle("allowed_zeitnahme", "Zeitnahme Berechtigung?", uuidStr != "new" && ug.AllowedZeitnahme, false)
 
-      <div class="mb-6 flex flex-row justify-between">
-        <label class="">
-          Startlisten Berechtigung?
-        </label>
-        <input
-          name="allowed_startlisten"
-          type="checkbox"
-          class="toggle"
-          if uuidStr  != "new" && ug.AllowedStartlisten{
-            checked
-          }
-        />
-      </div>
+        @Toggle("allowed_startlisten", "Startlisten Berechtigung?", uuidStr != "new" && ug.AllowedStartlisten, false)
 
-      <div class="mb-6 flex flex-row justify-between">
-        <label class="">
-          Regattabüro Berechtigung?
-        </label>
-        <input
-          name="allowed_regattabuero"
-          type="checkbox"
-          class="toggle"
-          if uuidStr  != "new" && ug.AllowedRegattabuero{
-            checked
-          }
-        />
-      </div>
+        @Toggle("allowed_regattabuero", "Regattabüro Berechtigung?", uuidStr != "new" && ug.AllowedRegattabuero, false)
 
-      <div class="mb-6 flex flex-row justify-between">
-        <label class="">
-          Regattaleitung Berechtigung?
-        </label>
-        <input
-          name="allowed_regattaleitung"
-          type="checkbox"
-          class="toggle"
-          if uuidStr  != "new" && ug.AllowedRegattaleitung{
-            checked
-          }
-        />
+        @Toggle("allowed_regattaleitung", "Regattaleitung Berechtigung?", uuidStr != "new" && ug.AllowedRegattaleitung, false)
       </div>
-
       @SubmitButton("Speichern", Success)
     </form>
   </div>

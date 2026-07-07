@@ -81,7 +81,7 @@ func InternalRegattaleitungPausen(c *handler.Context) (templ.Component, error) {
 }
 
 func InternalRegattaleitungZeitplan(c *handler.Context) (templ.Component, error) {
-	return ui_pages.InternalRegattaleitungZeitplan(), nil
+	return ui_pages.InternalRegattaleitungZeitplan("", nil), nil
 }
 
 func InternalRegattaleitungStartnummern(c *handler.Context) (templ.Component, error) {
@@ -340,7 +340,7 @@ func InternalRegattabueroUmmeldungMeldung(c *handler.Context) (templ.Component, 
 	}
 
 	// TODO: Filter only viable athleten
-	return ui_pages.InternalRegattabueroUmmeldungMeldung(verein, meldung, athleten), nil
+	return ui_pages.InternalRegattabueroUmmeldungMeldung(verein, meldung, athleten, "", nil), nil
 }
 
 func InternalRegattabueroNachmeldung(c *handler.Context) (templ.Component, error) {
@@ -383,7 +383,7 @@ func InternalRegattabueroNachmeldungRennen(c *handler.Context) (templ.Component,
 	}
 
 	// TODO: Filter only viable athleten
-	return ui_pages.InternalRegattabueroNachmeldungMeldung(verein, rennen, athleten), nil
+	return ui_pages.InternalRegattabueroNachmeldungMeldung(verein, rennen, athleten, "", nil), nil
 }
 
 func InternalRegattabueroNachmeldungSuccess(c *handler.Context) (templ.Component, error) {
@@ -446,7 +446,7 @@ func InternalRegattabueroWaage(c *handler.Context) (templ.Component, error) {
 		return nil, handler.NotAcceptable("Invalid UUID")
 	}
 
-	return ui_pages.InternalRegattabueroWaage(athlet), nil
+	return ui_pages.InternalRegattabueroWaage(athlet, "", nil), nil
 }
 
 func InternalRegattabueroStartberechtigung(c *handler.Context) (templ.Component, error) {

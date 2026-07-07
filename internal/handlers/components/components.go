@@ -139,6 +139,7 @@ func UserEditNewPost(c *handler.Context) error {
 
 	username := c.FormValue("username")
 	groupUuid, errGroupUuid := uuid.Parse(c.FormValue("user_group_uuid"))
+	isNotActive := c.FormValue("is_not_active") == "on"
 
 	if err != nil || errGroupUuid != nil {
 		return handler.NotAcceptable("Invalid UUID")
@@ -162,6 +163,7 @@ func UserEditNewPost(c *handler.Context) error {
 			User: sqlc.User{
 				Uuid:     userUuid,
 				Username: username,
+				IsActive: !isNotActive,
 			},
 			UserGroup: &sqlc.UsersGroup{
 				Uuid: groupUuid,
@@ -175,6 +177,7 @@ func UserEditNewPost(c *handler.Context) error {
 			User: sqlc.User{
 				Uuid:     userUuid,
 				Username: username,
+				IsActive: !isNotActive,
 			},
 			UserGroup: &sqlc.UsersGroup{
 				Uuid: groupUuid,
@@ -196,6 +199,16 @@ func UserEditNewPost(c *handler.Context) error {
 
 	u, err = crud.GetUser(c.Request.Context(), userUuid)
 	if err != nil {
+		u = &crud.User{
+			User: sqlc.User{
+				Uuid:     userUuid,
+				Username: username,
+				IsActive: !isNotActive,
+			},
+			UserGroup: &sqlc.UsersGroup{
+				Uuid: groupUuid,
+			},
+		}
 		return handler.BadRequest("Error while updating user, Err: " + err.Error()).WithForm(ui_components.UserEdit(*u, "", nil))
 	}
 
@@ -230,48 +243,72 @@ func UserGroupEditNew(c *handler.Context) error {
 		}
 	}
 
-	templ.Handler(ui_components.UserGroupEdit(ug, "")).ServeHTTP(c.Writer, c.Request)
+	templ.Handler(ui_components.UserGroupEdit(ug, "", nil)).ServeHTTP(c.Writer, c.Request)
 	return nil
 }
 
 func UserGroupEditNewPost(c *handler.Context) error {
-	var (
-		groupUuid uuid.UUID
-		err       error
-	)
-
 	uuidStr := c.Param("uuid")
+	var groupUuid uuid.UUID
+
 	if uuidStr == "new" {
+		var err error
 		groupUuid, err = uuid.NewV7()
 		if err != nil {
 			return handler.NotAcceptable("Bad Request")
 		}
-		_, err = crud.CreateUserGroup(c.Request.Context(), sqlc.CreateUserGroupParams{
-			Name:                  c.FormValue("name"),
-			AllowedAdmin:          c.FormValue("allowed_admin") == "on",
-			AllowedZeitnahme:      c.FormValue("allowed_zeitnahme") == "on",
-			AllowedStartlisten:    c.FormValue("allowed_startlisten") == "on",
-			AllowedRegattabuero:   c.FormValue("allowed_regattabuero") == "on",
-			AllowedRegattaleitung: c.FormValue("allowed_regattaleitung") == "on",
-		})
-		if err != nil {
-			return handler.InternalError("Error while updating user group")
-		}
 	} else {
+		var err error
 		groupUuid, err = uuid.Parse(uuidStr)
 		if err != nil {
 			return handler.NotAcceptable("Bad Request")
 		}
-		err = crud.UpdateUserGroup(c.Request.Context(), groupUuid, sqlc.UpdateUserGroupParams{
-			Name:                  c.FormValue("name"),
-			AllowedAdmin:          c.FormValue("allowed_admin") == "on",
-			AllowedZeitnahme:      c.FormValue("allowed_zeitnahme") == "on",
-			AllowedStartlisten:    c.FormValue("allowed_startlisten") == "on",
-			AllowedRegattabuero:   c.FormValue("allowed_regattabuero") == "on",
-			AllowedRegattaleitung: c.FormValue("allowed_regattaleitung") == "on",
+	}
+
+	name := c.FormValue("name")
+
+	fieldErrors := make(map[string]string)
+	if name == "" {
+		fieldErrors["name"] = "Gruppenname erforderlich"
+	}
+
+	ug := sqlc.UsersGroup{
+		Uuid:                  groupUuid,
+		Name:                  name,
+		AllowedAdmin:          c.FormValue("allowed_admin") == "on",
+		AllowedZeitnahme:      c.FormValue("allowed_zeitnahme") == "on",
+		AllowedStartlisten:    c.FormValue("allowed_startlisten") == "on",
+		AllowedRegattabuero:   c.FormValue("allowed_regattabuero") == "on",
+		AllowedRegattaleitung: c.FormValue("allowed_regattaleitung") == "on",
+	}
+
+	if len(fieldErrors) > 0 {
+		return handler.BadRequest("Bitte alle Pflichtfelder ausfüllen").WithForm(ui_components.UserGroupEdit(ug, "", fieldErrors))
+	}
+
+	if uuidStr == "new" {
+		_, err := crud.CreateUserGroup(c.Request.Context(), sqlc.CreateUserGroupParams{
+			Name:                  name,
+			AllowedAdmin:          ug.AllowedAdmin,
+			AllowedZeitnahme:      ug.AllowedZeitnahme,
+			AllowedStartlisten:    ug.AllowedStartlisten,
+			AllowedRegattabuero:   ug.AllowedRegattabuero,
+			AllowedRegattaleitung: ug.AllowedRegattaleitung,
 		})
 		if err != nil {
-			return handler.InternalError("Error while updating user group")
+			return handler.BadRequest("Fehler beim Erstellen der Nutzergruppe").WithForm(ui_components.UserGroupEdit(ug, "", nil))
+		}
+	} else {
+		err := crud.UpdateUserGroup(c.Request.Context(), groupUuid, sqlc.UpdateUserGroupParams{
+			Name:                  name,
+			AllowedAdmin:          ug.AllowedAdmin,
+			AllowedZeitnahme:      ug.AllowedZeitnahme,
+			AllowedStartlisten:    ug.AllowedStartlisten,
+			AllowedRegattabuero:   ug.AllowedRegattabuero,
+			AllowedRegattaleitung: ug.AllowedRegattaleitung,
+		})
+		if err != nil {
+			return handler.BadRequest("Fehler beim Aktualisieren der Nutzergruppe").WithForm(ui_components.UserGroupEdit(ug, "", nil))
 		}
 	}
 
@@ -502,14 +539,21 @@ func PausenDelete(c *handler.Context) error {
 
 func ZeitplanPost(c *handler.Context) error {
 	startzeit_saStr := c.FormValue("startzeit_sa")
+	startzeit_soStr := c.FormValue("startzeit_so")
+
+	fieldErrors := make(map[string]string)
+
 	startzeit_sa, err := strconv.Atoi(startzeit_saStr)
 	if err != nil || startzeit_sa < 0 || startzeit_sa > 24 {
-		return handler.NotAcceptable("Invalid startzeit_sa")
+		fieldErrors["startzeit_sa"] = "Ungültige Startzeit (0-24)"
 	}
-	startzeit_soStr := c.FormValue("startzeit_so")
 	startzeit_so, err := strconv.Atoi(startzeit_soStr)
 	if err != nil || startzeit_so < 0 || startzeit_so > 24 {
-		return handler.NotAcceptable("Invalid startzeit_so")
+		fieldErrors["startzeit_so"] = "Ungültige Startzeit (0-24)"
+	}
+
+	if len(fieldErrors) > 0 {
+		return handler.BadRequest("Ungültige Startzeit").WithForm(ui_pages.InternalRegattaleitungZeitplan("", fieldErrors))
 	}
 
 	zeitplan := service.SetZeitplanParams{
@@ -620,10 +664,16 @@ func UmmeldungPost(c *handler.Context) error {
 		return handler.NotAcceptable("Invalid UUID")
 	}
 
+	athleten, err := crud.GetAllAthletenForVerein(c.Request.Context(), vereinUuid)
+	if err != nil {
+		return handler.InternalError("Error while loading athleten")
+	}
+
 	if err := c.Request.ParseForm(); err != nil {
 		return handler.BadRequest("Error parsing form")
 	}
 
+	fieldErrors := make(map[string]string)
 	for i := range meldung.Athleten {
 		athUuidStr := c.Request.FormValue(fmt.Sprintf("athleten_%d", i))
 		if athUuidStr == "" {
@@ -631,7 +681,8 @@ func UmmeldungPost(c *handler.Context) error {
 		}
 		athUuid, err := uuid.Parse(athUuidStr)
 		if err != nil {
-			return handler.BadRequest(fmt.Sprintf("Invalid athlete UUID at position %d", i))
+			fieldErrors[fmt.Sprintf("athleten_%d", i)] = "Ungültige UUID"
+			continue
 		}
 		if athUuid == meldung.Athleten[i].Uuid {
 			continue
@@ -643,8 +694,12 @@ func UmmeldungPost(c *handler.Context) error {
 			AthletUuid:  athUuid,
 		})
 		if err != nil {
-			return handler.InternalError(fmt.Sprintf("Error updating athlete at position %d", i))
+			fieldErrors[fmt.Sprintf("athleten_%d", i)] = "Fehler beim Aktualisieren"
 		}
+	}
+
+	if len(fieldErrors) > 0 {
+		return handler.BadRequest("Fehler bei der Ummeldung").WithForm(ui_pages.InternalRegattabueroUmmeldungMeldung(verein, meldung, athleten, "", fieldErrors))
 	}
 
 	meldungen, err := crud.GetAllMeldungForVerein(c.Request.Context(), verein.Uuid)
@@ -674,6 +729,20 @@ func NachmeldungPost(c *handler.Context) error {
 		return handler.BadRequest("Error parsing form")
 	}
 
+	vereinUuid, err := uuid.Parse(c.Request.FormValue("verein_uuid"))
+	if err != nil {
+		return handler.NotAcceptable("Invalid UUID")
+	}
+	verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
+	if err != nil {
+		return handler.InternalError("Error while loading verein")
+	}
+
+	athleten, err := crud.GetAllAthletenForVerein(c.Request.Context(), vereinUuid)
+	if err != nil {
+		return handler.InternalError("Error while loading athleten")
+	}
+
 	numAthletes, stmRequired := rennen.GetTeilnehmerMeldeParams()
 
 	params := api_v1.PostNachmeldungParams{
@@ -683,11 +752,14 @@ func NachmeldungPost(c *handler.Context) error {
 		Athleten:                      []api_v1.PostNachmeldungAthletParams{},
 	}
 
+	fieldErrors := make(map[string]string)
+	hasAthlete := false
 	for i := range numAthletes {
 		athVal := c.Request.FormValue(fmt.Sprintf("athleten_%d", i))
 		if athVal == "" || athVal == "---" {
 			continue
 		}
+		hasAthlete = true
 		params.Athleten = append(params.Athleten, api_v1.PostNachmeldungAthletParams{
 			AthletUuid: athVal,
 			Position:   strconv.Itoa(i),
@@ -697,11 +769,20 @@ func NachmeldungPost(c *handler.Context) error {
 	if stmRequired {
 		stmVal := c.Request.FormValue("stm")
 		if stmVal != "" && stmVal != "---" {
+			hasAthlete = true
 			params.Athleten = append(params.Athleten, api_v1.PostNachmeldungAthletParams{
 				AthletUuid: stmVal,
 				Position:   "stm",
 			})
 		}
+	}
+
+	if !hasAthlete {
+		fieldErrors["athleten_0"] = "Mindestens ein Teilnehmer erforderlich"
+	}
+
+	if len(fieldErrors) > 0 {
+		return handler.BadRequest("Bitte wähle mindestens einen Teilnehmer aus").WithForm(ui_pages.InternalRegattabueroNachmeldungMeldung(verein, rennen, athleten, "", fieldErrors))
 	}
 
 	m, err := api_v1.CreateNachmeldung(c.Request.Context(), params)
@@ -742,12 +823,6 @@ func WaagePost(c *handler.Context) error {
 
 	idStr := c.Request.FormValue("uuid")
 	gewichtStr := c.Request.FormValue("gewicht")
-	gewichtFloat, err := strconv.ParseFloat(gewichtStr, 32)
-	if err != nil {
-		slog.Error("ParseFloat error", "err", err)
-		return handler.NotAcceptable("Ungültiges Gewicht")
-	}
-	gewicht := int(gewichtFloat * 10)
 
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -759,6 +834,17 @@ func WaagePost(c *handler.Context) error {
 	if err != nil {
 		slog.Error("GetAthletMinimal error", "err", err)
 		return err
+	}
+
+	fieldErrors := make(map[string]string)
+	gewichtFloat, err := strconv.ParseFloat(gewichtStr, 32)
+	if err != nil {
+		fieldErrors["gewicht"] = "Ungültiges Gewicht"
+	}
+	gewicht := int(gewichtFloat * 10)
+
+	if len(fieldErrors) > 0 {
+		return handler.BadRequest("Ungültiges Gewicht").WithForm(ui_pages.InternalRegattabueroWaage(ath, "", fieldErrors))
 	}
 
 	err = ath.UpdateGewicht(c.Request.Context(), gewicht)
