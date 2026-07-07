@@ -1,4 +1,4 @@
-package server
+package components
 
 import (
 	"context"
@@ -14,106 +14,16 @@ import (
 	"github.com/bata94/RegattaApi/internal/config"
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handler"
-	"github.com/bata94/RegattaApi/internal/service"
 	api_v1 "github.com/bata94/RegattaApi/internal/handlers/api/v1"
+	"github.com/bata94/RegattaApi/internal/service"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	ui_components "github.com/bata94/RegattaApi/internal/templates/components"
 	ui_pages "github.com/bata94/RegattaApi/internal/templates/pages"
 	"github.com/bata94/RegattaApi/internal/utils"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
-func logoutHandler(w http.ResponseWriter, r *http.Request) {
-	secure := r.TLS != nil
-	http.SetCookie(w, &http.Cookie{
-		Name:     "auth_token",
-		Value:    "",
-		MaxAge:   -1,
-		HttpOnly: true,
-		Secure:   secure,
-		SameSite: http.SameSiteLaxMode,
-		Path:     "/",
-	})
-	http.Redirect(w, r, "/", http.StatusSeeOther)
-}
-
-func getProfilePage(c *handler.Context) (templ.Component, error) {
-	userToken, ok := c.GetLocals("user").(*jwt.Token)
-	if !ok {
-		return nil, handler.Unauthorized("Nicht angemeldet")
-	}
-
-	claims := userToken.Claims.(jwt.MapClaims)
-	userUuidStr, ok := claims["user_id"].(string)
-	if !ok {
-		return nil, handler.Unauthorized("Invalid token")
-	}
-	username, ok := claims["username"].(string)
-	if !ok {
-		return nil, handler.Unauthorized("Invalid token")
-	}
-
-	userGroup := ""
-	if ug, ok := claims["user_group_name"].(string); ok {
-		userGroup = ug
-	}
-
-	var capabilities []string
-	capFields := []string{
-		"allowed_zeitnahme",
-		"allowed_startlisten",
-		"allowed_regattabuero",
-		"allowed_regattaleitung",
-		"allowed_admin",
-	}
-
-	for _, field := range capFields {
-		if val, exists := claims[field]; exists && val == true {
-			capabilities = append(capabilities, field)
-		}
-	}
-
-	userUuid, err := uuid.Parse(userUuidStr)
-	if err != nil {
-		return nil, handler.Unauthorized("Invalid token")
-	}
-
-	data := ui_pages.ProfilData{
-		Uuid:         userUuid,
-		Username:     username,
-		UserGroup:    userGroup,
-		Capabilities: capabilities,
-	}
-
-	return ui_pages.Profil(data), nil
-}
-
-func metricsPageHandler(c *handler.Context) (templ.Component, error) {
-	secret := config.C.Auth.JWTSecret
-
-	tokenString := c.Cookie("auth_token")
-	if tokenString == "" {
-		return nil, handler.Unauthorized("Nicht angemeldet")
-	}
-
-	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (any, error) {
-		return []byte(secret), nil
-	})
-	if err != nil || !token.Valid {
-		return nil, handler.Unauthorized("Ungültiges oder abgelaufenes Token")
-	}
-
-	claims := token.Claims.(jwt.MapClaims)
-	admin, ok := claims["allowed_admin"].(bool)
-	if !ok || !admin {
-		return nil, handler.Forbidden("Keine Admin-Berechtigung")
-	}
-
-	return ui_pages.Metrics(), nil
-}
-
-func loginPostHandler(c *handler.Context) error {
+func LoginPost(c *handler.Context) error {
 	username := c.FormValue("username")
 	password := c.FormValue("password")
 
@@ -142,7 +52,7 @@ func loginPostHandler(c *handler.Context) error {
 	return nil
 }
 
-func imageComponentHandler(c *handler.Context) error {
+func ImageComponent(c *handler.Context) error {
 	queryParams := c.Request.URL.Query()
 	src := queryParams.Get("src")
 	alt := queryParams.Get("alt")
@@ -182,7 +92,7 @@ func imageComponentHandler(c *handler.Context) error {
 	return nil
 }
 
-func userEditNewHandler(c *handler.Context) error {
+func UserEditNew(c *handler.Context) error {
 	var u *crud.User
 	if c.Param("uuid") == "" {
 		return handler.NotFound("User not found")
@@ -206,7 +116,7 @@ func userEditNewHandler(c *handler.Context) error {
 	return nil
 }
 
-func userEditNewHandlerPost(c *handler.Context) error {
+func UserEditNewPost(c *handler.Context) error {
 	var (
 		u        *crud.User
 		userUuid uuid.UUID
@@ -270,7 +180,7 @@ func userEditNewHandlerPost(c *handler.Context) error {
 	return nil
 }
 
-func userGroupEditNewHandler(c *handler.Context) error {
+func UserGroupEditNew(c *handler.Context) error {
 	var ug sqlc.UsersGroup
 	if c.Param("uuid") == "" {
 		return handler.NotFound("UserGroup not found")
@@ -291,7 +201,7 @@ func userGroupEditNewHandler(c *handler.Context) error {
 	return nil
 }
 
-func userGroupEditNewHandlerPost(c *handler.Context) error {
+func UserGroupEditNewPost(c *handler.Context) error {
 	var (
 		groupUuid uuid.UUID
 		err       error
@@ -337,7 +247,7 @@ func userGroupEditNewHandlerPost(c *handler.Context) error {
 	return nil
 }
 
-func changePasswordGetHandler(c *handler.Context) error {
+func ChangePasswordGet(c *handler.Context) error {
 	userUuidStr := c.Param("uuid")
 	userUuid, err := uuid.Parse(userUuidStr)
 	user, err := crud.GetUser(c.Request.Context(), userUuid)
@@ -349,7 +259,7 @@ func changePasswordGetHandler(c *handler.Context) error {
 	return nil
 }
 
-func changePasswordPostHandler(c *handler.Context) error {
+func ChangePasswordPost(c *handler.Context) error {
 	userUuidStr := c.Param("uuid")
 	userUuid, err := uuid.Parse(userUuidStr)
 	user, err := crud.GetUser(c.Request.Context(), userUuid)
@@ -383,16 +293,16 @@ func changePasswordPostHandler(c *handler.Context) error {
 	return nil
 }
 
-func drvUploadPostHandler(c *handler.Context) error {
+func DrvUploadPost(c *handler.Context) error {
 	err := api_v1.DrvMeldungUpload(c)
 	if err != nil {
-		return handler.BadRequest(fmt.Sprintf("Ein Fehler ist aufgetreten! Bitte versuche es erneut."))
+		return handler.BadRequest("Ein Fehler ist aufgetreten! Bitte versuche es erneut.")
 	}
 
 	return handler.OK("Upload erfolgreich!")
 }
 
-func setzungsVerwaltungLosungPostHandler(c *handler.Context) error {
+func SetzungsVerwaltungLosungPost(c *handler.Context) error {
 	err := api_v1.SetzungsLosung(c)
 	if err != nil {
 		return handler.BadRequest(fmt.Sprintf("Ein Fehler ist aufgetreten: %s", err.Error()))
@@ -400,7 +310,7 @@ func setzungsVerwaltungLosungPostHandler(c *handler.Context) error {
 	return handler.OK("Losung erfolgreich!")
 }
 
-func setzungsVerwaltungLosungDeleteHandler(c *handler.Context) error {
+func SetzungsVerwaltungLosungDelete(c *handler.Context) error {
 	err := api_v1.ResetSetzung(c)
 	if err != nil {
 		return handler.BadRequest(fmt.Sprintf("Ein Fehler ist aufgetreten: %s", err.Error()))
@@ -408,7 +318,7 @@ func setzungsVerwaltungLosungDeleteHandler(c *handler.Context) error {
 	return handler.OK("Setzung erfolgreich zurückgesetzt!")
 }
 
-func setzungsVerwaltungAenderungRennenPostHandler(c *handler.Context) error {
+func SetzungsVerwaltungAenderungRennenPost(c *handler.Context) error {
 	var (
 		err    error
 		rUuid  uuid.UUID
@@ -468,7 +378,7 @@ func setzungsVerwaltungAenderungRennenPostHandler(c *handler.Context) error {
 	return handler.OK("Setzung erfolgreich!")
 }
 
-func pausenNewHandler(c *handler.Context) error {
+func PausenNew(c *handler.Context) error {
 	nachRennenUuidStr := c.Param("nach_rennen_uuid")
 	nachRennenUuid, err := uuid.Parse(nachRennenUuidStr)
 	if err != nil {
@@ -480,7 +390,7 @@ func pausenNewHandler(c *handler.Context) error {
 	return nil
 }
 
-func pausenPostHandler(c *handler.Context) error {
+func PausenPost(c *handler.Context) error {
 	idStr := c.FormValue("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -525,7 +435,7 @@ func pausenPostHandler(c *handler.Context) error {
 	}
 }
 
-func pausenDeleteHandler(c *handler.Context) error {
+func PausenDelete(c *handler.Context) error {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -542,7 +452,7 @@ func pausenDeleteHandler(c *handler.Context) error {
 	return nil
 }
 
-func zeitplanPostHandler(c *handler.Context) error {
+func ZeitplanPost(c *handler.Context) error {
 	startzeit_saStr := c.FormValue("startzeit_sa")
 	startzeit_sa, err := strconv.Atoi(startzeit_saStr)
 	if err != nil || startzeit_sa < 0 || startzeit_sa > 24 {
@@ -567,7 +477,7 @@ func zeitplanPostHandler(c *handler.Context) error {
 	return handler.OK("Zeitplan erstellt")
 }
 
-func startnummernVerteilenPostHandler(c *handler.Context) error {
+func StartnummernVerteilenPost(c *handler.Context) error {
 	err := service.SetStartnummern(c.Request.Context())
 	if err != nil {
 		return handler.InternalError(fmt.Sprintf("Error while setting startnummern: %s", err.Error()))
@@ -576,7 +486,7 @@ func startnummernVerteilenPostHandler(c *handler.Context) error {
 	return handler.OK("Startnummern erfolgreich verteilt!")
 }
 
-func startnummernVerteilenDeleteHandler(c *handler.Context) error {
+func StartnummernVerteilenDelete(c *handler.Context) error {
 	err := service.ResetStartnummern(c.Request.Context())
 	if err != nil {
 		return handler.InternalError("Error while resetting startnummern")
@@ -585,7 +495,7 @@ func startnummernVerteilenDeleteHandler(c *handler.Context) error {
 	return handler.OK("Startnummern erfolgreich zurückgesetzt!")
 }
 
-func pdfMeldeergebnisPostHandler(c *handler.Context) error {
+func PdfMeldeergebnisPost(c *handler.Context) error {
 	fileName := fmt.Sprintf("Meldeergebnis_%s", time.Now().Format("2006-01-02_15-04-05"))
 	_, err := utils.SavePDFfromHTML(
 		"leitung/meldeergebnis",
@@ -602,7 +512,7 @@ func pdfMeldeergebnisPostHandler(c *handler.Context) error {
 	return nil
 }
 
-func abmeldungDeleteHandler(c *handler.Context) error {
+func AbmeldungDelete(c *handler.Context) error {
 	vereinUuidStr := c.Param("v_uuid")
 	vereinUuid, err := uuid.Parse(vereinUuidStr)
 	if err != nil {
@@ -637,7 +547,7 @@ func abmeldungDeleteHandler(c *handler.Context) error {
 	return nil
 }
 
-func ummeldungPostHandler(c *handler.Context) error {
+func UmmeldungPost(c *handler.Context) error {
 	vereinUuidStr := c.Param("v_uuid")
 	vereinUuid, err := uuid.Parse(vereinUuidStr)
 	if err != nil {
@@ -699,7 +609,7 @@ func ummeldungPostHandler(c *handler.Context) error {
 	return ui_pages.InternalRegattabueroUmmeldung(verein, meldungen).Render(context.Background(), c.Writer)
 }
 
-func nachmeldungPostHandler(c *handler.Context) error {
+func NachmeldungPost(c *handler.Context) error {
 	vereinUuidStr := c.Param("v_uuid")
 	rennenUuidStr := c.Param("r_uuid")
 	rennenUuid, err := uuid.Parse(rennenUuidStr)
@@ -760,7 +670,7 @@ func nachmeldungPostHandler(c *handler.Context) error {
 	return ui_pages.InternalRegattabueroNachmeldungSuccess(meldung).Render(context.Background(), c.Writer)
 }
 
-func rennenTabHandler(c *handler.Context) error {
+func RennenTab(c *handler.Context) error {
 	wettkampfStr := c.Param("wettkampf")
 	wettkampf, err := crud.WettkampfFromString(wettkampfStr)
 	if err != nil {
@@ -775,7 +685,7 @@ func rennenTabHandler(c *handler.Context) error {
 	return nil
 }
 
-func waagePostHandler(c *handler.Context) error {
+func WaagePost(c *handler.Context) error {
 	err := c.Request.ParseForm()
 	if err != nil {
 		slog.Error("ParseForm error", "err", err)
@@ -830,4 +740,38 @@ func waagePostHandler(c *handler.Context) error {
 	c.Writer.Header().Set("HX-Push-Url", fmt.Sprintf("/internal/regattabuero/%s/waage", vereinUuidStr))
 	c.Writer.WriteHeader(http.StatusOK)
 	return ui_pages.InternalRegattabueroWaageWahl(verein, athleten).Render(context.Background(), c.Writer)
+}
+
+func ZeitplanCollapseBody(c *handler.Context) error {
+	wettkampfStr := c.Param("wettkampf")
+	wettkampf, err := crud.WettkampfFromString(wettkampfStr)
+	if err != nil {
+		return handler.NotFound("Wettkampf not found")
+	}
+	templ.Handler(ui_components.ZeitplanCollapseBody(wettkampf)).ServeHTTP(c.Writer, c.Request)
+	return nil
+}
+
+func AusschreibungRennenCollapseBody(c *handler.Context) error {
+	wettkampfStr := c.Param("wettkampf")
+	wettkampf, err := crud.WettkampfFromString(wettkampfStr)
+	if err != nil {
+		return handler.NotFound("Wettkampf not found")
+	}
+	templ.Handler(ui_pages.AusschreibungRennenCollapseBody(wettkampf)).ServeHTTP(c.Writer, c.Request)
+	return nil
+}
+
+func MeldeergebnisCollapseBody(c *handler.Context) error {
+	wettkampfStr := c.Param("wettkampf")
+	wettkampf, err := crud.WettkampfFromString(wettkampfStr)
+	if err != nil {
+		return handler.NotFound("Wettkampf not found")
+	}
+	templ.Handler(ui_pages.MeldeergebnisCollapseBody(wettkampf)).ServeHTTP(c.Writer, c.Request)
+	return nil
+}
+
+func MetricsAPIHandler(c *handler.Context) error {
+	return api_v1.MetricsApi(c)
 }
