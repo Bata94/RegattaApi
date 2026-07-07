@@ -124,6 +124,7 @@ func (r *Rennen) GetMeldungen(ctx context.Context) ([]Meldung, error) {
 	if r.Meldungen != nil {
 		return r.Meldungen, nil
 	}
+	slog.Warn("lazy loading Meldungen", "rennen_uuid", r.Uuid.String())
 	loaded, err := GetRennenMeldungen(context.Background(), r.Uuid)
 	if err != nil {
 		return nil, err

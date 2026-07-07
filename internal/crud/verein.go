@@ -51,6 +51,7 @@ func (v *Verein) GetAthleten() ([]Athlet, error) {
 	if v.Athleten != nil {
 		return v.Athleten, nil
 	}
+	slog.Warn("lazy loading Athleten", "verein_uuid", v.Uuid.String())
 	return v.loadAthleten(context.Background())
 }
 
