@@ -177,7 +177,7 @@ templ PausenPausenEntry(p crud.Pause) {
           }
         </div>
 
-        @ui_components.RangeStepInput("laenge", "Pausenlänge in Minuten", int(p.Laenge), 0, 120, 15, true)
+        @ui_components.RangeStepInput("laenge", "Pausenlänge in Minuten", int(p.Laenge), 0, 120, 15, true, "")
         @ui_components.SubmitButton("Pause speichern", ui_components.Success)
       </form>
     </div>

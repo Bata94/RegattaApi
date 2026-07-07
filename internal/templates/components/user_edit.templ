@@ -52,7 +52,7 @@ templ UserEdit(u crud.User, msg string, fieldErrors map[string]string) {
 
         @LineInput("password", "Passwort", "", "password", isNew, fieldErrors["password"])
 
-        @Toggle("is_not_active", "Nutzer gesperrt?", !isNew && !u.IsActive, false)
+        @Toggle("is_not_active", "Nutzer gesperrt?", !isNew && !u.IsActive, false, fieldErrors["is_not_active"])
 
         @DropDown("user_group_uuid", "Nutzergruppe", dropDownOptions, dropDownValues, u.UserGroup.Uuid.String(), true, fieldErrors["user_group_uuid"], "Nutzergruppe")
       </div>
@@ -90,15 +90,15 @@ templ UserGroupEdit(ug sqlc.UsersGroup, msg string, fieldErrors map[string]strin
       <div class="flex flex-col gap-4">
         @LineInput("name", "Gruppenname", ug.Name, "text", true, fieldErrors["name"])
 
-        @Toggle("allowed_admin", "Admin Berechtigung?", uuidStr != "new" && ug.AllowedAdmin, false)
+        @Toggle("allowed_admin", "Admin Berechtigung?", uuidStr != "new" && ug.AllowedAdmin, false, fieldErrors["allowed_admin"])
 
-        @Toggle("allowed_zeitnahme", "Zeitnahme Berechtigung?", uuidStr != "new" && ug.AllowedZeitnahme, false)
+        @Toggle("allowed_zeitnahme", "Zeitnahme Berechtigung?", uuidStr != "new" && ug.AllowedZeitnahme, false, fieldErrors["allowed_zeitnahme"])
 
-        @Toggle("allowed_startlisten", "Startlisten Berechtigung?", uuidStr != "new" && ug.AllowedStartlisten, false)
+        @Toggle("allowed_startlisten", "Startlisten Berechtigung?", uuidStr != "new" && ug.AllowedStartlisten, false, fieldErrors["allowed_startlisten"])
 
-        @Toggle("allowed_regattabuero", "Regattabüro Berechtigung?", uuidStr != "new" && ug.AllowedRegattabuero, false)
+        @Toggle("allowed_regattabuero", "Regattabüro Berechtigung?", uuidStr != "new" && ug.AllowedRegattabuero, false, fieldErrors["allowed_regattabuero"])
 
-        @Toggle("allowed_regattaleitung", "Regattaleitung Berechtigung?", uuidStr != "new" && ug.AllowedRegattaleitung, false)
+        @Toggle("allowed_regattaleitung", "Regattaleitung Berechtigung?", uuidStr != "new" && ug.AllowedRegattaleitung, false, fieldErrors["allowed_regattaleitung"])
       </div>
       @SubmitButton("Speichern", Success)
     </form>

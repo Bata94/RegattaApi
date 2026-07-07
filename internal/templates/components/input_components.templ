@@ -137,15 +137,19 @@ templ FileUpload(name, label string, required bool, errorMsg string) {
   </div>
 }
 
-templ RangeStepInput(name, label string, value, min, max, step int, required bool) {
+templ RangeStepInput(name, label string, value, min, max, step int, required bool, errorMsg string) {
   {{
     stepCount := (max - min) / step + 1
+    inputClass := "range range-primary w-full"
+    if errorMsg != "" {
+      inputClass += " range-error"
+    }
   }}
   <div
     class="w-full max-w-xs"
   >
     <input
-      class="range range-primary w-full"
+      class={inputClass}
       type="range"
       name={name}
       value={value}
@@ -163,25 +167,78 @@ templ RangeStepInput(name, label string, value, min, max, step int, required boo
         <span>{i * step}</span>
       }
     </div>
+    if errorMsg != "" {
+      <span class="text-error text-sm mt-1">{errorMsg}</span>
+    }
   </div>
 }
 
-templ Toggle(name, label string, checked bool, required bool) {
-  <div class="form-control w-full flex flex-row justify-between">
+templ GenderSelect(name string, selectedValue string, errorMsg string) {
+  {{
+    btnClass := "btn join-item"
+    if errorMsg != "" {
+      btnClass += " btn-outline btn-error"
+    }
+  }}
+  <div class="form-control mb-6 w-full flex flex-row justify-between">
     <label class="label">
-      <span class="label-text">{label}</span>
+      <span class="label-text">Geschlecht</span>
     </label>
-    <input
-      type="checkbox"
-      name={name}
-      class="toggle toggle-primary"
-      value="on"
-      if checked {
-        checked
-      }
-      if required {
-        required
-      }
-    />
+    <div class="join" role="radiogroup">
+      <input
+        type="radio"
+        name={name}
+        value="m"
+        class={btnClass}
+        aria-label="Männlich"
+        if selectedValue == "m" {
+          checked
+        }
+      />
+      <input
+        type="radio"
+        name={name}
+        value="w"
+        class={btnClass}
+        aria-label="Weiblich"
+        if selectedValue == "w" {
+          checked
+        }
+      />
+    </div>
+    if errorMsg != "" {
+      <span class="text-error text-sm mt-1">{errorMsg}</span>
+    }
+  </div>
+}
+
+templ Toggle(name, label string, checked bool, required bool, errorMsg string) {
+  {{
+    toggleClass := "toggle toggle-primary"
+    if errorMsg != "" {
+      toggleClass += " toggle-error"
+    }
+  }}
+  <div class="form-control w-full flex flex-col items-start">
+    <div class="flex flex-row justify-between w-full">
+      <label class="label">
+        <span class="label-text">{label}</span>
+      </label>
+      <input
+        type="checkbox"
+        name={name}
+        class={toggleClass}
+        value="on"
+        if checked {
+          checked
+        }
+        if required {
+          required
+        }
+      />
+    </div>
+    if errorMsg != "" {
+      <span class="text-error text-sm mt-1">{errorMsg}</span>
+    }
   </div>
 }
