@@ -99,6 +99,8 @@ func GetRouter() http.Handler {
 	r.Handle("POST", "/internal/regattabuero/setzungsverwaltung/aenderung/rennen/{param}", wrapHandler(components.SetzungsVerwaltungAenderungRennenPost, true))
 	baseLayoutHandler("/internal/regattabuero/setzungsverwaltung/aenderung/rennen/{param}", pages.InternalRegattaleitungSetzungAenderungRennen)
 	baseLayoutHandler("/internal/regattabuero/setzungsverwaltung/aenderung", pages.InternalRegattaleitungSetzungAenderung)
+	// TODO: Change Links in Pages to use "regattabuero" instead of "regattaleitung"
+	baseLayoutHandler("/internal/regattabuero/startnummern/aenderung", pages.InternalRegattaleitungStartnummernAendernRennenWahl)
 
 	baseLayoutHandler("/internal/regattaleitung", pages.InternalRegattaleitung)
 	baseLayoutHandler("/internal/regattaleitung/drvupload", pages.InternalRegattaleitungDrvUpload)
@@ -124,7 +126,10 @@ func GetRouter() http.Handler {
 	r.Handle("POST", "/internal/regattaleitung/startnummern/verteilen", wrapHandler(components.StartnummernVerteilenPost, true))
 	r.Handle("DELETE", "/internal/regattaleitung/startnummern/verteilen", wrapHandler(components.StartnummernVerteilenDelete, true))
 	baseLayoutHandler("/internal/regattaleitung/startnummern/bereich", pages.InternalRegattaleitungStartnummernBereich)
-	baseLayoutHandler("/internal/regattaleitung/startnummern/aenderung", pages.InternalRegattaleitungStartnummernAendern)
+	baseLayoutHandler("/internal/regattaleitung/startnummern/aenderung", pages.InternalRegattaleitungStartnummernAendernRennenWahl)
+	baseLayoutHandler("/internal/regattaleitung/startnummern/aenderung/{r_uuid}", pages.InternalRegattaleitungStartnummernAendernMeldungsWahl)
+	baseLayoutHandler("/internal/regattaleitung/startnummern/aenderung/{r_uuid}/{m_uuid}", pages.InternalRegattaleitungStartnummernAendern)
+	r.Handle("POST", "/internal/regattaleitung/startnummern/aenderung/{r_uuid}/{m_uuid}", wrapHandler(components.StartnummernAendernPost, true))
 	baseLayoutHandler("/internal/regattaleitung/pdf_meldeergebnis", pages.InternalRegattaleitungPdfMeldeergebnis)
 	r.Handle("POST", "/internal/regattaleitung/pdf_meldeergebnis", wrapHandler(components.PdfMeldeergebnisPost, true))
 	baseLayoutHandler("/internal/regattaleitung/vereine", pages.InternalRegattaleitungVereinsverwaltung)

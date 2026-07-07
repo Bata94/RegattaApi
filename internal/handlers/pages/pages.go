@@ -96,8 +96,48 @@ func InternalRegattaleitungStartnummernBereich(c *handler.Context) (templ.Compon
 	return ui_pages.InternalRegattaleitungStartnummernBereich(), nil
 }
 
+func InternalRegattaleitungStartnummernAendernRennenWahl(c *handler.Context) (templ.Component, error) {
+	return ui_pages.InternalRegattaleitungStartnummernAendernRennenWahl(), nil
+}
+
+func InternalRegattaleitungStartnummernAendernMeldungsWahl(c *handler.Context) (templ.Component, error) {
+	rUuidStr := c.Param("r_uuid")
+	rUuid, err := uuid.Parse(rUuidStr)
+	if err != nil {
+		return nil, handler.NotAcceptable("Invalid UUID")
+	}
+
+	r, err := crud.GetRennen(c.Request.Context(), rUuid)
+	if err != nil {
+		return nil, handler.NotFound("Rennen nicht gefunden")
+	}
+
+	for i := range r.Meldungen {
+		r.Meldungen[i].Rennen = &r
+	}
+
+	return ui_pages.InternalRegattaleitungStartnummernAendernMeldungsWahl(r), nil
+}
+
 func InternalRegattaleitungStartnummernAendern(c *handler.Context) (templ.Component, error) {
-	return ui_pages.InternalRegattaleitungStartnummernAendern(), nil
+	// rUuidStr := c.Param("r_uuid")
+	mUuidStr := c.Param("m_uuid")
+
+	// rUuid, err := uuid.Parse(rUuidStr)
+	// if err != nil {
+	// 	return nil, handler.NotAcceptable("Invalid UUID")
+	// }
+	mUuid, err := uuid.Parse(mUuidStr)
+	if err != nil {
+		return nil, handler.NotAcceptable("Invalid UUID")
+	}
+
+	m, err := crud.GetMeldung(c.Request.Context(), mUuid)
+	if err != nil {
+		return nil, handler.NotFound("Meldung nicht gefunden")
+	}
+
+	return ui_pages.InternalRegattaleitungStartnummernAendern(m, nil), nil
 }
 
 func InternalRegattaleitungPdfMeldeergebnis(c *handler.Context) (templ.Component, error) {

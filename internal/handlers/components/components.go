@@ -1,19 +1,21 @@
 package components
 
 import (
-	"strings"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/a-h/templ"
 	"github.com/bata94/RegattaApi/internal/config"
 	"github.com/bata94/RegattaApi/internal/crud"
+	apierr "github.com/bata94/RegattaApi/internal/errors"
 	"github.com/bata94/RegattaApi/internal/handler"
 	api_v1 "github.com/bata94/RegattaApi/internal/handlers/api/v1"
 	"github.com/bata94/RegattaApi/internal/service"
@@ -468,6 +470,75 @@ func SetzungsVerwaltungAenderungRennenPost(c *handler.Context) error {
 	}
 
 	return handler.OK("Setzung erfolgreich!")
+}
+
+func StartnummernAendernPost(c *handler.Context) error {
+	rennenUuidStr := c.Param("r_uuid")
+	meldungUuidStr := c.Param("m_uuid")
+
+	rennenUuid, err := uuid.Parse(rennenUuidStr)
+	if err != nil {
+		return handler.NotAcceptable("Invalid UUID")
+	}
+	meldungUuid, err := uuid.Parse(meldungUuidStr)
+	if err != nil {
+		return handler.NotAcceptable("Invalid UUID")
+	}
+
+	m, err := crud.GetMeldung(c.Request.Context(), meldungUuid)
+	if err != nil {
+		return handler.NotFound("Meldung nicht gefunden")
+	}
+	if m.RennenUuid != rennenUuid {
+		return handler.NotAcceptable("Invalid UUID")
+	}
+
+	fieldErrors := make(map[string]string)
+	startnummer := c.FormValue("startnummer")
+	if startnummer == "" {
+		fieldErrors["startnummer"] = "Startnummer erforderlich"
+	}
+	startNummerInt, err := strconv.Atoi(startnummer)
+	if err != nil {
+		fieldErrors["startnummer"] = "Ungültige Startnummer"
+	}
+
+	// TODO: Make this configurable
+	const MAX_STARTNUMMER = 350
+	if startNummerInt <= 0 || startNummerInt > MAX_STARTNUMMER {
+		fieldErrors["startnummer"] = fmt.Sprintf("Startnummer muss zwischen 1 und %v liegen", MAX_STARTNUMMER)
+	}
+
+	checkStartnummer, err := crud.GetMeldungByStartNrUndTag(c.Request.Context(), startNummerInt, m.Rennen.Tag)
+	if err != nil && !errors.As(err, &apierr.ErrNotFound) {
+		return handler.InternalError("Error while loading meldung")
+	}
+	if checkStartnummer.Uuid !=  uuid.Nil {
+		fieldErrors["startnummer"] = "Startnummer bereits vergeben"
+	}
+
+	if len(fieldErrors) > 0 {
+		templ.Handler(ui_pages.InternalRegattaleitungStartnummernAendern(m, fieldErrors)).ServeHTTP(c.Writer, c.Request)
+		return nil
+	}
+
+	err = crud.UpdateStartNummer(c.Request.Context(), sqlc.UpdateStartNummerParams{
+		Uuid:        m.Uuid,
+		StartNummer: int32(startNummerInt),
+	})
+	if err != nil {
+		slog.Error("UpdateStartNummer error", "err", err)
+		return handler.InternalError("Error while updating startnummer")
+	}
+
+	m, err = crud.GetMeldung(c.Request.Context(), m.Uuid)
+	if err != nil {
+		slog.Error("GetMeldung error", "err", err)
+		return handler.InternalError("Error while loading meldung")
+	}
+
+	templ.Handler(ui_pages.InternalRegattaleitungStartnummernAendern(m, fieldErrors)).ServeHTTP(c.Writer, c.Request)
+	return nil
 }
 
 func PausenNew(c *handler.Context) error {
