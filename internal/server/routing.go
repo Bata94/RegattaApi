@@ -71,6 +71,7 @@ func GetRouter() http.Handler {
 	r.Handle("GET", "/internal/profil/password/{uuid}", wrapHandler(components.ChangePasswordGet, true))
 	r.Handle("PUT", "/internal/profil/password/{uuid}", wrapHandler(components.ChangePasswordPost, true))
 	baseLayoutHandler("/internal/zeitnahme", pages.InternalZeitnahme)
+	baseLayoutHandler("/internal/zeitnahme/ziel", pages.InternalZeitnahmeZiel)
 
 	baseLayoutHandler("/internal/startlisten", pages.InternalStartlisten)
 
@@ -223,10 +224,12 @@ func GetRouter() http.Handler {
 	r.Handle("GET", "/api/v1/verein/{uuid}/waage", wrapHandler(api_v1.GetAllAthletenForVereinWaage, true))
 	r.Handle("GET", "/api/v1/verein/{uuid}/startberechtigung", wrapHandler(api_v1.GetAllAthletenForVereinMissStartber, true))
 
-	r.Handle("GET", "/api/v1/zeitnahme/ziel", wrapHandler(api_v1.WsZeitnahmeZiel, true))
+	r.Handle("GET", "/api/v1/zeitnahme/ziel", wrapHandler(api_v1.GetOpenZeitnahmeZiel, true))
 	r.Handle("POST", "/api/v1/zeitnahme/start", wrapHandler(api_v1.PostZeitnahmeStart, true))
 	r.Handle("GET", "/api/v1/zeitnahme/openStarts", wrapHandler(api_v1.GetOpenStarts, true))
 	r.Handle("POST", "/api/v1/zeitnahme/genErgebnis", wrapHandler(api_v1.GenerateEndZeit, true))
+
+	r.Handle("GET", "/ws/zeitnahme", api_v1.HandleZeitnahmeWS)
 
 	go handlers.RunHub()
 

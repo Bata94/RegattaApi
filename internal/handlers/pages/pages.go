@@ -48,6 +48,10 @@ func InternalZeitnahme(c *handler.Context) (templ.Component, error) {
 	return ui_pages.InternalZeitnahme(), nil
 }
 
+func InternalZeitnahmeZiel(c *handler.Context) (templ.Component, error) {
+	return ui_pages.ZeitnahmeZiel(), nil
+}
+
 func InternalStartlisten(c *handler.Context) (templ.Component, error) {
 	return ui_pages.InternalStartlisten(), nil
 }

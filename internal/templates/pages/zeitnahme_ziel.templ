@@ -1,0 +1,220 @@
+package ui_pages
+
+import "github.com/bata94/RegattaApi/internal/templates/components"
+
+script zeitnahmeZiel() {
+	'use strict';
+
+	var airHorn = new Audio('/assets/sound/airHorn.mp3');
+	airHorn.preload = 'auto';
+
+	function renderCurrent() {
+		var raw = window.__wasm_getOpenStarts();
+		try { render(JSON.parse(raw)); } catch (e) { console.error('render openStarts', e); }
+	}
+
+	if (window.__wasm_initialized) {
+		wasmReady = true;
+		renderCurrent();
+		window.__wasm_onStateChange(renderCurrent);
+		if (window.__wasm_onWSChange) window.__wasm_onWSChange(updateWSBadge);
+		var inp = document.getElementById('start-nr-input');
+		if (inp) inp.focus();
+		return;
+	}
+
+	var wasmReady = false;
+
+	function failApp(msg) {
+		var app = document.getElementById('ziel-app');
+		if (app) app.innerHTML = '<div class="alert alert-error">' + msg + '</div>';
+	}
+
+	function getWSBadgeHTML() {
+		if (window.__wasm_getWSConnected && window.__wasm_getWSConnected()) {
+			var latMs = window.__wasm_getLatencyMs ? window.__wasm_getLatencyMs() : -1;
+			var latText = '';
+			if (latMs > 0) { latText = ' (' + latMs + 'ms)'; }
+			else if (latMs === 0) { latText = ' (<1ms)'; }
+			return '<span id="ws-status" class="badge badge-success">Verbunden' + latText + '</span>';
+		}
+		var reconnecting = window.__wasm_isReconnecting ? window.__wasm_isReconnecting() : false;
+		if (reconnecting) {
+			return '<span id="ws-status" class="badge badge-error gap-2">Getrennt — Verbindung wird hergestellt...<span class="loading loading-spinner loading-xs"></span></span>';
+		}
+		return '<span id="ws-status" class="badge badge-error cursor-pointer">Getrennt — klicken zum Verbinden</span>';
+	}
+
+	function updateWSBadge() {
+		var container = document.getElementById('ws-badge-container');
+		if (!container) return;
+		container.innerHTML = getWSBadgeHTML();
+		var badge = document.getElementById('ws-status');
+		if (badge && (!window.__wasm_getWSConnected || !window.__wasm_getWSConnected())) {
+			badge.addEventListener('click', function() {
+				if (window.__wasm_forceReconnect) window.__wasm_forceReconnect();
+			});
+		}
+	}
+
+	function render(starts) {
+		var app = document.getElementById('ziel-app');
+		if (!app) return;
+
+		var unsynced = window.__wasm_getUnsyncedCount ? window.__wasm_getUnsyncedCount() : 0;
+
+		var rows = '';
+		if (starts.length === 0) {
+			rows = '<tr><td colspan="4" class="text-center opacity-60 py-8">Keine offenen Starts</td></tr>';
+		} else {
+			for (var i = 0; i < starts.length; i++) {
+				var s = starts[i];
+				var nr = s.start_nummer || '\u2014';
+				var rn = s.rennen_nummer || '\u2014';
+				var time = s.time_client
+					? new Date(s.time_client).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+					: '\u2014';
+				rows += '<tr class="hover:bg-base-200">' +
+					'<td class="font-mono text-lg font-bold">' + nr + '</td>' +
+					'<td>' + rn + '</td>' +
+					'<td>' + time + '</td>' +
+					'<td><button class="btn btn-sm btn-primary" data-start="' + nr + '">Ziel</button></td>' +
+					'</tr>';
+			}
+		}
+
+		app.innerHTML =
+			'<div class="flex flex-col gap-4">' +
+			'<div class="flex items-center justify-between">' +
+			'<h2 class="text-xl font-bold">Zielgericht</h2>' +
+			'<span id="ws-badge-container">' + getWSBadgeHTML() + '</span>' +
+			'</div>' +
+			'<div class="flex gap-2 items-end">' +
+			'<label class="form-control flex-1">' +
+			'<span class="label-text">Startnummer eingeben oder scannen</span>' +
+			'<input type="text" id="start-nr-input" class="input input-bordered font-mono text-xl" placeholder="Startnummer" autofocus />' +
+			'</label>' +
+			'<button id="submit-finish-btn" class="btn btn-primary btn-lg">OK</button>' +
+			'</div>' +
+			(unsynced > 0 ? '<div class="alert alert-warning">' + unsynced + ' nicht synchronisierte Zeitnahmen (offline)</div>' : '') +
+			'<div class="overflow-x-auto">' +
+			'<table class="table table-zebra">' +
+			'<thead><tr><th>Start-Nr</th><th>Rennen</th><th>Startzeit</th><th>Aktion</th></tr></thead>' +
+			'<tbody>' + rows + '</tbody>' +
+			'</table>' +
+			'</div>' +
+			'</div>';
+
+		app.querySelectorAll('[data-start]').forEach(function(btn) {
+			btn.addEventListener('click', function() {
+				submitFinish(this.getAttribute('data-start'));
+			});
+		});
+
+		document.getElementById('submit-finish-btn').addEventListener('click', function() {
+			var input = document.getElementById('start-nr-input');
+			var nr = input.value.trim();
+			if (nr) {
+				submitFinish(nr);
+				input.value = '';
+				input.focus();
+			}
+		});
+
+		document.getElementById('start-nr-input').addEventListener('keydown', function(e) {
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				document.getElementById('submit-finish-btn').click();
+			}
+		});
+
+	}
+
+	function submitFinish(startNr) {
+		if (!wasmReady) {
+			showToast('WASM wird noch geladen\u2026', 'alert-info');
+			return;
+		}
+		var now = new Date().toISOString();
+		window.__wasm_submitFinish(startNr, now);
+		airHorn.currentTime = 0;
+		airHorn.play().catch(function() {});
+		showToast('Zielzeit erfasst: ' + startNr, 'alert-success');
+	}
+
+	function showToast(msg, cls) {
+		var container = document.getElementById('toast-container');
+		if (!container) return;
+		var t = document.createElement('div');
+		t.className = 'alert ' + (cls || 'alert-info') + ' shadow-lg';
+		t.textContent = msg;
+		container.appendChild(t);
+		setTimeout(function() { t.remove(); }, 4000);
+	}
+
+	function startApp() {
+		if (!window.__wasm_submitFinish) {
+			setTimeout(startApp, 100);
+			return;
+		}
+		wasmReady = true;
+		window.__wasm_initialized = true;
+
+		window.__wasm_onStateChange(renderCurrent);
+		if (window.__wasm_onWSChange) window.__wasm_onWSChange(updateWSBadge);
+		renderCurrent();
+
+		var input = document.getElementById('start-nr-input');
+		if (input) input.focus();
+	}
+
+	function initWasm() {
+		if (!WebAssembly.instantiateStreaming) {
+			failApp('Dein Browser unterst\u00fctzt kein WebAssembly.');
+			return;
+		}
+
+		var go = new Go();
+		WebAssembly.instantiateStreaming(fetch('/public/wasm/zeitnahme.wasm'), go.importObject)
+			.then(function(result) {
+				go.run(result.instance);
+				startApp();
+			})
+			.catch(function(err) {
+				console.error('WASM load failed', err);
+				failApp('WASM konnte nicht geladen werden: ' + err.message);
+			});
+	}
+
+	initWasm();
+}
+
+templ ZeitnahmeZiel() {
+	{{
+		breadcrumbs := []ui_components.BreadcrumbsEntries{
+			ui_components.BreadcrumbsEntries{
+				Title: "Home",
+				Paths: "/",
+			},
+			ui_components.BreadcrumbsEntries{
+				Title: "Internes",
+				Paths: "/internal",
+			},
+			ui_components.BreadcrumbsEntries{
+				Title: "Zeitnahme",
+				Paths: "/internal/zeitnahme",
+			},
+			ui_components.BreadcrumbsEntries{
+				Title: "Zielgericht",
+				Paths: "",
+			},
+		}
+	}}
+	@ui_components.Breadcrumbs(breadcrumbs)
+	@ui_components.InternalPageDivCol() {
+		<div id="ziel-app" class="min-h-[60vh] flex items-center justify-center">
+			<span class="loading loading-spinner loading-lg"></span>
+		</div>
+		@zeitnahmeZiel()
+	}
+}

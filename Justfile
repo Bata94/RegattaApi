@@ -62,16 +62,21 @@ mod-tidy:
 	@echo "go mod tidy ..."
 	go mod tidy
 
+# Build WASM module for Zielgericht
+wasm-build:
+	@echo "Building WASM module..."
+	GOOS=js GOARCH=wasm go build -o public/wasm/zeitnahme.wasm ./cmd/wasm/zeitnahme/
+
 # Build the application
-build: templ tailwind-gen # swagger-gen
+build: templ tailwind-gen wasm-build # swagger-gen
 	@echo "Building..."
 	go build -o bin/main main.go
 
-build-air: templ tailwind-gen # swagger-gen
+build-air: templ tailwind-gen wasm-build # swagger-gen
 	@echo "Building..."
 	go build -o tmp/main main.go
 
-full-build: templ tailwind-gen sqlc-gen # db-up # swagger-fmt build
+full-build: templ tailwind-gen sqlc-gen wasm-build # db-up # swagger-fmt build
 	@echo "Full-Building..."
 	CGO_ENABLED=1 go build -o bin/mainDocker main.go
 
@@ -94,6 +99,10 @@ clean:
 watch: sqlc-gen db-up build
   @echo "Watching..."
   air
+
+watch-prod:
+  @echo "Watching..."
+  docker compose watch api
 
 # Docker Compose commands
 dev:
@@ -127,3 +136,14 @@ fmt:
 
 lint:
 	golangci-lint run
+
+# Poke the hole
+open-firewall:
+    sudo iptables -I INPUT 1 -p tcp --dport 8080 -j ACCEPT
+
+# Close the hole
+close-firewall:
+    sudo iptables -D INPUT -p tcp --dport 8080 -j ACCEPT
+
+verify-firewall:
+  sudo iptables -L INPUT -n --line-numbers | grep 8080

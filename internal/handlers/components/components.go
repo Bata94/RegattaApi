@@ -513,7 +513,7 @@ func StartnummernAendernPost(c *handler.Context) error {
 	if err != nil && !errors.As(err, &apierr.ErrNotFound) {
 		return handler.InternalError("Error while loading meldung")
 	}
-	if checkStartnummer.Uuid !=  uuid.Nil {
+	if checkStartnummer.Uuid != uuid.Nil {
 		fieldErrors["startnummer"] = "Startnummer bereits vergeben"
 	}
 

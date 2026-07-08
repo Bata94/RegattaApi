@@ -1,8 +1,6 @@
 package api_v1
 
 import (
-	"encoding/json"
-	"fmt"
 	"log/slog"
 	"strconv"
 	"time"
@@ -13,43 +11,12 @@ import (
 	"github.com/google/uuid"
 )
 
-type WSZnMsg struct {
-	Status *string         `json:"status"`
-	Method string          `json:"method"`
-	Data   *crud.Zeitnahme `json:"data"`
-}
-
-func WsZeitnahmeZiel(c *handler.Context) error {
-	defer func() {
-		handlers.Unregister <- nil
-		c.Writer.WriteHeader(200)
-	}()
-
-	handlers.Register <- nil
-
+func GetOpenZeitnahmeZiel(c *handler.Context) error {
 	q, err := crud.GetOpenZeitnahmeZiel(c.Request.Context())
 	if err != nil {
-		errStr := fmt.Sprint("Error getting open ZnZiel... ", err)
-		slog.Error(errStr)
-		if _, err := c.Writer.Write([]byte(errStr)); err != nil {
-			slog.Error("Error writing response", "err", err)
-		}
-		return nil
+		return err
 	}
-
-	qJson, err := json.Marshal(map[string]any{"list": q})
-	if err != nil {
-		errStr := fmt.Sprint("Error getting open ZnZiel... ", err)
-		slog.Error(errStr)
-		if _, err := c.Writer.Write([]byte(errStr)); err != nil {
-			slog.Error("Error writing response", "err", err)
-		}
-		return nil
-	}
-	if _, err := c.Writer.Write(qJson); err != nil {
-		slog.Error("Error writing response", "err", err)
-	}
-	return nil
+	return c.JSON(map[string]any{"list": q})
 }
 
 type PostStartParams struct {
@@ -70,6 +37,11 @@ func PostZeitnahmeStart(c *handler.Context) error {
 	if err != nil {
 		return err
 	}
+
+	handlers.GetHub().BroadcastJSON(map[string]any{
+		"type": "new_start",
+		"data": q,
+	})
 
 	return c.JSON(q)
 }
@@ -131,6 +103,15 @@ func GenerateEndZeit(c *handler.Context) error {
 					slog.Debug("CreateZeitnahmeErgebnis")
 					return err
 				}
+
+				handlers.GetHub().BroadcastJSON(map[string]any{
+					"type": "finish_confirmed",
+					"data": map[string]any{
+						"startNummer": *s.StartNummer,
+						"rennNummer":  s.RennenNummer,
+						"endzeit":     z.TimeClient.Sub(*s.TimeClient).Seconds(),
+					},
+				})
 			}
 		}
 	}

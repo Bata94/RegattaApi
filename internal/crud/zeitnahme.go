@@ -173,11 +173,11 @@ func CreateZeitnahmeStart(ctx context.Context, rennNr *string, startNummern []st
 			StartNummer:  startNummer,
 			TimeClient: pgtype.Timestamp{
 				Valid: true,
-				Time:  timeClient,
+				Time:  timeClient.UTC(),
 			},
 			TimeServer: pgtype.Timestamp{
 				Valid: true,
-				Time:  now,
+				Time:  now.UTC(),
 			},
 			MeasuredLatency: pgtype.Int4{
 				Valid: true,
@@ -219,11 +219,11 @@ func CreateZeitnahmeZiel(ctx context.Context, rennNr, startNr *string, timeClien
 		StartNummer:  startNummer,
 		TimeClient: pgtype.Timestamp{
 			Valid: true,
-			Time:  timeClient,
+			Time:  timeClient.UTC(),
 		},
 		TimeServer: pgtype.Timestamp{
 			Valid: true,
-			Time:  now,
+			Time:  now.UTC(),
 		},
 		MeasuredLatency: pgtype.Int4{
 			Valid: true,
