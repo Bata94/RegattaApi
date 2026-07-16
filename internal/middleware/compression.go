@@ -83,9 +83,12 @@ func Compression() Middleware {
 			}
 
 			gw := gzip.NewWriter(c.Writer)
+			gwClosed := false
 			defer func() {
-				if err := gw.Close(); err != nil {
-					slog.Error("Error closing gzip writer", "err", err)
+				if !gwClosed {
+					if err := gw.Close(); err != nil {
+						slog.Error("Error closing gzip writer", "err", err)
+					}
 				}
 			}()
 
@@ -102,18 +105,22 @@ func Compression() Middleware {
 
 			err := next(c)
 
+			if err != nil {
+				c.Writer = originalWriter
+				c.Writer.Header().Del("Content-Encoding")
+				gwClosed = true
+				return err
+			}
+
 			if err := gw.Flush(); err != nil {
 				slog.Error("Error flushing gzip writer", "err", err)
 			}
 			if err := gw.Close(); err != nil {
 				slog.Error("Error closing gzip writer", "err", err)
 			}
+			gwClosed = true
 
 			c.Writer = originalWriter
-
-			if err != nil {
-				return err
-			}
 
 			if !wrapped.written {
 				return nil
