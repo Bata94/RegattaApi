@@ -10,7 +10,7 @@ import (
 templ WaageWahl(v crud.Verein, athleten []crud.Athlet) {
   {{
     navOpts := ui_components.HXNavigationOptions{
-      URL:    "/internal/regattabuero/" + v.Uuid.String() + "/waage/",
+      URL:    "/internal/regattabuero/" + v.Uuid.String() + "/waage",
       Target: "main",
       Push:   true,
       Method: ui_components.GET,
@@ -79,7 +79,7 @@ templ Waage(a crud.Athlet, msg string, fieldErrors map[string]string) {
 templ StartberechtigungWahl(v crud.Verein, athleten []crud.Athlet) {
   {{
     navOpts := ui_components.HXNavigationOptions{
-      URL:    "/internal/regattabuero/" + v.Uuid.String() + "/startberechtigung/",
+      URL:    "/internal/regattabuero/" + v.Uuid.String() + "/startberechtigung",
       Target: "main",
       Push:   true,
       Method: ui_components.GET,
