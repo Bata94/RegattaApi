@@ -1,0 +1,18 @@
+package ui_components
+
+templ TopBar(title string, mobileDrawerId string, desktopDrawerId string) {
+	<div class="flex items-center justify-between px-4 py-2 border-b border-base-300 bg-base-100">
+		<div class="flex items-center gap-3">
+			<label for={mobileDrawerId} class="btn btn-ghost btn-sm lg:hidden">
+				<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16" /></svg>
+			</label>
+			<label for={desktopDrawerId} class="btn btn-ghost btn-sm hidden lg:flex">
+				<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16" /></svg>
+			</label>
+			<h2 class="text-lg font-semibold !m-0">{title}</h2>
+		</div>
+		<div class="flex items-center gap-2">
+			@themeSwitcher()
+		</div>
+	</div>
+}

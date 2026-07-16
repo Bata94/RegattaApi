@@ -1,4 +1,4 @@
-package ui_pages
+package regattaleitung
 
 import "github.com/bata94/RegattaApi/internal/templates/components"
 import "github.com/bata94/RegattaApi/internal/crud"
@@ -145,65 +145,14 @@ script setzungDragDropInit() {
   });
 }
 
-templ InternalRegattaleitungSetzung() {
-  {{
-    breadcrumbs := []ui_components.BreadcrumbsEntries{
-      ui_components.BreadcrumbsEntries{
-        Title: "Home",
-        Paths: "/",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Internes",
-        Paths: "/internal",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Regattaleitung",
-        Paths: "/internal/regattaleitung",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Setzungsverwaltung",
-        Paths: "/internal/regattaleitung/setzungsverwaltung",
-      },
-    }
-  }}
-  @ui_components.Breadcrumbs(breadcrumbs)
+templ Setzung() {
   @ui_components.InternalPageDivCol() {
     @ui_components.PageHeader("Setzungsverwaltung")
     @ui_components.PageHeaderSubtext("")
-
-    @ui_components.InternalNavBtnGrid([]ui_components.InternalNavBtnParams{
-      {Name: "Setzungslosung", Desc: "Auslosung der Abteilungen nach dem Meldeschluss", URL: "/internal/regattaleitung/setzungsverwaltung/losung"},
-      {Name: "Setzungsänderung", Desc: "Anpassen von Rennsetzungen indem z.B. mehrfach der gleiche Verein gegeneinander fährt", URL: "/internal/regattaleitung/setzungsverwaltung/aenderung"},
-    })
   }
 }
 
-templ InternalRegattaleitungSetzungLosung() {
-  {{
-    breadcrumbs := []ui_components.BreadcrumbsEntries{
-      ui_components.BreadcrumbsEntries{
-        Title: "Home",
-        Paths: "/",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Internes",
-        Paths: "/internal",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Regattaleitung",
-        Paths: "/internal/regattaleitung",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Setzungsverwaltung",
-        Paths: "/internal/regattaleitung/setzungsverwaltung",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Setzungslosung",
-        Paths: "/internal/regattaleitung/setzungsverwaltung/losung",
-      },
-    }
-  }}
-  @ui_components.Breadcrumbs(breadcrumbs)
+templ SetzungLosung() {
   @ui_components.InternalPageDivCol() {
     @ui_components.PageHeader("Setzungslosung")
     @ui_components.PageHeaderSubtext("Hier kannst du die Setzungslosung durchführen.")
@@ -238,32 +187,7 @@ templ InternalRegattaleitungSetzungLosung() {
   }
 }
 
-templ InternalRegattaleitungSetzungAenderung() {
-  {{
-    breadcrumbs := []ui_components.BreadcrumbsEntries{
-      ui_components.BreadcrumbsEntries{
-        Title: "Home",
-        Paths: "/",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Internes",
-        Paths: "/internal",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Regattaleitung",
-        Paths: "/internal/regattaleitung",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Setzungsverwaltung",
-        Paths: "/internal/regattaleitung/setzungsverwaltung",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Setzungsänderung",
-        Paths: "/internal/regattaleitung/setzungsverwaltung/aenderung",
-      },
-    }
-  }}
-  @ui_components.Breadcrumbs(breadcrumbs)
+templ SetzungAenderung() {
   @ui_components.InternalPageDivCol() {
     @ui_components.PageHeader("Setzungsänderung")
     @ui_components.PageHeaderSubtext("Ein Rennenwählen um Setzung zu ändern. Es werden nur Rennen mit mindestens einer Meldung angezeigt.")
@@ -272,44 +196,16 @@ templ InternalRegattaleitungSetzungAenderung() {
   }
 }
 
-templ InternalRegattaleitungSetzungAenderungRennen(rennId uuid.UUID) {
+templ SetzungAenderungRennen(rennId uuid.UUID) {
   {{
     rennen, err := crud.GetRennen(ctx, rennId)
     dragDropUpdateUrl := fmt.Sprintf("/internal/regattaleitung/setzungsverwaltung/aenderung/rennen/%s", rennId)
-
-    breadcrumbs := []ui_components.BreadcrumbsEntries{
-      ui_components.BreadcrumbsEntries{
-        Title: "Home",
-        Paths: "/",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Internes",
-        Paths: "/internal",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Regattaleitung",
-        Paths: "/internal/regattaleitung",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Setzungsverwaltung",
-        Paths: "/internal/regattaleitung/setzungsverwaltung",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Setzungsänderung",
-        Paths: "/internal/regattaleitung/setzungsverwaltung/aenderung",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Rennen anpassen",
-        Paths: "",
-      },
-    }
   }}
   if err != nil {
     @ui_components.ErrorBody(404, err.Error())
     {{return}}
   }
 
-  @ui_components.Breadcrumbs(breadcrumbs)
   @ui_components.InternalPageDivCol() {
     @ui_components.PageHeader(fmt.Sprintf("Setzung für %s - %s", rennen.Nummer, rennen.BezeichnungLang))
 

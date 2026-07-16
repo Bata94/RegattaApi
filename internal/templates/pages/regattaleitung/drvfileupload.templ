@@ -1,31 +1,10 @@
-package ui_pages
+package regattaleitung
 
 import "github.com/bata94/RegattaApi/internal/templates/components"
 
 // TODO: Add functionality to upload multiple files
 
-templ InternalRegattaleitungDrvFileUpload(msg string) {
-  {{
-    breadcrumbs := []ui_components.BreadcrumbsEntries{
-      ui_components.BreadcrumbsEntries{
-        Title: "Home",
-        Paths: "/",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Internes",
-        Paths: "/internal",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Regattaleitung",
-        Paths: "/internal/regattaleitung",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "DRV-Datei Upload",
-        Paths: "/internal/regattaleitung/drv_upload",
-      },
-    }
-  }}
-  @ui_components.Breadcrumbs(breadcrumbs)
+templ DrvFileUpload(msg string) {
   @ui_components.InternalPageDivCol() {
 
     @ui_components.PageHeader("DRV-Datei Upload")

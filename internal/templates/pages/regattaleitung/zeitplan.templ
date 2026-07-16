@@ -1,30 +1,8 @@
-package ui_pages
+package regattaleitung
 
 import "github.com/bata94/RegattaApi/internal/templates/components"
 
-templ InternalRegattaleitungZeitplan(msg string, fieldErrors map[string]string) {
-  {{
-    breadcrumbs := []ui_components.BreadcrumbsEntries{
-      ui_components.BreadcrumbsEntries{
-        Title: "Home",
-        Paths: "/",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Internes",
-        Paths: "/internal",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Regattaleitung",
-        Paths: "/internal/regattaleitung",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Zeitplan",
-        Paths: "/internal/regattaleitung/zeitplan",
-      },
-    }
-  }}
-
-  @ui_components.Breadcrumbs(breadcrumbs)
+templ Zeitplan(msg string, fieldErrors map[string]string) {
   @ui_components.InternalPageDivCol() {
     @ui_components.PageHeader("Zeitplan")
     @ui_components.PageHeaderSubtext("")

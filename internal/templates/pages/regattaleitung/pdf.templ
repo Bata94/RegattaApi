@@ -1,4 +1,4 @@
-package ui_pages
+package regattaleitung
 
 import (
   "github.com/bata94/RegattaApi/internal/templates/components"
@@ -7,27 +7,8 @@ import (
 	"fmt"
 )
 
-templ InternalRegattaleitungPdfMeldeergebnis(highlightLast bool) {
+templ PdfMeldeergebnis(highlightLast bool) {
   {{
-    breadcrumbs := []ui_components.BreadcrumbsEntries{
-      ui_components.BreadcrumbsEntries{
-        Title: "Home",
-        Paths: "/",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Internes",
-        Paths: "/internal",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Regattaleitung",
-        Paths: "/internal/regattaleitung",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "PDF Meldeergebnis",
-        Paths: "/internal/regattaleitung/pdf_meldeergebnis",
-      },
-    }
-
     pdfLS, errFiles := utils.GetFilenames("meldeergebnis")
   }}
   if errFiles != nil {
@@ -35,7 +16,6 @@ templ InternalRegattaleitungPdfMeldeergebnis(highlightLast bool) {
     {{return}}
   }
 
-  @ui_components.Breadcrumbs(breadcrumbs)
   @ui_components.InternalPageDivCol() {
     @ui_components.PageHeader("PDF Meldeergebnis")
     @ui_components.PageHeaderSubtext("Meldeergebnisse sollten automatisch erstellt werden. Sollte trotzdem ein neues benötigt werden, kann hier ein neues erstellt werden. Das aktuellste wird an anderen Stellen der Website verlinkt. Zusätzlich können hier alle vorherig erstellten Meldeergebnisse heruntergeladen werden.")

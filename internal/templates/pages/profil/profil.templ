@@ -1,4 +1,4 @@
-package ui_pages
+package profil
 
 import (
   "fmt"
@@ -17,23 +17,6 @@ type ProfilData struct {
 }
 
 templ Profil(data ProfilData) {
-  {{
-    breadcrumbs := []ui_components.BreadcrumbsEntries{
-      ui_components.BreadcrumbsEntries{
-        Title: "Home",
-        Paths: "/",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Internes",
-        Paths: "/internal",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Profil",
-        Paths: "/internal/profil",
-      },
-    }
-  }}
-  @ui_components.Breadcrumbs(breadcrumbs)
     @ui_components.InternalPageDivCol() {
       @ui_components.PageHeader("Profil")
       @ui_components.PageHeaderSubtext("Hier kannst du dein Profil verwalten.")

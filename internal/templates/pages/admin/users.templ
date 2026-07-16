@@ -1,4 +1,4 @@
-package ui_pages
+package admin
 
 import (
   "github.com/bata94/RegattaApi/internal/templates/components"
@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-templ InternalAdminUsers() {
+templ Users() {
   {{
     users, err := crud.GetAllUsers(ctx)
     userGroups, errUserGroups := crud.GetAllUsersGroups(ctx)
@@ -44,27 +44,8 @@ templ InternalAdminUsers() {
       })
     }
 
-    breadcrumbs := []ui_components.BreadcrumbsEntries{
-      ui_components.BreadcrumbsEntries{
-        Title: "Home",
-        Paths: "/",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Internes",
-        Paths: "/internal",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Admin",
-        Paths: "/internal/admin",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Nutzerverwaltung",
-        Paths: "/internal/admin/users",
-      },
-    }
   }}
 
-  @ui_components.Breadcrumbs(breadcrumbs)
   @ui_components.InternalPageDivCol() {
 
     <div class="flex flex-row justify-between items-center">

@@ -18,7 +18,7 @@ func Login(c *handler.Context) error {
 	}
 
 	c.SetCookie("auth_token", u.Jwt.Token, 72*60*60)
-	c.Writer.Header().Set("HX-Redirect", "/")
+	c.Writer.Header().Set("HX-Redirect", "/internal")
 	return c.JSON(u)
 }
 

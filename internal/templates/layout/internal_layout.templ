@@ -1,0 +1,39 @@
+package ui_layouts
+
+import "github.com/bata94/RegattaApi/internal/templates/components"
+
+templ InternalLayout(body templ.Component, sidebarCats []ui_components.SidebarCategory, userCaps []string, username string, pageTitle string) {
+	@MinimalLayout(internalLayoutBody(body, sidebarCats, userCaps, username, pageTitle))
+}
+
+templ internalLayoutBody(body templ.Component, sidebarCats []ui_components.SidebarCategory, userCaps []string, username string, pageTitle string) {
+	<div class="flex min-h-screen max-w-none">
+		<!-- Desktop sidebar toggle (sibling of aside for peer to work) -->
+		<input id="sidebar-drawer-desktop" type="checkbox" checked class="hidden peer" />
+
+		<!-- Desktop sidebar (lg+) -->
+		<aside class="hidden lg:flex flex-col w-0 shrink-0 overflow-hidden peer-checked:w-72 transition-all duration-300 bg-base-200 text-base-content border-r border-base-300">
+			<div class="w-72 shrink-0 h-screen">
+				@ui_components.Sidebar(sidebarCats, userCaps, username)
+			</div>
+		</aside>
+
+		<!-- Shared content area -->
+		<div class="flex-1 flex flex-col min-w-0 bg-base-100">
+			@ui_components.TopBar(pageTitle, "sidebar-drawer-mobile", "sidebar-drawer-desktop")
+
+			<main id="main-content" class="flex-1 p-4 md:p-6 lg:p-8 overflow-auto">
+				@body
+			</main>
+		</div>
+	</div>
+
+	<!-- Mobile sidebar overlay (< lg) -->
+	<input id="sidebar-drawer-mobile" type="checkbox" class="hidden peer" />
+	<label for="sidebar-drawer-mobile" class="lg:hidden fixed inset-0 bg-black/40 z-30 hidden peer-checked:block cursor-pointer"></label>
+	<aside class="lg:hidden fixed inset-y-0 left-0 z-40 w-72 -translate-x-full peer-checked:translate-x-0 transition-transform duration-300 bg-base-200 text-base-content border-r border-base-300 overflow-y-auto shadow-xl">
+		@ui_components.Sidebar(sidebarCats, userCaps, username)
+	</aside>
+
+	<div id="toast-container" class="toast toast-end"/>
+}

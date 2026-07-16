@@ -22,6 +22,9 @@ import (
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	ui_components "github.com/bata94/RegattaApi/internal/templates/components"
 	ui_pages "github.com/bata94/RegattaApi/internal/templates/pages"
+	profil "github.com/bata94/RegattaApi/internal/templates/pages/profil"
+	regattabuero "github.com/bata94/RegattaApi/internal/templates/pages/regattabuero"
+	regattaleitung "github.com/bata94/RegattaApi/internal/templates/pages/regattaleitung"
 	"github.com/bata94/RegattaApi/internal/utils"
 	"github.com/google/uuid"
 )
@@ -57,7 +60,7 @@ func LoginPost(c *handler.Context) error {
 		Path:     "/",
 	})
 
-	c.Writer.Header().Set("HX-Redirect", "/")
+	c.Writer.Header().Set("HX-Redirect", "/internal")
 	c.Writer.WriteHeader(http.StatusOK)
 	return nil
 }
@@ -331,7 +334,7 @@ func ChangePasswordGet(c *handler.Context) error {
 		return handler.NotFound("User not found")
 	}
 
-	templ.Handler(ui_pages.ChangePasswordDialogBody(*user, "", nil)).ServeHTTP(c.Writer, c.Request)
+	templ.Handler(profil.ChangePasswordDialogBody(*user, "", nil)).ServeHTTP(c.Writer, c.Request)
 	return nil
 }
 
@@ -374,7 +377,7 @@ func ChangePasswordPost(c *handler.Context) error {
 		topMsg = "Aktuelles Passwort ist falsch"
 	}
 	if len(fieldErrors) > 0 {
-		return handler.BadRequest(topMsg).WithForm(ui_pages.ChangePasswordDialogBody(*user, "", fieldErrors))
+		return handler.BadRequest(topMsg).WithForm(profil.ChangePasswordDialogBody(*user, "", fieldErrors))
 	}
 
 	err = crud.UpdatePassword(c.Request.Context(), userUuid, newPassword1)
@@ -518,7 +521,7 @@ func StartnummernAendernPost(c *handler.Context) error {
 	}
 
 	if len(fieldErrors) > 0 {
-		templ.Handler(ui_pages.InternalRegattaleitungStartnummernAendern(m, fieldErrors)).ServeHTTP(c.Writer, c.Request)
+		templ.Handler(regattaleitung.StartnummernAendern(m, fieldErrors)).ServeHTTP(c.Writer, c.Request)
 		return nil
 	}
 
@@ -537,7 +540,7 @@ func StartnummernAendernPost(c *handler.Context) error {
 		return handler.InternalError("Error while loading meldung")
 	}
 
-	templ.Handler(ui_pages.InternalRegattaleitungStartnummernAendern(m, fieldErrors)).ServeHTTP(c.Writer, c.Request)
+	templ.Handler(regattaleitung.StartnummernAendern(m, fieldErrors)).ServeHTTP(c.Writer, c.Request)
 	return nil
 }
 
@@ -549,7 +552,7 @@ func PausenNew(c *handler.Context) error {
 	}
 	p := crud.Pause{Pause: sqlc.Pause{ID: int32(-2), NachRennenUuid: nachRennenUuid, Laenge: 45}}
 
-	templ.Handler(ui_pages.PausenPausenEntry(p)).ServeHTTP(c.Writer, c.Request)
+	templ.Handler(regattaleitung.PausenEntry(p)).ServeHTTP(c.Writer, c.Request)
 	return nil
 }
 
@@ -582,7 +585,7 @@ func PausenPost(c *handler.Context) error {
 			return handler.InternalError("Error while creating pause")
 		}
 
-		templ.Handler(ui_pages.InternalRegattaleitungPausen()).ServeHTTP(c.Writer, c.Request)
+		templ.Handler(regattaleitung.Pausen()).ServeHTTP(c.Writer, c.Request)
 		return nil
 	} else {
 		_, err = crud.UpdatePause(c.Request.Context(), sqlc.UpdatePauseParams{
@@ -593,7 +596,7 @@ func PausenPost(c *handler.Context) error {
 			return handler.InternalError("Error while updating pause")
 		}
 
-		templ.Handler(ui_pages.InternalRegattaleitungPausen()).ServeHTTP(c.Writer, c.Request)
+		templ.Handler(regattaleitung.Pausen()).ServeHTTP(c.Writer, c.Request)
 		return nil
 	}
 }
@@ -611,7 +614,7 @@ func PausenDelete(c *handler.Context) error {
 		return handler.InternalError("Error while deleting pause")
 	}
 
-	templ.Handler(ui_pages.InternalRegattaleitungPausen()).ServeHTTP(c.Writer, c.Request)
+	templ.Handler(regattaleitung.Pausen()).ServeHTTP(c.Writer, c.Request)
 	return nil
 }
 
@@ -631,7 +634,7 @@ func ZeitplanPost(c *handler.Context) error {
 	}
 
 	if len(fieldErrors) > 0 {
-		return handler.BadRequest("Ungültige Startzeit").WithForm(ui_pages.InternalRegattaleitungZeitplan("", fieldErrors))
+		return handler.BadRequest("Ungültige Startzeit").WithForm(regattaleitung.Zeitplan("", fieldErrors))
 	}
 
 	zeitplan := service.SetZeitplanParams{
@@ -680,7 +683,7 @@ func PdfMeldeergebnisPost(c *handler.Context) error {
 		return handler.InternalError(fmt.Sprintf("Fehler während PDF Erstellung: %s", err.Error()))
 	}
 
-	templ.Handler(ui_pages.InternalRegattaleitungPdfMeldeergebnis(true)).ServeHTTP(c.Writer, c.Request)
+	templ.Handler(regattaleitung.PdfMeldeergebnis(true)).ServeHTTP(c.Writer, c.Request)
 	return nil
 }
 
@@ -779,7 +782,7 @@ func UmmeldungPost(c *handler.Context) error {
 	}
 
 	if len(fieldErrors) > 0 {
-		return handler.BadRequest("Fehler bei der Ummeldung").WithForm(ui_pages.InternalRegattabueroUmmeldungMeldung(verein, meldung, athleten, "", fieldErrors))
+		return handler.BadRequest("Fehler bei der Ummeldung").WithForm(regattabuero.UmmeldungMeldung(verein, meldung, athleten, "", fieldErrors))
 	}
 
 	meldungen, err := crud.GetAllMeldungForVerein(c.Request.Context(), verein.Uuid)
@@ -789,7 +792,7 @@ func UmmeldungPost(c *handler.Context) error {
 
 	c.Writer.Header().Set("HX-Push-Url", fmt.Sprintf("/internal/regattabuero/%s/ummeldung", verein.Uuid))
 	c.Writer.WriteHeader(http.StatusOK)
-	return ui_pages.InternalRegattabueroUmmeldung(verein, meldungen).Render(context.Background(), c.Writer)
+	return regattabuero.Ummeldung(verein, meldungen).Render(context.Background(), c.Writer)
 }
 
 func NachmeldungPost(c *handler.Context) error {
@@ -862,7 +865,7 @@ func NachmeldungPost(c *handler.Context) error {
 	}
 
 	if len(fieldErrors) > 0 {
-		return handler.BadRequest("Bitte wähle mindestens einen Teilnehmer aus").WithForm(ui_pages.InternalRegattabueroNachmeldungMeldung(verein, rennen, athleten, "", fieldErrors))
+		return handler.BadRequest("Bitte wähle mindestens einen Teilnehmer aus").WithForm(regattabuero.NachmeldungMeldung(verein, rennen, athleten, "", fieldErrors))
 	}
 
 	m, err := api_v1.CreateNachmeldung(c.Request.Context(), params)
@@ -876,7 +879,7 @@ func NachmeldungPost(c *handler.Context) error {
 
 	c.Writer.Header().Set("HX-Push-Url", fmt.Sprintf("/internal/regattabuero/%s/nachmeldung/success/%s", vereinUuidStr, m.Uuid.String()))
 	c.Writer.WriteHeader(http.StatusOK)
-	return ui_pages.InternalRegattabueroNachmeldungSuccess(meldung).Render(context.Background(), c.Writer)
+	return regattabuero.NachmeldungSuccess(meldung).Render(context.Background(), c.Writer)
 }
 
 func RennenTab(c *handler.Context) error {
@@ -928,7 +931,7 @@ func NewAthletPost(c *handler.Context) error {
 
 	if len(fieldErrors) > 0 {
 		return handler.BadRequest("Bitte alle Pflichtfelder ausfüllen").WithForm(
-			ui_pages.InternalRegattabueroNewAthlet(verein, "", fieldErrors),
+			regattabuero.NewAthlet(verein, "", fieldErrors),
 		)
 	}
 
@@ -948,12 +951,12 @@ func NewAthletPost(c *handler.Context) error {
 	})
 	if err != nil {
 		return handler.InternalError("Fehler beim Anlegen des Athleten").WithForm(
-			ui_pages.InternalRegattabueroNewAthlet(verein, "", nil),
+			regattabuero.NewAthlet(verein, "", nil),
 		)
 	}
 
 	a.Verein = &verein
-	return ui_pages.InternalRegattabueroNewAthletSuccess(a).Render(context.Background(), c.Writer)
+	return regattabuero.NewAthletSuccess(a).Render(context.Background(), c.Writer)
 }
 
 func WaagePost(c *handler.Context) error {
@@ -986,7 +989,7 @@ func WaagePost(c *handler.Context) error {
 	gewicht := int(gewichtFloat * 10)
 
 	if len(fieldErrors) > 0 {
-		return handler.BadRequest("Ungültiges Gewicht").WithForm(ui_pages.InternalRegattabueroWaage(ath, "", fieldErrors))
+		return handler.BadRequest("Ungültiges Gewicht").WithForm(regattabuero.Waage(ath, "", fieldErrors))
 	}
 
 	err = ath.UpdateGewicht(c.Request.Context(), gewicht)
@@ -1015,7 +1018,7 @@ func WaagePost(c *handler.Context) error {
 
 	c.Writer.Header().Set("HX-Push-Url", fmt.Sprintf("/internal/regattabuero/%s/waage", vereinUuidStr))
 	c.Writer.WriteHeader(http.StatusOK)
-	return ui_pages.InternalRegattabueroWaageWahl(verein, athleten).Render(context.Background(), c.Writer)
+	return regattabuero.WaageWahl(verein, athleten).Render(context.Background(), c.Writer)
 }
 
 func StartberechtigungPost(c *handler.Context) error {

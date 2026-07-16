@@ -1,4 +1,4 @@
-package ui_pages
+package regattabuero
 
 import (
   "fmt"
@@ -7,27 +7,8 @@ import (
 	"github.com/bata94/RegattaApi/internal/templates/components"
 )
 
-templ InternalRegattabueroWaageWahl(v crud.Verein, athleten []crud.Athlet) {
+templ WaageWahl(v crud.Verein, athleten []crud.Athlet) {
   {{
-    breadcrumbs := []ui_components.BreadcrumbsEntries{
-      ui_components.BreadcrumbsEntries{
-        Title: "Home",
-        Paths: "/",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Internes",
-        Paths: "/internal",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Regattabüro",
-        Paths: "/internal/regattabuero",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Waage",
-        Paths: "",
-      },
-    }
-
     navOpts := ui_components.HXNavigationOptions{
       URL:    "/internal/regattabuero/" + v.Uuid.String() + "/waage/",
       Target: "main",
@@ -36,7 +17,6 @@ templ InternalRegattabueroWaageWahl(v crud.Verein, athleten []crud.Athlet) {
     }
   }}
 
-  @ui_components.Breadcrumbs(breadcrumbs)
   @ui_components.InternalPageDivCol() {
     @ui_components.PageHeader("Waage für " + v.Name)
     @ui_components.PageHeaderSubtext("")
@@ -45,29 +25,7 @@ templ InternalRegattabueroWaageWahl(v crud.Verein, athleten []crud.Athlet) {
   }
 }
 
-templ InternalRegattabueroWaage(a crud.Athlet, msg string, fieldErrors map[string]string) {
-  {{
-    breadcrumbs := []ui_components.BreadcrumbsEntries{
-      ui_components.BreadcrumbsEntries{
-        Title: "Home",
-        Paths: "/",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Internes",
-        Paths: "/internal",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Regattabüro",
-        Paths: "/internal/regattabuero",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Waage",
-        Paths: "",
-      },
-    }
-  }}
-
-  @ui_components.Breadcrumbs(breadcrumbs)
+templ Waage(a crud.Athlet, msg string, fieldErrors map[string]string) {
   @ui_components.InternalPageDivCol() {
     @ui_components.PageHeader("Waage für " + a.FullName())
     @ui_components.PageHeaderSubtext("")
@@ -118,27 +76,8 @@ templ InternalRegattabueroWaage(a crud.Athlet, msg string, fieldErrors map[strin
   }
 }
 
-templ InternalRegattabueroStartberechtigungWahl(v crud.Verein, athleten []crud.Athlet) {
+templ StartberechtigungWahl(v crud.Verein, athleten []crud.Athlet) {
   {{
-    breadcrumbs := []ui_components.BreadcrumbsEntries{
-      ui_components.BreadcrumbsEntries{
-        Title: "Home",
-        Paths: "/",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Internes",
-        Paths: "/internal",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Regattabüro",
-        Paths: "/internal/regattabuero",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Startberechtigung",
-        Paths: "",
-      },
-    }
-
     navOpts := ui_components.HXNavigationOptions{
       URL:    "/internal/regattabuero/" + v.Uuid.String() + "/startberechtigung/",
       Target: "main",
@@ -147,7 +86,6 @@ templ InternalRegattabueroStartberechtigungWahl(v crud.Verein, athleten []crud.A
     }
   }}
 
-  @ui_components.Breadcrumbs(breadcrumbs)
   @ui_components.InternalPageDivCol() {
     @ui_components.PageHeader("Fehlende Startberechtigungen für " + v.Name)
     @ui_components.PageHeaderSubtext("")
@@ -157,29 +95,7 @@ templ InternalRegattabueroStartberechtigungWahl(v crud.Verein, athleten []crud.A
 }
 
 // TODO: Add FileUpload/PhotoUpload for Ärztliche Bescheinigung
-templ InternalRegattabueroStartberechtigung(a crud.Athlet, msg string, fieldErrors map[string]string) {
-  {{
-    breadcrumbs := []ui_components.BreadcrumbsEntries{
-      ui_components.BreadcrumbsEntries{
-        Title: "Home",
-        Paths: "/",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Internes",
-        Paths: "/internal",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Regattabüro",
-        Paths: "/internal/regattabuero",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Startberechtigung",
-        Paths: "",
-      },
-    }
-  }}
-
-  @ui_components.Breadcrumbs(breadcrumbs)
+templ Startberechtigung(a crud.Athlet, msg string, fieldErrors map[string]string) {
   @ui_components.InternalPageDivCol() {
     @ui_components.PageHeader("Startberechtigung für " + a.FullName())
     @ui_components.PageHeaderSubtext("")
@@ -232,29 +148,7 @@ templ InternalRegattabueroStartberechtigung(a crud.Athlet, msg string, fieldErro
   }
 }
 
-templ InternalRegattabueroNewAthlet(v crud.Verein, msg string, fieldErrors map[string]string) {
-  {{
-    breadcrumbs := []ui_components.BreadcrumbsEntries{
-      ui_components.BreadcrumbsEntries{
-        Title: "Home",
-        Paths: "/",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Internes",
-        Paths: "/internal",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Regattabüro",
-        Paths: "/internal/regattabuero",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Neuer Athlet",
-        Paths: "",
-      },
-    }
-  }}
-
-  @ui_components.Breadcrumbs(breadcrumbs)
+templ NewAthlet(v crud.Verein, msg string, fieldErrors map[string]string) {
   @ui_components.InternalPageDivCol() {
     @ui_components.PageHeader("Neuen Sportler anlegen für " + v.Name)
     @ui_components.PageHeaderSubtext("")
@@ -293,33 +187,7 @@ templ InternalRegattabueroNewAthlet(v crud.Verein, msg string, fieldErrors map[s
   }
 }
 
-templ InternalRegattabueroNewAthletSuccess(a crud.Athlet) {
-  {{
-    breadcrumbs := []ui_components.BreadcrumbsEntries{
-      ui_components.BreadcrumbsEntries{
-        Title: "Home",
-        Paths: "/",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Internes",
-        Paths: "/internal",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Regattabüro",
-        Paths: "/internal/regattabuero",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Neuen Athlet anlegen",
-        Paths: fmt.Sprintf("/internal/regattabuero/%s/new_athlet", a.Verein.Uuid.String()),
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Athlet erfolgreich angelegt",
-        Paths: "",
-      },
-    }
-  }}
-
-  @ui_components.Breadcrumbs(breadcrumbs)
+templ NewAthletSuccess(a crud.Athlet) {
   @ui_components.InternalPageDivCol() {
     @ui_components.PageHeader(fmt.Sprintf("Sportler %s erfolgreich angelegt", a.FullName()))
     @ui_components.PageHeaderSubtext("")

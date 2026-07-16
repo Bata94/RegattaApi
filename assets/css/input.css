@@ -50,3 +50,8 @@ html {
 .select-error { @apply border-error; }
 .file-input-error { @apply border-error; }
 .text-error { @apply text-error; }
+
+/* Override DaisyUI menu fit-content so sidebar categories span full width */
+.internal-sidebar .menu {
+  width: 100%;
+}

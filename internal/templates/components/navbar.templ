@@ -36,25 +36,38 @@ func hasCapability(userCaps []string, requiredCaps []string) bool {
 }
 
 templ navbarEntry(entry NavBarEntry, userCaps []string, loggedIn bool) {
-  if !hasCapability(userCaps, entry.RequiredCaps) {
-    {{return}}
-  }
-  if len(entry.SubEntries) > 0 {
-    <li class="z-100">
-      <details>
-        <summary>{entry.Name}</summary>
-        <ul class="bg-base-100 rounded-t-none p-2">
-          for _, sub := range entry.SubEntries {
-            @navbarEntry(sub, userCaps, loggedIn)
-          }
-        </ul>
-      </details>
-    </li>
-  } else {
-    <li>
-      <button hx-get={entry.URL} hx-target="main" hx-push-url="true" href={entry.URL} onclick="this.closest('details')?.removeAttribute('open')">{entry.Name}</button>
-    </li>
-  }
+	if !hasCapability(userCaps, entry.RequiredCaps) {
+		{{return}}
+	}
+	if len(entry.SubEntries) > 0 {
+		if entry.Name == "Internes" && loggedIn {
+			<li class="z-100">
+				<a
+					class="btn btn-ghost"
+					href="/internal"
+					target="_blank"
+					rel="noopener noreferrer"
+				>
+					{entry.Name}
+				</a>
+			</li>
+		} else {
+			<li class="z-100">
+				<details>
+					<summary>{entry.Name}</summary>
+					<ul class="bg-base-100 rounded-t-none p-2">
+						for _, sub := range entry.SubEntries {
+							@navbarEntry(sub, userCaps, loggedIn)
+						}
+					</ul>
+				</details>
+			</li>
+		}
+	} else {
+		<li>
+			<button hx-get={entry.URL} hx-target="main" hx-push-url="true" href={entry.URL} onclick="this.closest('details')?.removeAttribute('open')">{entry.Name}</button>
+		</li>
+	}
 }
 
 templ navbarEntries(entries []NavBarEntry, userCaps []string, loggedIn bool) {
@@ -78,7 +91,7 @@ templ NavbarIcon() {
 }
 
 templ loginIcon() {
-  <a class="btn btn-circle btn-ghost tooltip tooltip-left" href="/login" data-tip="Einloggen">
+  <a class="btn btn-circle btn-ghost tooltip tooltip-left" href="/login" target="_blank" data-tip="Einloggen">
     <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
   </a>
 }

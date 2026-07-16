@@ -8,6 +8,14 @@ import (
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handler"
 	ui_pages "github.com/bata94/RegattaApi/internal/templates/pages"
+	admin "github.com/bata94/RegattaApi/internal/templates/pages/admin"
+	dashboard "github.com/bata94/RegattaApi/internal/templates/pages/dashboard"
+	profil "github.com/bata94/RegattaApi/internal/templates/pages/profil"
+	regattabuero "github.com/bata94/RegattaApi/internal/templates/pages/regattabuero"
+	regattaleitung "github.com/bata94/RegattaApi/internal/templates/pages/regattaleitung"
+	startlisten "github.com/bata94/RegattaApi/internal/templates/pages/startlisten"
+	vereinswahl "github.com/bata94/RegattaApi/internal/templates/pages/vereinswahl"
+	zeitnahme "github.com/bata94/RegattaApi/internal/templates/pages/zeitnahme"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
@@ -45,63 +53,63 @@ func Datenschutz(c *handler.Context) (templ.Component, error) {
 }
 
 func InternalZeitnahme(c *handler.Context) (templ.Component, error) {
-	return ui_pages.InternalZeitnahme(), nil
+	return zeitnahme.Zeitnahme(), nil
 }
 
 func InternalZeitnahmeZiel(c *handler.Context) (templ.Component, error) {
-	return ui_pages.ZeitnahmeZiel(), nil
+	return zeitnahme.Ziel(), nil
 }
 
 func InternalStartlisten(c *handler.Context) (templ.Component, error) {
-	return ui_pages.InternalStartlisten(), nil
+	return startlisten.Startlisten(), nil
 }
 
 func InternalRegattabuero(c *handler.Context) (templ.Component, error) {
-	return ui_pages.InternalRegattabuero(), nil
+	return regattabuero.Dashboard(), nil
 }
 
 func InternalRegattaleitung(c *handler.Context) (templ.Component, error) {
-	return ui_pages.InternalRegattaleitung(), nil
+	return regattaleitung.Dashboard(), nil
 }
 
 func InternalRegattaleitungDrvUpload(c *handler.Context) (templ.Component, error) {
-	return ui_pages.InternalRegattaleitungDrvFileUpload(""), nil
+	return regattaleitung.DrvFileUpload(""), nil
 }
 
 func InternalRegattaleitungSetzung(c *handler.Context) (templ.Component, error) {
-	return ui_pages.InternalRegattaleitungSetzung(), nil
+	return regattaleitung.Setzung(), nil
 }
 
 func InternalRegattaleitungSetzungLosung(c *handler.Context) (templ.Component, error) {
-	return ui_pages.InternalRegattaleitungSetzungLosung(), nil
+	return regattaleitung.SetzungLosung(), nil
 }
 
 func InternalRegattaleitungSetzungAenderung(c *handler.Context) (templ.Component, error) {
-	return ui_pages.InternalRegattaleitungSetzungAenderung(), nil
+	return regattaleitung.SetzungAenderung(), nil
 }
 
 func InternalRegattaleitungPausen(c *handler.Context) (templ.Component, error) {
-	return ui_pages.InternalRegattaleitungPausen(), nil
+	return regattaleitung.Pausen(), nil
 }
 
 func InternalRegattaleitungZeitplan(c *handler.Context) (templ.Component, error) {
-	return ui_pages.InternalRegattaleitungZeitplan("", nil), nil
+	return regattaleitung.Zeitplan("", nil), nil
 }
 
 func InternalRegattaleitungStartnummern(c *handler.Context) (templ.Component, error) {
-	return ui_pages.InternalRegattaleitungStartnummern(), nil
+	return regattaleitung.Startnummern(), nil
 }
 
 func InternalRegattaleitungStartnummernVerteilen(c *handler.Context) (templ.Component, error) {
-	return ui_pages.InternalRegattaleitungStartnummernVerteilen(), nil
+	return regattaleitung.StartnummernVerteilen(), nil
 }
 
 func InternalRegattaleitungStartnummernBereich(c *handler.Context) (templ.Component, error) {
-	return ui_pages.InternalRegattaleitungStartnummernBereich(), nil
+	return regattaleitung.StartnummernBereich(), nil
 }
 
 func InternalRegattaleitungStartnummernAendernRennenWahl(c *handler.Context) (templ.Component, error) {
-	return ui_pages.InternalRegattaleitungStartnummernAendernRennenWahl(), nil
+	return regattaleitung.StartnummernAendernRennenWahl(), nil
 }
 
 func InternalRegattaleitungStartnummernAendernMeldungsWahl(c *handler.Context) (templ.Component, error) {
@@ -120,7 +128,7 @@ func InternalRegattaleitungStartnummernAendernMeldungsWahl(c *handler.Context) (
 		r.Meldungen[i].Rennen = &r
 	}
 
-	return ui_pages.InternalRegattaleitungStartnummernAendernMeldungsWahl(r), nil
+	return regattaleitung.StartnummernAendernMeldungsWahl(r), nil
 }
 
 func InternalRegattaleitungStartnummernAendern(c *handler.Context) (templ.Component, error) {
@@ -141,31 +149,31 @@ func InternalRegattaleitungStartnummernAendern(c *handler.Context) (templ.Compon
 		return nil, handler.NotFound("Meldung nicht gefunden")
 	}
 
-	return ui_pages.InternalRegattaleitungStartnummernAendern(m, nil), nil
+	return regattaleitung.StartnummernAendern(m, nil), nil
 }
 
 func InternalRegattaleitungPdfMeldeergebnis(c *handler.Context) (templ.Component, error) {
-	return ui_pages.InternalRegattaleitungPdfMeldeergebnis(false), nil
+	return regattaleitung.PdfMeldeergebnis(false), nil
 }
 
 func InternalRegattaleitungVereinsverwaltung(c *handler.Context) (templ.Component, error) {
-	return ui_pages.InternalRegattaleitungVereinsverwaltung(), nil
+	return regattaleitung.Vereinsverwaltung(), nil
 }
 
 func InternalRegattaleitungEmail(c *handler.Context) (templ.Component, error) {
-	return ui_pages.InternalRegattaleitungEmailIndex(), nil
+	return regattaleitung.EmailIndex(), nil
 }
 
 func InternalAdmin(c *handler.Context) (templ.Component, error) {
-	return ui_pages.InternalAdmin(), nil
+	return admin.Dashboard(), nil
 }
 
 func InternalAdminUsers(c *handler.Context) (templ.Component, error) {
-	return ui_pages.InternalAdminUsers(), nil
+	return admin.Users(), nil
 }
 
 func InternalAdminUserGroups(c *handler.Context) (templ.Component, error) {
-	return ui_pages.InternalAdminUserGroups(), nil
+	return admin.UserGroups(), nil
 }
 
 func InternalIndex(c *handler.Context) (templ.Component, error) {
@@ -185,7 +193,7 @@ func InternalIndex(c *handler.Context) (templ.Component, error) {
 		}
 	}
 
-	return ui_pages.InternalIndex(capabilities), nil
+	return dashboard.Dashboard(capabilities), nil
 }
 
 func ProfilPage(c *handler.Context) (templ.Component, error) {
@@ -229,14 +237,14 @@ func ProfilPage(c *handler.Context) (templ.Component, error) {
 		return nil, handler.Unauthorized("Invalid token")
 	}
 
-	data := ui_pages.ProfilData{
+	data := profil.ProfilData{
 		Uuid:         userUuid,
 		Username:     username,
 		UserGroup:    userGroup,
 		Capabilities: capabilities,
 	}
 
-	return ui_pages.Profil(data), nil
+	return profil.Profil(data), nil
 }
 
 func MetricsPage(c *handler.Context) (templ.Component, error) {
@@ -288,7 +296,7 @@ func InternalVereinswahl(c *handler.Context) (templ.Component, error) {
 		return nil, handler.InternalError("Fehler beim Laden der Vereine")
 	}
 
-	return ui_pages.InternalVereinswahl(nextUrl, title, vereine), nil
+	return vereinswahl.Vereinswahl(nextUrl, title, vereine), nil
 }
 
 func InternalRegattabueroAbmeldung(c *handler.Context) (templ.Component, error) {
@@ -305,7 +313,7 @@ func InternalRegattabueroAbmeldung(c *handler.Context) (templ.Component, error) 
 	if err != nil {
 		return nil, handler.InternalError("Error while loading meldungen")
 	}
-	return ui_pages.InternalRegattabueroAbmeldung(verein, meldungen), nil
+	return regattabuero.Abmeldung(verein, meldungen), nil
 }
 
 func InternalRegattabueroAbmeldungMeldung(c *handler.Context) (templ.Component, error) {
@@ -333,7 +341,7 @@ func InternalRegattabueroAbmeldungMeldung(c *handler.Context) (templ.Component, 
 		return nil, handler.NotAcceptable("Invalid UUID")
 	}
 
-	return ui_pages.InternalRegattabueroAbmeldungMeldung(verein, meldung), nil
+	return regattabuero.AbmeldungMeldung(verein, meldung), nil
 }
 
 func InternalRegattabueroUmmeldung(c *handler.Context) (templ.Component, error) {
@@ -350,7 +358,7 @@ func InternalRegattabueroUmmeldung(c *handler.Context) (templ.Component, error) 
 	if err != nil {
 		return nil, handler.InternalError("Error while loading meldungen")
 	}
-	return ui_pages.InternalRegattabueroUmmeldung(verein, meldungen), nil
+	return regattabuero.Ummeldung(verein, meldungen), nil
 }
 
 func InternalRegattabueroUmmeldungMeldung(c *handler.Context) (templ.Component, error) {
@@ -384,7 +392,7 @@ func InternalRegattabueroUmmeldungMeldung(c *handler.Context) (templ.Component, 
 	}
 
 	// TODO: Filter only viable athleten
-	return ui_pages.InternalRegattabueroUmmeldungMeldung(verein, meldung, athleten, "", nil), nil
+	return regattabuero.UmmeldungMeldung(verein, meldung, athleten, "", nil), nil
 }
 
 func InternalRegattabueroNachmeldung(c *handler.Context) (templ.Component, error) {
@@ -397,7 +405,7 @@ func InternalRegattabueroNachmeldung(c *handler.Context) (templ.Component, error
 	if err != nil {
 		return nil, handler.InternalError("Error while loading verein")
 	}
-	return ui_pages.InternalRegattabueroNachmeldung(verein), nil
+	return regattabuero.Nachmeldung(verein), nil
 }
 
 func InternalRegattabueroNachmeldungRennen(c *handler.Context) (templ.Component, error) {
@@ -431,7 +439,7 @@ func InternalRegattabueroNachmeldungRennen(c *handler.Context) (templ.Component,
 		return nil, handler.InternalError("Error while loading athleten")
 	}
 
-	return ui_pages.InternalRegattabueroNachmeldungMeldung(verein, rennen, athleten, "", nil), nil
+	return regattabuero.NachmeldungMeldung(verein, rennen, athleten, "", nil), nil
 }
 
 func InternalRegattabueroNachmeldungSuccess(c *handler.Context) (templ.Component, error) {
@@ -444,7 +452,7 @@ func InternalRegattabueroNachmeldungSuccess(c *handler.Context) (templ.Component
 	if err != nil {
 		return nil, handler.InternalError("Error while loading meldung")
 	}
-	return ui_pages.InternalRegattabueroNachmeldungSuccess(m), nil
+	return regattabuero.NachmeldungSuccess(m), nil
 }
 
 func InternalRegattabueroWaageWahl(c *handler.Context) (templ.Component, error) {
@@ -466,7 +474,7 @@ func InternalRegattabueroWaageWahl(c *handler.Context) (templ.Component, error) 
 		athleten[i].Verein = &verein
 	}
 
-	return ui_pages.InternalRegattabueroWaageWahl(verein, athleten), nil
+	return regattabuero.WaageWahl(verein, athleten), nil
 }
 
 func InternalRegattabueroWaage(c *handler.Context) (templ.Component, error) {
@@ -494,7 +502,7 @@ func InternalRegattabueroWaage(c *handler.Context) (templ.Component, error) {
 		return nil, handler.NotAcceptable("Invalid UUID")
 	}
 
-	return ui_pages.InternalRegattabueroWaage(athlet, "", nil), nil
+	return regattabuero.Waage(athlet, "", nil), nil
 }
 
 func InternalRegattabueroStartberechtigung(c *handler.Context) (templ.Component, error) {
@@ -516,7 +524,7 @@ func InternalRegattabueroStartberechtigung(c *handler.Context) (templ.Component,
 		athleten[i].Verein = &verein
 	}
 
-	return ui_pages.InternalRegattabueroStartberechtigungWahl(verein, athleten), nil
+	return regattabuero.StartberechtigungWahl(verein, athleten), nil
 }
 
 func InternalRegattabueroStartberechtigungAthlet(c *handler.Context) (templ.Component, error) {
@@ -545,7 +553,7 @@ func InternalRegattabueroStartberechtigungAthlet(c *handler.Context) (templ.Comp
 	}
 
 	// TODO: Implement Form Errors
-	return ui_pages.InternalRegattabueroStartberechtigung(athlet, "", nil), nil
+	return regattabuero.Startberechtigung(athlet, "", nil), nil
 }
 
 func InternalRegattabueroNewAthlet(c *handler.Context) (templ.Component, error) {
@@ -558,7 +566,7 @@ func InternalRegattabueroNewAthlet(c *handler.Context) (templ.Component, error) 
 	if err != nil {
 		return nil, handler.InternalError("Error while loading verein")
 	}
-	return ui_pages.InternalRegattabueroNewAthlet(verein, "", nil), nil
+	return regattabuero.NewAthlet(verein, "", nil), nil
 }
 
 func InternalRegattaleitungSetzungAenderungRennen(c *handler.Context) (templ.Component, error) {
@@ -572,5 +580,5 @@ func InternalRegattaleitungSetzungAenderungRennen(c *handler.Context) (templ.Com
 		templ.Handler(ui_pages.Error(404, "Rennen nicht gefunden")).ServeHTTP(c.Writer, c.Request)
 		return nil, nil
 	}
-	return ui_pages.InternalRegattaleitungSetzungAenderungRennen(rUuid), nil
+	return regattaleitung.SetzungAenderungRennen(rUuid), nil
 }

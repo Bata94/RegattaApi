@@ -1,33 +1,11 @@
-package ui_pages
+package regattaleitung
 
 import "github.com/bata94/RegattaApi/internal/templates/components"
 import "github.com/bata94/RegattaApi/internal/crud"
 import "github.com/bata94/RegattaApi/internal/sqlc"
 import "fmt"
 
-templ InternalRegattaleitungPausen() {
-  {{
-    breadcrumbs := []ui_components.BreadcrumbsEntries{
-      ui_components.BreadcrumbsEntries{
-        Title: "Home",
-        Paths: "/",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Internes",
-        Paths: "/internal",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Regattaleitung",
-        Paths: "/internal/regattaleitung",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Pausen verwalten",
-        Paths: "/internal/regattaleitung/pausen",
-      },
-    }
-  }}
-
-  @ui_components.Breadcrumbs(breadcrumbs)
+templ Pausen() {
   @ui_components.InternalPageDivCol() {
     @ui_components.PageHeader("Pausen verwalten")
     @ui_components.PageHeaderSubtext("")
@@ -108,7 +86,7 @@ templ pausenRennenWahlWettkampf(wettkampf sqlc.Wettkampf) {
       }}
 
       @pausenRennenEntry(r, pause)
-      @PausenPausenEntry(pause)
+      @PausenEntry(pause)
     }
   </div>
 }
@@ -143,7 +121,7 @@ templ pausenRennenEntry(r crud.Rennen, p crud.Pause) {
   </div>
 }
 
-templ PausenPausenEntry(p crud.Pause) {
+templ PausenEntry(p crud.Pause) {
   if p.ID == -1 {
     <div
       id={"pause-nach-" + p.NachRennenUuid.String()}

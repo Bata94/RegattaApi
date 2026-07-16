@@ -21,11 +21,10 @@ templ MinimalLayout(body templ.Component) {
   <script src="/assets/js/htmx-ext-response-target.js"></script>
   <script src="/assets/js/theming.js"></script>
   <script src="/assets/js/toast.js"></script>
-  <script src="/assets/js/wasm_exec.js"></script>
+  <script src="/assets/js/sidebar.js"></script>
 </head>
 <body
   class="max-w-screen prose antialiased"
-  hx-on:click="if (!event.target.closest('details')) document.querySelectorAll('details[open]').forEach(d => d.removeAttribute('open'))"
   hx-ext="response-targets"
 >
   @body
@@ -34,7 +33,10 @@ templ MinimalLayout(body templ.Component) {
 }
 
 templ baseLayoutBody(body templ.Component, navbarConfig ui_components.NavBarConfig) {
-  <div class="min-h-screen max-w-none">
+  <div
+    class="min-h-screen max-w-none"
+    hx-on:click="if (!event.target.closest('details')) document.querySelectorAll('details[open]').forEach(d => d.removeAttribute('open'))"
+  >
     <nav class="w-full">
       @ui_components.Navbar(navbarConfig)
     </nav>

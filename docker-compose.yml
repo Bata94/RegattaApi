@@ -86,6 +86,8 @@ services:
     depends_on:
       gotenberg:
         condition: service_started
+      caddy:
+        condition: service_started
       db:
         condition: service_healthy
 

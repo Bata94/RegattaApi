@@ -1,4 +1,4 @@
-package ui_pages
+package regattabuero
 
 import (
   "fmt"
@@ -7,29 +7,10 @@ import (
   "github.com/bata94/RegattaApi/internal/templates/components"
 )
 
-templ InternalRegattabueroAbmeldung(v crud.Verein, meldungen []crud.Meldung) {
+templ Abmeldung(v crud.Verein, meldungen []crud.Meldung) {
   {{
-    breadcrumbs := []ui_components.BreadcrumbsEntries{
-      ui_components.BreadcrumbsEntries{
-        Title: "Home",
-        Paths: "/",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Internes",
-        Paths: "/internal",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Regattabüro",
-        Paths: "/internal/regattabuero",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Abmeldung",
-        Paths: "",
-      },
-    }
     var curDay crud.Tag
   }}
-  @ui_components.Breadcrumbs(breadcrumbs)
   @ui_components.InternalPageDivCol() {
     @ui_components.PageHeader("Abmeldung für " + v.Name)
     @ui_components.PageHeaderSubtext("Bereits abgemeldete Meldungen werden nicht angezeigt")
@@ -50,31 +31,11 @@ templ InternalRegattabueroAbmeldung(v crud.Verein, meldungen []crud.Meldung) {
   }
 }
 
-templ InternalRegattabueroAbmeldungMeldung(v crud.Verein, m crud.Meldung) {
+templ AbmeldungMeldung(v crud.Verein, m crud.Meldung) {
   {{
-    breadcrumbs := []ui_components.BreadcrumbsEntries{
-      ui_components.BreadcrumbsEntries{
-        Title: "Home",
-        Paths: "/",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Internes",
-        Paths: "/internal",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Regattabüro",
-        Paths: "/internal/regattabuero",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Abmeldung",
-        Paths: "",
-      },
-    }
-
     yesUrl := fmt.Sprintf("/internal/regattabuero/%s/abmeldung/%s", v.Uuid, m.Uuid)
     noUrl := fmt.Sprintf("/internal/regattabuero/%s/abmeldung", v.Uuid)
   }}
-  @ui_components.Breadcrumbs(breadcrumbs)
   @ui_components.InternalPageDivCol() {
     @ui_components.PageHeader("Abmeldung für " + v.Name)
     @ui_components.PageHeaderSubtext("")
@@ -111,29 +72,10 @@ templ InternalRegattabueroAbmeldungMeldung(v crud.Verein, m crud.Meldung) {
   }
 }
 
-templ InternalRegattabueroUmmeldung(v crud.Verein, meldungen []crud.Meldung) {
+templ Ummeldung(v crud.Verein, meldungen []crud.Meldung) {
   {{
-    breadcrumbs := []ui_components.BreadcrumbsEntries{
-      ui_components.BreadcrumbsEntries{
-        Title: "Home",
-        Paths: "/",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Internes",
-        Paths: "/internal",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Regattabüro",
-        Paths: "/internal/regattabuero",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Ummeldung",
-        Paths: "",
-      },
-    }
     var curDay crud.Tag
   }}
-  @ui_components.Breadcrumbs(breadcrumbs)
   @ui_components.InternalPageDivCol() {
     @ui_components.PageHeader("Ummeldung für " + v.Name)
     @ui_components.PageHeaderSubtext("")
@@ -155,27 +97,8 @@ templ InternalRegattabueroUmmeldung(v crud.Verein, meldungen []crud.Meldung) {
 }
 
 // TODO: Check for previous Ummeldungen, only 50% + Stm is allowed!
-templ InternalRegattabueroUmmeldungMeldung(v crud.Verein, m crud.Meldung, athleten []crud.Athlet, msg string, fieldErrors map[string]string) {
+templ UmmeldungMeldung(v crud.Verein, m crud.Meldung, athleten []crud.Athlet, msg string, fieldErrors map[string]string) {
   {{
-    breadcrumbs := []ui_components.BreadcrumbsEntries{
-      ui_components.BreadcrumbsEntries{
-        Title: "Home",
-        Paths: "/",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Internes",
-        Paths: "/internal",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Regattabüro",
-        Paths: "/internal/regattabuero",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Ummeldung",
-        Paths: "",
-      },
-    }
-
     yesUrl := fmt.Sprintf("/internal/regattabuero/%s/ummeldung/%s", v.Uuid, m.Uuid)
     noUrl := fmt.Sprintf("/internal/regattabuero/%s/ummeldung", v.Uuid)
 
@@ -186,7 +109,6 @@ templ InternalRegattabueroUmmeldungMeldung(v crud.Verein, m crud.Meldung, athlet
       athletValues = append(athletValues, a.Uuid.String())
     }
   }}
-  @ui_components.Breadcrumbs(breadcrumbs)
   @ui_components.InternalPageDivCol() {
     @ui_components.PageHeader("Ummeldung für " + v.Name)
     @ui_components.PageHeaderSubtext("")
@@ -228,28 +150,7 @@ templ InternalRegattabueroUmmeldungMeldung(v crud.Verein, m crud.Meldung, athlet
   }
 }
 
-templ InternalRegattabueroNachmeldung(v crud.Verein) {
-  {{
-    breadcrumbs := []ui_components.BreadcrumbsEntries{
-      ui_components.BreadcrumbsEntries{
-        Title: "Home",
-        Paths: "/",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Internes",
-        Paths: "/internal",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Regattabüro",
-        Paths: "/internal/regattabuero",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Nachmeldung",
-        Paths: "",
-      },
-    }
-  }}
-  @ui_components.Breadcrumbs(breadcrumbs)
+templ Nachmeldung(v crud.Verein) {
   @ui_components.InternalPageDivCol() {
     @ui_components.PageHeader("Nachmeldung für " + v.Name)
     @ui_components.PageHeaderSubtext("")
@@ -258,27 +159,8 @@ templ InternalRegattabueroNachmeldung(v crud.Verein) {
   }
 }
 
-templ InternalRegattabueroNachmeldungMeldung(v crud.Verein, r crud.Rennen, athleten []crud.Athlet, msg string, fieldErrors map[string]string) {
+templ NachmeldungMeldung(v crud.Verein, r crud.Rennen, athleten []crud.Athlet, msg string, fieldErrors map[string]string) {
   {{
-    breadcrumbs := []ui_components.BreadcrumbsEntries{
-      ui_components.BreadcrumbsEntries{
-        Title: "Home",
-        Paths: "/",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Internes",
-        Paths: "/internal",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Regattabüro",
-        Paths: "/internal/regattabuero",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Nachmeldung",
-        Paths: "",
-      },
-    }
-
     formUrl := fmt.Sprintf("/internal/regattabuero/%s/nachmeldung/%s", v.Uuid, r.Uuid)
     numAthletes, stmRequired := r.GetTeilnehmerMeldeParams()
 
@@ -289,7 +171,6 @@ templ InternalRegattabueroNachmeldungMeldung(v crud.Verein, r crud.Rennen, athle
       athletValues = append(athletValues, a.Uuid.String())
     }
   }}
-  @ui_components.Breadcrumbs(breadcrumbs)
   @ui_components.InternalPageDivCol() {
     @ui_components.PageHeader("Nachmeldung für " + v.Name)
     @ui_components.PageHeaderSubtext("")
@@ -343,29 +224,10 @@ templ InternalRegattabueroNachmeldungMeldung(v crud.Verein, r crud.Rennen, athle
   }
 }
 
-templ InternalRegattabueroNachmeldungSuccess(m crud.Meldung) {
+templ NachmeldungSuccess(m crud.Meldung) {
   {{
-    breadcrumbs := []ui_components.BreadcrumbsEntries{
-      ui_components.BreadcrumbsEntries{
-        Title: "Home",
-        Paths: "/",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Internes",
-        Paths: "/internal",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Regattabüro",
-        Paths: "/internal/regattabuero",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Nachmeldung",
-        Paths: "",
-      },
-    }
     backUrl := fmt.Sprintf("/internal/regattabuero/%s/nachmeldung", m.Verein.Uuid)
   }}
-  @ui_components.Breadcrumbs(breadcrumbs)
   @ui_components.InternalPageDivCol() {
     @ui_components.PageHeader("Nachmeldung erfolgreich!")
     @ui_components.PageHeaderSubtext("")

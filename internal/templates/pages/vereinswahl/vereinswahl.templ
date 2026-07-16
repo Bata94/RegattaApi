@@ -1,4 +1,4 @@
-package ui_pages
+package vereinswahl
 
 import (
   "fmt"
@@ -6,32 +6,13 @@ import (
 	"github.com/bata94/RegattaApi/internal/templates/components"
 )
 
-templ InternalVereinswahl(nextUrl string, title string, vereine []crud.Verein){
+templ Vereinswahl(nextUrl string, title string, vereine []crud.Verein){
   {{
     titleStr := "Vereinswahl"
     if title != "" {
       titleStr = title
     }
-    breadcrumbs := []ui_components.BreadcrumbsEntries{
-      ui_components.BreadcrumbsEntries{
-        Title: "Home",
-        Paths: "/",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Internes",
-        Paths: "/internal",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: "Regattabüro",
-        Paths: "/internal/regattabuero",
-      },
-      ui_components.BreadcrumbsEntries{
-        Title: titleStr,
-        Paths: "",
-      },
-    }
   }}
-  @ui_components.Breadcrumbs(breadcrumbs)
   @ui_components.InternalPageDivCol() {
     @ui_components.PageHeader(titleStr)
     @ui_components.PageHeaderSubtext("")
