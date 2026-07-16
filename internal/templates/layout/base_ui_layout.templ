@@ -7,7 +7,7 @@ templ MinimalLayout(body templ.Component) {
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
   <title>MRG Regatta</title>
   <meta name="description" content="Homepage der MRG Regatta" />
@@ -16,6 +16,7 @@ templ MinimalLayout(body templ.Component) {
 
   <link href="/public/css_global.css" rel="stylesheet">
   <link href="/assets/css/font-awesome.min.css" rel="stylesheet">
+  <link rel="manifest" href="/public/manifest.json" />
 
   <script src="/assets/js/htmx.min.js"></script>
   <script src="/assets/js/htmx-ext-response-target.js"></script>

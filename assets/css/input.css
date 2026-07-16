@@ -46,12 +46,79 @@ html {
   display: inline;
 }
 
-.input-error { @apply border-error; }
-.select-error { @apply border-error; }
-.file-input-error { @apply border-error; }
-.text-error { @apply text-error; }
+.input-error {
+  @apply border-error;
+}
+
+.select-error {
+  @apply border-error;
+}
+
+.file-input-error {
+  @apply border-error;
+}
+
+.text-error {
+  @apply text-error;
+}
 
 /* Override DaisyUI menu fit-content so sidebar categories span full width */
 .internal-sidebar .menu {
   width: 100%;
+}
+
+/* Only apply these to touch devices */
+@media (pointer: coarse) {
+  body {
+    /* Prevent "pull-to-refresh" and "overscroll glow" */
+    overscroll-behavior-y: contain;
+
+    /* Prevent the magnifying glass/selection menu from appearing on long-press */
+    -webkit-user-select: none;
+    user-select: none;
+
+    /* Disables the "gray flash" when tapping links/buttons */
+    -webkit-tap-highlight-color: transparent;
+
+    /* Smooth scrolling for touch */
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Re-enable selection for inputs so users can still type */
+  input,
+  textarea {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  input,
+  button,
+  select {
+    /* Removes the default 3D/rounded styling on buttons and inputs */
+    appearance: none;
+    -webkit-appearance: none;
+    border-radius: 4px;
+    /* Give it a consistent native radius */
+  }
+
+  /* Standard Android touch target is roughly 48px */
+  button,
+  .clickable-element {
+    min-height: 48px;
+    min-width: 48px;
+  }
+
+  html,
+  body {
+    /* Disable double-tap to zoom */
+    touch-action: manipulation;
+  }
+}
+
+body {
+  /* Ensures your content stays within the "safe" area of the screen */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
