@@ -140,6 +140,51 @@ func (ns NullTag) Value() (driver.Value, error) {
 	return string(ns.Tag), nil
 }
 
+type UserCapability string
+
+const (
+	UserCapabilityAllowedAdmin          UserCapability = "allowed_admin"
+	UserCapabilityAllowedZeitnahme      UserCapability = "allowed_zeitnahme"
+	UserCapabilityAllowedStartlisten    UserCapability = "allowed_startlisten"
+	UserCapabilityAllowedRegattabuero   UserCapability = "allowed_regattabuero"
+	UserCapabilityAllowedRegattaleitung UserCapability = "allowed_regattaleitung"
+)
+
+func (e *UserCapability) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = UserCapability(s)
+	case string:
+		*e = UserCapability(s)
+	default:
+		return fmt.Errorf("unsupported scan type for UserCapability: %T", src)
+	}
+	return nil
+}
+
+type NullUserCapability struct {
+	UserCapability UserCapability `json:"user_capability"`
+	Valid          bool           `json:"valid"` // Valid is true if UserCapability is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullUserCapability) Scan(value interface{}) error {
+	if value == nil {
+		ns.UserCapability, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.UserCapability.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullUserCapability) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.UserCapability), nil
+}
+
 type Wettkampf string
 
 const (
@@ -283,13 +328,9 @@ type User struct {
 }
 
 type UsersGroup struct {
-	Uuid                  uuid.UUID `json:"uuid"`
-	Name                  string    `json:"name"`
-	AllowedAdmin          bool      `json:"allowed_admin"`
-	AllowedZeitnahme      bool      `json:"allowed_zeitnahme"`
-	AllowedStartlisten    bool      `json:"allowed_startlisten"`
-	AllowedRegattabuero   bool      `json:"allowed_regattabuero"`
-	AllowedRegattaleitung bool      `json:"allowed_regattaleitung"`
+	Uuid         uuid.UUID        `json:"uuid"`
+	Name         string           `json:"name"`
+	Capabilities []UserCapability `json:"capabilities"`
 }
 
 type Verein struct {

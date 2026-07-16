@@ -103,11 +103,11 @@ func genJWT(u sqlc.User, ug *sqlc.UsersGroup) (string, time.Time, error) {
 
 	if ug != nil {
 		claims["user_group_name"] = ug.Name
-		claims["allowed_admin"] = ug.AllowedAdmin
-		claims["allowed_zeitnahme"] = ug.AllowedZeitnahme
-		claims["allowed_startlisten"] = ug.AllowedStartlisten
-		claims["allowed_regattabuero"] = ug.AllowedRegattabuero
-		claims["allowed_regattaleitung"] = ug.AllowedRegattaleitung
+		caps := make([]string, len(ug.Capabilities))
+		for i, c := range ug.Capabilities {
+			caps[i] = string(c)
+		}
+		claims["capabilities"] = caps
 	}
 	claims["allowed_logged_in"] = true
 

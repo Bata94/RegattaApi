@@ -93,8 +93,15 @@ func getCustomDataTypes(ctx context.Context, pool *pgxpool.Pool) ([]*pgtype.Type
 	// TODO: Add missing custom types
 	dataTypeNames := []string{
 		"wettkampf",
-		// An underscore prefix is an array type in pgtypes.
 		"_wettkampf",
+		"user_capability",
+		"_user_capability",
+		"geschlecht",
+		"_geschlecht",
+		"tag",
+		"_tag",
+		"rolle",
+		"_rolle",
 	}
 
 	var typesToRegister []*pgtype.Type

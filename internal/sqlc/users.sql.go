@@ -75,7 +75,7 @@ func (q *Queries) GetAllUser(ctx context.Context) ([]User, error) {
 }
 
 const getUser = `-- name: GetUser :one
-SELECT users.uuid, users.username, users.hashed_password, users.is_active, users.group_uuid, users_group.uuid, users_group.name, users_group.allowed_admin, users_group.allowed_zeitnahme, users_group.allowed_startlisten, users_group.allowed_regattabuero, users_group.allowed_regattaleitung
+SELECT users.uuid, users.username, users.hashed_password, users.is_active, users.group_uuid, users_group.uuid, users_group.name, users_group.capabilities
 FROM users
 JOIN users_group
 ON users.group_uuid = users_group.uuid
@@ -98,11 +98,7 @@ func (q *Queries) GetUser(ctx context.Context, argUuid uuid.UUID) (GetUserRow, e
 		&i.User.GroupUuid,
 		&i.UsersGroup.Uuid,
 		&i.UsersGroup.Name,
-		&i.UsersGroup.AllowedAdmin,
-		&i.UsersGroup.AllowedZeitnahme,
-		&i.UsersGroup.AllowedStartlisten,
-		&i.UsersGroup.AllowedRegattabuero,
-		&i.UsersGroup.AllowedRegattaleitung,
+		&i.UsersGroup.Capabilities,
 	)
 	return i, err
 }

@@ -22,14 +22,10 @@ ORDER BY uuid;
 -- name: CreateUserGroup :one
 INSERT INTO users_group (
   name,
-  allowed_admin,
-  allowed_zeitnahme,
-  allowed_startlisten,
-  allowed_regattabuero,
-  allowed_regattaleitung,
+  capabilities,
   uuid
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, uuidv7()
+  $1, $2, uuidv7()
 )
 RETURNING *;
 
@@ -37,9 +33,5 @@ RETURNING *;
 UPDATE users_group
 SET
   name = $2,
-  allowed_admin = $3,
-  allowed_zeitnahme = $4,
-  allowed_startlisten = $5,
-  allowed_regattabuero = $6,
-  allowed_regattaleitung = $7
+  capabilities = $3
 WHERE uuid = $1;

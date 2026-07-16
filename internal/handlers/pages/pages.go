@@ -177,23 +177,11 @@ func InternalAdminUserGroups(c *handler.Context) (templ.Component, error) {
 }
 
 func InternalIndex(c *handler.Context) (templ.Component, error) {
-	userToken, ok := c.GetLocals("user").(*jwt.Token)
+	caps, ok := c.GetLocals("capabilities").([]string)
 	if !ok {
-		return nil, handler.Unauthorized("Nicht angemeldet")
+		caps = []string{}
 	}
-
-	claims := userToken.Claims.(jwt.MapClaims)
-	var capabilities []string
-
-	capFields := []string{"allowed_admin", "allowed_zeitnahme", "allowed_startlisten", "allowed_regattabuero", "allowed_regattaleitung"}
-
-	for _, field := range capFields {
-		if val, exists := claims[field]; exists && val == true {
-			capabilities = append(capabilities, field)
-		}
-	}
-
-	return dashboard.Dashboard(capabilities), nil
+	return dashboard.Dashboard(caps), nil
 }
 
 func ProfilPage(c *handler.Context) (templ.Component, error) {
@@ -218,17 +206,11 @@ func ProfilPage(c *handler.Context) (templ.Component, error) {
 	}
 
 	var capabilities []string
-	capFields := []string{
-		"allowed_zeitnahme",
-		"allowed_startlisten",
-		"allowed_regattabuero",
-		"allowed_regattaleitung",
-		"allowed_admin",
-	}
-
-	for _, field := range capFields {
-		if val, exists := claims[field]; exists && val == true {
-			capabilities = append(capabilities, field)
+	if capsRaw, ok := claims["capabilities"].([]any); ok {
+		for _, c := range capsRaw {
+			if s, ok := c.(string); ok {
+				capabilities = append(capabilities, s)
+			}
 		}
 	}
 
@@ -263,8 +245,18 @@ func MetricsPage(c *handler.Context) (templ.Component, error) {
 	}
 
 	claims := token.Claims.(jwt.MapClaims)
-	admin, ok := claims["allowed_admin"].(bool)
-	if !ok || !admin {
+	caps, ok := claims["capabilities"].([]any)
+	if !ok {
+		return nil, handler.Forbidden("Keine Admin-Berechtigung")
+	}
+	hasAdmin := false
+	for _, c := range caps {
+		if s, ok := c.(string); ok && s == "allowed_admin" {
+			hasAdmin = true
+			break
+		}
+	}
+	if !hasAdmin {
 		return nil, handler.Forbidden("Keine Admin-Berechtigung")
 	}
 

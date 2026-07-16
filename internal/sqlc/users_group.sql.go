@@ -14,51 +14,28 @@ import (
 const createUserGroup = `-- name: CreateUserGroup :one
 INSERT INTO users_group (
   name,
-  allowed_admin,
-  allowed_zeitnahme,
-  allowed_startlisten,
-  allowed_regattabuero,
-  allowed_regattaleitung,
+  capabilities,
   uuid
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, uuidv7()
+  $1, $2, uuidv7()
 )
-RETURNING uuid, name, allowed_admin, allowed_zeitnahme, allowed_startlisten, allowed_regattabuero, allowed_regattaleitung
+RETURNING uuid, name, capabilities
 `
 
 type CreateUserGroupParams struct {
-	Name                  string `json:"name"`
-	AllowedAdmin          bool   `json:"allowed_admin"`
-	AllowedZeitnahme      bool   `json:"allowed_zeitnahme"`
-	AllowedStartlisten    bool   `json:"allowed_startlisten"`
-	AllowedRegattabuero   bool   `json:"allowed_regattabuero"`
-	AllowedRegattaleitung bool   `json:"allowed_regattaleitung"`
+	Name         string           `json:"name"`
+	Capabilities []UserCapability `json:"capabilities"`
 }
 
 func (q *Queries) CreateUserGroup(ctx context.Context, arg CreateUserGroupParams) (UsersGroup, error) {
-	row := q.db.QueryRow(ctx, createUserGroup,
-		arg.Name,
-		arg.AllowedAdmin,
-		arg.AllowedZeitnahme,
-		arg.AllowedStartlisten,
-		arg.AllowedRegattabuero,
-		arg.AllowedRegattaleitung,
-	)
+	row := q.db.QueryRow(ctx, createUserGroup, arg.Name, arg.Capabilities)
 	var i UsersGroup
-	err := row.Scan(
-		&i.Uuid,
-		&i.Name,
-		&i.AllowedAdmin,
-		&i.AllowedZeitnahme,
-		&i.AllowedStartlisten,
-		&i.AllowedRegattabuero,
-		&i.AllowedRegattaleitung,
-	)
+	err := row.Scan(&i.Uuid, &i.Name, &i.Capabilities)
 	return i, err
 }
 
 const getAllUserGroup = `-- name: GetAllUserGroup :many
-SELECT uuid, name, allowed_admin, allowed_zeitnahme, allowed_startlisten, allowed_regattabuero, allowed_regattaleitung FROM users_group
+SELECT uuid, name, capabilities FROM users_group
 ORDER BY uuid
 `
 
@@ -71,15 +48,7 @@ func (q *Queries) GetAllUserGroup(ctx context.Context) ([]UsersGroup, error) {
 	items := []UsersGroup{}
 	for rows.Next() {
 		var i UsersGroup
-		if err := rows.Scan(
-			&i.Uuid,
-			&i.Name,
-			&i.AllowedAdmin,
-			&i.AllowedZeitnahme,
-			&i.AllowedStartlisten,
-			&i.AllowedRegattabuero,
-			&i.AllowedRegattaleitung,
-		); err != nil {
+		if err := rows.Scan(&i.Uuid, &i.Name, &i.Capabilities); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -91,7 +60,7 @@ func (q *Queries) GetAllUserGroup(ctx context.Context) ([]UsersGroup, error) {
 }
 
 const getUserGroup = `-- name: GetUserGroup :many
-SELECT users_group.uuid, users_group.name, users_group.allowed_admin, users_group.allowed_zeitnahme, users_group.allowed_startlisten, users_group.allowed_regattabuero, users_group.allowed_regattaleitung, users.uuid, users.username, users.hashed_password, users.is_active, users.group_uuid
+SELECT users_group.uuid, users_group.name, users_group.capabilities, users.uuid, users.username, users.hashed_password, users.is_active, users.group_uuid
 FROM users_group
 JOIN users
 ON users_group.uuid = users.group_uuid
@@ -115,11 +84,7 @@ func (q *Queries) GetUserGroup(ctx context.Context, argUuid uuid.UUID) ([]GetUse
 		if err := rows.Scan(
 			&i.UsersGroup.Uuid,
 			&i.UsersGroup.Name,
-			&i.UsersGroup.AllowedAdmin,
-			&i.UsersGroup.AllowedZeitnahme,
-			&i.UsersGroup.AllowedStartlisten,
-			&i.UsersGroup.AllowedRegattabuero,
-			&i.UsersGroup.AllowedRegattaleitung,
+			&i.UsersGroup.Capabilities,
 			&i.User.Uuid,
 			&i.User.Username,
 			&i.User.HashedPassword,
@@ -137,7 +102,7 @@ func (q *Queries) GetUserGroup(ctx context.Context, argUuid uuid.UUID) ([]GetUse
 }
 
 const getUserGroupMinimal = `-- name: GetUserGroupMinimal :one
-SELECT uuid, name, allowed_admin, allowed_zeitnahme, allowed_startlisten, allowed_regattabuero, allowed_regattaleitung
+SELECT uuid, name, capabilities
 FROM users_group
 WHERE users_group.uuid = $1
 `
@@ -145,15 +110,7 @@ WHERE users_group.uuid = $1
 func (q *Queries) GetUserGroupMinimal(ctx context.Context, argUuid uuid.UUID) (UsersGroup, error) {
 	row := q.db.QueryRow(ctx, getUserGroupMinimal, argUuid)
 	var i UsersGroup
-	err := row.Scan(
-		&i.Uuid,
-		&i.Name,
-		&i.AllowedAdmin,
-		&i.AllowedZeitnahme,
-		&i.AllowedStartlisten,
-		&i.AllowedRegattabuero,
-		&i.AllowedRegattaleitung,
-	)
+	err := row.Scan(&i.Uuid, &i.Name, &i.Capabilities)
 	return i, err
 }
 
@@ -174,33 +131,17 @@ const updateUserGroup = `-- name: UpdateUserGroup :exec
 UPDATE users_group
 SET
   name = $2,
-  allowed_admin = $3,
-  allowed_zeitnahme = $4,
-  allowed_startlisten = $5,
-  allowed_regattabuero = $6,
-  allowed_regattaleitung = $7
+  capabilities = $3
 WHERE uuid = $1
 `
 
 type UpdateUserGroupParams struct {
-	Uuid                  uuid.UUID `json:"uuid"`
-	Name                  string    `json:"name"`
-	AllowedAdmin          bool      `json:"allowed_admin"`
-	AllowedZeitnahme      bool      `json:"allowed_zeitnahme"`
-	AllowedStartlisten    bool      `json:"allowed_startlisten"`
-	AllowedRegattabuero   bool      `json:"allowed_regattabuero"`
-	AllowedRegattaleitung bool      `json:"allowed_regattaleitung"`
+	Uuid         uuid.UUID        `json:"uuid"`
+	Name         string           `json:"name"`
+	Capabilities []UserCapability `json:"capabilities"`
 }
 
 func (q *Queries) UpdateUserGroup(ctx context.Context, arg UpdateUserGroupParams) error {
-	_, err := q.db.Exec(ctx, updateUserGroup,
-		arg.Uuid,
-		arg.Name,
-		arg.AllowedAdmin,
-		arg.AllowedZeitnahme,
-		arg.AllowedStartlisten,
-		arg.AllowedRegattabuero,
-		arg.AllowedRegattaleitung,
-	)
+	_, err := q.db.Exec(ctx, updateUserGroup, arg.Uuid, arg.Name, arg.Capabilities)
 	return err
 }

@@ -6,6 +6,7 @@ CREATE TYPE geschlecht AS ENUM ('m', 'w', 'x');
 CREATE TYPE tag AS ENUM('sa', 'so');
 CREATE TYPE wettkampf AS ENUM('Langstrecke', 'Kurzstrecke', 'Slalom', 'Staffel');
 CREATE TYPE ROLLE AS ENUM('Ruderer', 'Stm.', 'Trainer');
+CREATE TYPE user_capability AS ENUM('allowed_admin', 'allowed_zeitnahme', 'allowed_startlisten', 'allowed_regattabuero', 'allowed_regattaleitung');
 
 CREATE TABLE verein (
   uuid uuid PRIMARY KEY,
@@ -153,11 +154,7 @@ CREATE TABLE zeitnahme_ergebnis (
 CREATE TABLE users_group (
   uuid uuid PRIMARY KEY DEFAULT uuidv7(),
   name text NOT NULL,
-  allowed_admin boolean DEFAULT false NOT NULL,
-  allowed_zeitnahme boolean DEFAULT false NOT NULL,
-  allowed_startlisten boolean DEFAULT false NOT NULL,
-  allowed_regattabuero boolean DEFAULT false NOT NULL,
-  allowed_regattaleitung boolean DEFAULT false NOT NULL
+  capabilities user_capability[] NOT NULL DEFAULT '{}'
 );
 
 CREATE TABLE users (
@@ -169,59 +166,12 @@ CREATE TABLE users (
   CONSTRAINT fk_users_group FOREIGN KEY (group_uuid) REFERENCES users_group(uuid)
 );
 
-INSERT INTO users_group (
-  uuid,
-  name,
-  allowed_admin,
-  allowed_zeitnahme,
-  allowed_startlisten,
-  allowed_regattabuero,
-  allowed_regattaleitung
-) VALUES (
-  uuidv7(),
-  'full_admin',
-  true,
-  true,
-  true,
-  true,
-  true
-);
-INSERT INTO users_group (
-  uuid,
-  name,
-  allowed_regattabuero
-) VALUES (
-  uuidv7(),
-  'regattabuero',
-  true
-);
-INSERT INTO users_group (
-  uuid,
-  name,
-  allowed_regattaleitung
-) VALUES (
-  uuidv7(),
-  'regattaleitung',
-  true
-);
-INSERT INTO users_group (
-  uuid,
-  name,
-  allowed_zeitnahme
-) VALUES (
-  uuidv7(),
-  'zeitnahme',
-  true
-);
-INSERT INTO users_group (
-  uuid,
-  name,
-  allowed_startlisten
-) VALUES (
-  uuidv7(),
-  'startlisten',
-  true
-);
+INSERT INTO users_group (uuid, name, capabilities) VALUES
+  (uuidv7(), 'full_admin',    ARRAY['allowed_admin','allowed_zeitnahme','allowed_startlisten','allowed_regattabuero','allowed_regattaleitung']::user_capability[]),
+  (uuidv7(), 'regattabuero',  ARRAY['allowed_regattabuero']::user_capability[]),
+  (uuidv7(), 'regattaleitung',ARRAY['allowed_regattaleitung']::user_capability[]),
+  (uuidv7(), 'zeitnahme',     ARRAY['allowed_zeitnahme']::user_capability[]),
+  (uuidv7(), 'startlisten',   ARRAY['allowed_startlisten']::user_capability[]);
 
 INSERT INTO users (
   username,
@@ -260,4 +210,5 @@ DROP TYPE tag;
 DROP TYPE wettkampf;
 DROP TYPE geschlecht;
 DROP TYPE rolle;
+DROP TYPE user_capability;
 -- +goose StatementEnd

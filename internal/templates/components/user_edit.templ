@@ -61,6 +61,20 @@ templ UserEdit(u crud.User, msg string, fieldErrors map[string]string) {
   </div>
 }
 
+type capConfig struct {
+  Name  string
+  Label string
+  Value sqlc.UserCapability
+}
+
+var capabilityConfigs = []capConfig{
+  {"allowed_admin", "Admin", sqlc.UserCapabilityAllowedAdmin},
+  {"allowed_zeitnahme", "Zeitnahme", sqlc.UserCapabilityAllowedZeitnahme},
+  {"allowed_startlisten", "Startlisten", sqlc.UserCapabilityAllowedStartlisten},
+  {"allowed_regattabuero", "Regattabüro", sqlc.UserCapabilityAllowedRegattabuero},
+  {"allowed_regattaleitung", "Regattaleitung", sqlc.UserCapabilityAllowedRegattaleitung},
+}
+
 templ UserGroupEdit(ug sqlc.UsersGroup, msg string, fieldErrors map[string]string) {
   {{
     var title, uuidStr string
@@ -90,15 +104,21 @@ templ UserGroupEdit(ug sqlc.UsersGroup, msg string, fieldErrors map[string]strin
       <div class="flex flex-col gap-4">
         @LineInput("name", "Gruppenname", ug.Name, "text", true, fieldErrors["name"])
 
-        @Toggle("allowed_admin", "Admin Berechtigung?", uuidStr != "new" && ug.AllowedAdmin, false, fieldErrors["allowed_admin"])
-
-        @Toggle("allowed_zeitnahme", "Zeitnahme Berechtigung?", uuidStr != "new" && ug.AllowedZeitnahme, false, fieldErrors["allowed_zeitnahme"])
-
-        @Toggle("allowed_startlisten", "Startlisten Berechtigung?", uuidStr != "new" && ug.AllowedStartlisten, false, fieldErrors["allowed_startlisten"])
-
-        @Toggle("allowed_regattabuero", "Regattabüro Berechtigung?", uuidStr != "new" && ug.AllowedRegattabuero, false, fieldErrors["allowed_regattabuero"])
-
-        @Toggle("allowed_regattaleitung", "Regattaleitung Berechtigung?", uuidStr != "new" && ug.AllowedRegattaleitung, false, fieldErrors["allowed_regattaleitung"])
+        for _, cfg := range capabilityConfigs {
+          {{
+            checked := uuidStr != "new"
+            if checked {
+              checked = false
+              for _, c := range ug.Capabilities {
+                if c == cfg.Value {
+                  checked = true
+                  break
+                }
+              }
+            }
+          }}
+          @Toggle(cfg.Name, cfg.Label + " Berechtigung?", checked, false, fieldErrors[cfg.Name])
+        }
       </div>
       @SubmitButton("Speichern", Success)
     </form>

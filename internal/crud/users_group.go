@@ -119,13 +119,9 @@ func UpdateUserGroup(ctx context.Context, uuid uuid.UUID, uParams sqlc.UpdateUse
 	defer cancel()
 
 	err := DB.Queries.UpdateUserGroup(ctx, sqlc.UpdateUserGroupParams{
-		Uuid:                  uuid,
-		Name:                  uParams.Name,
-		AllowedAdmin:          uParams.AllowedAdmin,
-		AllowedZeitnahme:      uParams.AllowedZeitnahme,
-		AllowedStartlisten:    uParams.AllowedStartlisten,
-		AllowedRegattabuero:   uParams.AllowedRegattabuero,
-		AllowedRegattaleitung: uParams.AllowedRegattaleitung,
+		Uuid:         uuid,
+		Name:         uParams.Name,
+		Capabilities: uParams.Capabilities,
 	})
 	if err != nil {
 		return err

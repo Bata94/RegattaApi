@@ -278,14 +278,27 @@ func UserGroupEditNewPost(c *handler.Context) error {
 		fieldErrors["name"] = "Gruppenname erforderlich"
 	}
 
+	capList := []struct {
+		formName string
+		value    sqlc.UserCapability
+	}{
+		{"allowed_admin", sqlc.UserCapabilityAllowedAdmin},
+		{"allowed_zeitnahme", sqlc.UserCapabilityAllowedZeitnahme},
+		{"allowed_startlisten", sqlc.UserCapabilityAllowedStartlisten},
+		{"allowed_regattabuero", sqlc.UserCapabilityAllowedRegattabuero},
+		{"allowed_regattaleitung", sqlc.UserCapabilityAllowedRegattaleitung},
+	}
+	var capabilities []sqlc.UserCapability
+	for _, cf := range capList {
+		if c.FormValue(cf.formName) == "on" {
+			capabilities = append(capabilities, cf.value)
+		}
+	}
+
 	ug := sqlc.UsersGroup{
-		Uuid:                  groupUuid,
-		Name:                  name,
-		AllowedAdmin:          c.FormValue("allowed_admin") == "on",
-		AllowedZeitnahme:      c.FormValue("allowed_zeitnahme") == "on",
-		AllowedStartlisten:    c.FormValue("allowed_startlisten") == "on",
-		AllowedRegattabuero:   c.FormValue("allowed_regattabuero") == "on",
-		AllowedRegattaleitung: c.FormValue("allowed_regattaleitung") == "on",
+		Uuid:         groupUuid,
+		Name:         name,
+		Capabilities: capabilities,
 	}
 
 	if len(fieldErrors) > 0 {
@@ -294,24 +307,16 @@ func UserGroupEditNewPost(c *handler.Context) error {
 
 	if uuidStr == "new" {
 		_, err := crud.CreateUserGroup(c.Request.Context(), sqlc.CreateUserGroupParams{
-			Name:                  name,
-			AllowedAdmin:          ug.AllowedAdmin,
-			AllowedZeitnahme:      ug.AllowedZeitnahme,
-			AllowedStartlisten:    ug.AllowedStartlisten,
-			AllowedRegattabuero:   ug.AllowedRegattabuero,
-			AllowedRegattaleitung: ug.AllowedRegattaleitung,
+			Name:         name,
+			Capabilities: capabilities,
 		})
 		if err != nil {
 			return handler.BadRequest("Fehler beim Erstellen der Nutzergruppe").WithForm(ui_components.UserGroupEdit(ug, "", nil))
 		}
 	} else {
 		err := crud.UpdateUserGroup(c.Request.Context(), groupUuid, sqlc.UpdateUserGroupParams{
-			Name:                  name,
-			AllowedAdmin:          ug.AllowedAdmin,
-			AllowedZeitnahme:      ug.AllowedZeitnahme,
-			AllowedStartlisten:    ug.AllowedStartlisten,
-			AllowedRegattabuero:   ug.AllowedRegattabuero,
-			AllowedRegattaleitung: ug.AllowedRegattaleitung,
+			Name:         name,
+			Capabilities: capabilities,
 		})
 		if err != nil {
 			return handler.BadRequest("Fehler beim Aktualisieren der Nutzergruppe").WithForm(ui_components.UserGroupEdit(ug, "", nil))

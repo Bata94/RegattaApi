@@ -3,7 +3,7 @@ package admin
 import (
   "github.com/bata94/RegattaApi/internal/templates/components"
   "github.com/bata94/RegattaApi/internal/crud"
-	"github.com/bata94/RegattaApi/internal/utils"
+	"github.com/bata94/RegattaApi/internal/sqlc"
 	"time"
 )
 
@@ -18,16 +18,31 @@ templ UserGroups() {
   }
 
   {{
+    capLabels := map[sqlc.UserCapability]string{
+      sqlc.UserCapabilityAllowedAdmin:          "Admin",
+      sqlc.UserCapabilityAllowedZeitnahme:      "Zeitnahme",
+      sqlc.UserCapabilityAllowedStartlisten:    "Startlisten",
+      sqlc.UserCapabilityAllowedRegattabuero:   "Büro",
+      sqlc.UserCapabilityAllowedRegattaleitung: "Leitung",
+    }
+
     for _, g := range userGroups {
+      capsStr := ""
+      for i, c := range g.Capabilities {
+        if i > 0 {
+          capsStr += ", "
+        }
+        if label, ok := capLabels[c]; ok {
+          capsStr += label
+        } else {
+          capsStr += string(c)
+        }
+      }
       groupRows = append(groupRows, ui_components.TableRowParams{
         ID: g.Uuid.String(),
         Content: []string{
           g.Name,
-          utils.BoolToJaNein(g.AllowedAdmin),
-          utils.BoolToJaNein(g.AllowedZeitnahme),
-          utils.BoolToJaNein(g.AllowedStartlisten),
-          utils.BoolToJaNein(g.AllowedRegattabuero),
-          utils.BoolToJaNein(g.AllowedRegattaleitung),
+          capsStr,
           time.Unix(g.Uuid.Time().UnixTime()).Format("02.01.2006 15:04"),
         },
         OnClickDialogSrc: "/internal/admin/usergroups/" + g.Uuid.String(),
@@ -56,11 +71,7 @@ templ UserGroups() {
       Zebra: true,
       Columns: []ui_components.TableColumnParams{
         {Title: "Gruppenname", WidthClass: ""},
-        {Title: "Admin Berechtigung", WidthClass: ""},
-        {Title: "Zeitnahme Berechtigung", WidthClass: ""},
-        {Title: "Startlisten Berechtigung", WidthClass: ""},
-        {Title: "Büro Berechtigung", WidthClass: ""},
-        {Title: "Leitungs Berechtigung", WidthClass: ""},
+        {Title: "Berechtigungen", WidthClass: ""},
         {Title: "Erstellt am", WidthClass: ""},
       },
       Rows: groupRows,
