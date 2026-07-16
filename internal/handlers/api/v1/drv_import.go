@@ -13,10 +13,10 @@ import (
 	"github.com/bata94/RegattaApi/internal/config"
 
 	"github.com/bata94/RegattaApi/internal/crud"
+	apierr "github.com/bata94/RegattaApi/internal/errors"
 	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -189,7 +189,7 @@ func ImportDrvJson(ctx context.Context, filePath string) error {
 	for _, v := range drvMeldung.Clubs {
 		verein, err := crud.GetVereinMinimal(ctx, v.Id)
 		if err != nil {
-			if !errors.Is(err, pgx.ErrNoRows) {
+			if err != apierr.ErrNotFound {
 				fmt.Println("Crud get Error:", err)
 				return err
 			}
@@ -240,7 +240,7 @@ func ImportDrvJson(ctx context.Context, filePath string) error {
 	for _, r := range drvMeldung.Events {
 		rennen, err := crud.GetRennenMinimal(ctx, r.Id)
 		if err != nil {
-			if !errors.Is(err, pgx.ErrNoRows) {
+			if err != apierr.ErrNotFound {
 				fmt.Println("Crud get Error:", err)
 				return err
 			}
@@ -314,7 +314,7 @@ func ImportDrvJson(ctx context.Context, filePath string) error {
 	for _, a := range drvMeldung.ClubMembers {
 		athlet, err := crud.GetAthletMinimal(ctx, a.Id)
 		if err != nil {
-			if !errors.Is(err, pgx.ErrNoRows) {
+			if err != apierr.ErrNotFound {
 				fmt.Println("Crud get Error:", err)
 				return err
 			}
@@ -348,7 +348,7 @@ func ImportDrvJson(ctx context.Context, filePath string) error {
 	for _, m := range drvMeldung.Entries {
 		meldung, err := crud.GetMeldungMinimal(ctx, m.Id)
 		if err != nil {
-			if !errors.Is(err, pgx.ErrNoRows) {
+			if err != apierr.ErrNotFound {
 				fmt.Println("Crud get Error:", err)
 				return err
 			}
