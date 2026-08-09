@@ -177,7 +177,6 @@ func buildSidebarCategories(currentPath string, caps []string) []ui_components.S
 			IsActive:     strings.HasPrefix(currentPath, "/internal/regattaleitung"),
 			Entries: []ui_components.SidebarEntry{
 				{Name: "DRV Datei Upload", URL: "/internal/regattaleitung/drvupload", RequiredCaps: []string{"allowed_regattaleitung"}},
-				{Name: "Setzungsverwaltung", URL: "/internal/regattaleitung/setzungsverwaltung", RequiredCaps: []string{"allowed_regattaleitung"}},
 				{Name: "Setzungsauslosung", URL: "/internal/regattaleitung/setzungsverwaltung/losung", RequiredCaps: []string{"allowed_regattaleitung"}},
 				{Name: "Setzungsänderung", URL: "/internal/regattaleitung/setzungsverwaltung/aenderung", RequiredCaps: []string{"allowed_regattaleitung"}},
 				{Name: "Pausen", URL: "/internal/regattaleitung/pausen", RequiredCaps: []string{"allowed_regattaleitung"}},
