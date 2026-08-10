@@ -1,6 +1,6 @@
 # Stage 1: Toolchain — install compilers, code generators, and Node.js
 # Almost never changes -> maximale Cache-Nutzung
-FROM golang:trixie AS toolchain
+FROM golang:1.26-trixie AS toolchain
 
 RUN go install github.com/a-h/templ/cmd/templ@latest && \
     go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest && \
