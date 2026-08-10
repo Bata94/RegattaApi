@@ -24,22 +24,58 @@ func main() {
 	ws := NewWSClient(wsURL, store)
 	ws.Connect()
 
-	js.Global().Set("__wasm_submitFinish", js.FuncOf(func(this js.Value, args []js.Value) any {
-		if len(args) < 2 {
-			slog.Warn("__wasm_submitFinish: need 2 args")
+	js.Global().Set("__wasm_recordFinish", js.FuncOf(func(this js.Value, args []js.Value) any {
+		if len(args) < 1 {
+			slog.Warn("__wasm_recordFinish: need 1 arg")
 			return nil
 		}
-		startNr := args[0].String()
-		timeStr := args[1].String()
+		timeStr := args[0].String()
 
 		timeClient, err := time.Parse(time.RFC3339, timeStr)
 		if err != nil {
 			timeClient = time.Now()
 		}
 
-		pf := store.AddPendingFinish(startNr, timeClient, int(ws.GetLatencyMs()))
-		ws.SendFinish(pf)
+		pf := store.AddPendingFinish(timeClient, int(ws.GetLatencyMs()))
+		ws.SendRecordFinish(pf)
 		return nil
+	}))
+
+	js.Global().Set("__wasm_assignFinish", js.FuncOf(func(this js.Value, args []js.Value) any {
+		if len(args) < 3 {
+			slog.Warn("__wasm_assignFinish: need 3 args")
+			return nil
+		}
+		clientID := args[0].String()
+		seq := args[1].Int()
+		startNr := args[2].String()
+
+		store.AssignStartNummer(clientID, seq, startNr)
+		if pf := store.GetPending(clientID, seq); pf != nil {
+			ws.SendAssignFinish(*pf)
+		}
+		return nil
+	}))
+
+	js.Global().Set("__wasm_removePending", js.FuncOf(func(this js.Value, args []js.Value) any {
+		if len(args) < 2 {
+			slog.Warn("__wasm_removePending: need 2 args")
+			return nil
+		}
+		clientID := args[0].String()
+		seq := args[1].Int()
+		store.RemovePending(clientID, seq)
+		return nil
+	}))
+
+	js.Global().Set("__wasm_getPendingFinishes", js.FuncOf(func(this js.Value, args []js.Value) any {
+		pending := store.GetPendingFinishes()
+		data, err := json.Marshal(pending)
+		if err != nil {
+			slog.Error("marshal pendingFinishes", "err", err)
+			return "[]"
+		}
+		return string(data)
 	}))
 
 	js.Global().Set("__wasm_getOpenStarts", js.FuncOf(func(this js.Value, args []js.Value) any {

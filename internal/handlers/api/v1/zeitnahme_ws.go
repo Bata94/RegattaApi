@@ -34,6 +34,13 @@ type submitFinishPayload struct {
 	Seq             int       `json:"seq"`
 }
 
+type assignFinishPayload struct {
+	ClientID    string `json:"clientId"`
+	Seq         int    `json:"seq"`
+	ZielID      int32  `json:"zielId"`
+	StartNummer string `json:"startNummer"`
+}
+
 type syncBatchPayload struct {
 	ClientID   string                `json:"clientId"`
 	LastSeq    int                   `json:"lastSeq"`
@@ -117,8 +124,10 @@ func readPump(client *handlers.Client) {
 		}
 
 		switch msg.Type {
-		case "submit_finish":
-			handleSubmitFinish(client, msg.Data)
+		case "record_finish":
+			handleRecordFinish(client, msg.Data)
+		case "assign_finish":
+			handleAssignFinish(client, msg.Data)
 		case "sync_batch":
 			handleSyncBatch(client, msg.Data)
 		case "ping":
@@ -154,17 +163,51 @@ func handlePing(client *handlers.Client, raw json.RawMessage) {
 	}
 }
 
-func handleSubmitFinish(client *handlers.Client, raw json.RawMessage) {
+func handleRecordFinish(client *handlers.Client, raw json.RawMessage) {
 	var p submitFinishPayload
 	if err := json.Unmarshal(raw, &p); err != nil {
-		slog.Error("WS submit_finish unmarshal error", "err", err)
+		slog.Error("WS record_finish unmarshal error", "err", err)
 		return
 	}
 
 	ctx := context.TODO()
-	zn, err := crud.CreateZeitnahmeZiel(ctx, nil, &p.StartNummer, p.TimeClient, p.MeasuredLatency)
+	zn, err := crud.CreateZeitnahmeZiel(ctx, nil, nil, p.TimeClient, p.MeasuredLatency)
 	if err != nil {
 		slog.Error("CreateZeitnahmeZiel failed", "err", err)
+		return
+	}
+
+	msg, err := json.Marshal(map[string]any{
+		"type": "finish_recorded",
+		"data": map[string]any{
+			"clientId":   p.ClientID,
+			"seq":        p.Seq,
+			"zielId":     zn.ID,
+			"timeClient": zn.TimeClient,
+		},
+	})
+	if err != nil {
+		slog.Error("finish_recorded marshal error", "err", err)
+		return
+	}
+
+	select {
+	case client.Send <- msg:
+	default:
+		slog.Warn("WS finish_recorded send buffer full")
+	}
+}
+
+func handleAssignFinish(client *handlers.Client, raw json.RawMessage) {
+	var p assignFinishPayload
+	if err := json.Unmarshal(raw, &p); err != nil {
+		slog.Error("WS assign_finish unmarshal error", "err", err)
+		return
+	}
+
+	ctx := context.TODO()
+	if _, err := crud.UpdateZeitnahmeZiel(ctx, p.ZielID, nil, &p.StartNummer); err != nil {
+		slog.Error("UpdateZeitnahmeZiel failed", "err", err)
 		return
 	}
 
@@ -175,8 +218,10 @@ func handleSubmitFinish(client *handlers.Client, raw json.RawMessage) {
 		hub.BroadcastJSON(map[string]any{
 			"type": "finish_unmatched",
 			"data": map[string]any{
+				"clientId":    p.ClientID,
+				"seq":         p.Seq,
 				"startNummer": p.StartNummer,
-				"id":          zn.ID,
+				"id":          p.ZielID,
 			},
 		})
 		return
@@ -200,6 +245,12 @@ func handleSubmitFinish(client *handlers.Client, raw json.RawMessage) {
 				continue
 			}
 
+			zn, getErr := crud.GetZeitnahmeZiel(ctx, int(p.ZielID))
+			if getErr != nil {
+				slog.Error("GetZeitnahmeZiel failed", "err", getErr)
+				continue
+			}
+
 			err = crud.CreateZeitnahmeErgebnis(ctx, s, zn, meld)
 			if err != nil {
 				slog.Error("CreateZeitnahmeErgebnis failed", "err", err)
@@ -209,8 +260,10 @@ func handleSubmitFinish(client *handlers.Client, raw json.RawMessage) {
 			hub.BroadcastJSON(map[string]any{
 				"type": "finish_confirmed",
 				"data": map[string]any{
+					"clientId":    p.ClientID,
+					"seq":         p.Seq,
 					"startNummer": p.StartNummer,
-					"id":          zn.ID,
+					"id":          p.ZielID,
 					"endzeit":     zn.TimeClient.Sub(*s.TimeClient).Seconds(),
 				},
 			})
@@ -221,8 +274,10 @@ func handleSubmitFinish(client *handlers.Client, raw json.RawMessage) {
 	hub.BroadcastJSON(map[string]any{
 		"type": "finish_unmatched",
 		"data": map[string]any{
+			"clientId":    p.ClientID,
+			"seq":         p.Seq,
 			"startNummer": p.StartNummer,
-			"id":          zn.ID,
+			"id":          p.ZielID,
 		},
 	})
 }
@@ -241,7 +296,7 @@ func handleSyncBatch(client *handlers.Client, raw json.RawMessage) {
 			"op":       op,
 		})
 
-		handleSubmitFinish(client, func() json.RawMessage {
+		handleRecordFinish(client, func() json.RawMessage {
 			data, err := json.Marshal(op)
 			if err != nil {
 				slog.Error("sync marshal op failed", "err", err)

@@ -234,8 +234,26 @@ func (c *WSClient) handleMessage(raw string) {
 			c.store.AddOpenStart(s)
 		}
 
+	case "finish_recorded":
+		var data struct {
+			ClientID string `json:"clientId"`
+			Seq      int    `json:"seq"`
+			ZielID   int32  `json:"zielId"`
+		}
+		if err := json.Unmarshal(msg.Data, &data); err != nil {
+			slog.Error("unmarshal finish_recorded", "err", err)
+			return
+		}
+		c.store.SetPendingZielID(data.ClientID, data.Seq, data.ZielID)
+		slog.Info("finish recorded", "zielId", data.ZielID, "clientId", data.ClientID, "seq", data.Seq)
+		if pf := c.store.GetPending(data.ClientID, data.Seq); pf != nil && pf.StartNummer != "" && !pf.Unmatched {
+			c.SendAssignFinish(*pf)
+		}
+
 	case "finish_confirmed":
 		var data struct {
+			ClientID    string  `json:"clientId"`
+			Seq         int     `json:"seq"`
 			StartNummer string  `json:"startNummer"`
 			Endzeit     float64 `json:"endzeit"`
 		}
@@ -244,7 +262,7 @@ func (c *WSClient) handleMessage(raw string) {
 			return
 		}
 		c.store.RemoveOpenStart(data.StartNummer)
-		c.store.RemovePendingByStartNummer(data.StartNummer)
+		c.store.RemovePending(data.ClientID, data.Seq)
 		slog.Info("finish confirmed", "startNummer", data.StartNummer, "endzeit", data.Endzeit)
 
 	case "pong":
@@ -262,6 +280,8 @@ func (c *WSClient) handleMessage(raw string) {
 
 	case "finish_unmatched":
 		var data struct {
+			ClientID    string `json:"clientId"`
+			Seq         int    `json:"seq"`
 			StartNummer string `json:"startNummer"`
 		}
 		if err := json.Unmarshal(msg.Data, &data); err != nil {
@@ -269,36 +289,64 @@ func (c *WSClient) handleMessage(raw string) {
 			return
 		}
 		slog.Warn("finish unmatched", "startNummer", data.StartNummer)
-		c.store.RemovePendingByStartNummer(data.StartNummer)
+		c.store.MarkUnmatched(data.ClientID, data.Seq)
 
 	default:
 		slog.Warn("unknown WS message type", "type", msg.Type)
 	}
 }
 
-func (c *WSClient) SendFinish(pf PendingFinish) {
-	if c.ws.IsNull() || c.ws.IsUndefined() {
-		slog.Warn("WS not connected, queued locally", "startNummer", pf.StartNummer)
+func (c *WSClient) sendMessage(data map[string]any) {
+	c.mu.RLock()
+	ws := c.ws
+	c.mu.RUnlock()
+	if ws.IsNull() || ws.IsUndefined() {
+		slog.Warn("WS not connected, queued locally")
 		return
 	}
-	if c.ws.Get("readyState").Int() != 1 {
-		slog.Warn("WS not open, queued locally", "startNummer", pf.StartNummer, "readyState", c.ws.Get("readyState").Int())
+	if ws.Get("readyState").Int() != 1 {
+		slog.Warn("WS not open, queued locally", "readyState", ws.Get("readyState").Int())
 		return
 	}
-	data, _ := json.Marshal(map[string]any{
-		"type": "submit_finish",
+	raw, err := json.Marshal(data)
+	if err != nil {
+		slog.Error("marshal WS message", "err", err)
+		return
+	}
+	ws.Call("send", string(raw))
+}
+
+func (c *WSClient) SendRecordFinish(pf PendingFinish) {
+	if pf.ZielID != nil {
+		return
+	}
+	c.sendMessage(map[string]any{
+		"type": "record_finish",
 		"data": pf,
 	})
-	c.ws.Call("send", string(data))
+}
+
+func (c *WSClient) SendAssignFinish(pf PendingFinish) {
+	if pf.ZielID == nil || pf.StartNummer == "" {
+		return
+	}
+	c.sendMessage(map[string]any{
+		"type": "assign_finish",
+		"data": pf,
+	})
 }
 
 func (c *WSClient) flushUnsynced() {
-	pending := c.store.GetUnsynced()
+	pending := c.store.GetPendingFinishes()
 	if len(pending) == 0 {
 		return
 	}
 	slog.Info("flushing unsynced finishes", "count", len(pending))
 	for _, pf := range pending {
-		c.SendFinish(pf)
+		if pf.ZielID == nil {
+			c.SendRecordFinish(pf)
+		} else if pf.StartNummer != "" && !pf.Unmatched {
+			c.SendAssignFinish(pf)
+		}
 	}
 }

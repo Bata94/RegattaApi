@@ -8,18 +8,11 @@ script zeitnahmeZiel() {
 	var airHorn = new Audio('/assets/sound/airHorn.mp3');
 	airHorn.preload = 'auto';
 
-	function renderCurrent() {
-		var raw = window.__wasm_getOpenStarts();
-		try { render(JSON.parse(raw)); } catch (e) { console.error('render openStarts', e); }
-	}
-
 	if (window.__wasm_initialized) {
 		wasmReady = true;
 		renderCurrent();
 		window.__wasm_onStateChange(renderCurrent);
 		if (window.__wasm_onWSChange) window.__wasm_onWSChange(updateWSBadge);
-		var inp = document.getElementById('start-nr-input');
-		if (inp) inp.focus();
 		return;
 	}
 
@@ -57,28 +50,58 @@ script zeitnahmeZiel() {
 		}
 	}
 
-	function render(starts) {
+	function formatTime(iso) {
+		return new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+	}
+
+	function renderCurrent() {
+		var raw = window.__wasm_getPendingFinishes();
+		try { render(JSON.parse(raw)); } catch (e) { console.error('render pendingFinishes', e); }
+	}
+
+	function render(entries) {
 		var app = document.getElementById('ziel-app');
 		if (!app) return;
 
 		var unsynced = window.__wasm_getUnsyncedCount ? window.__wasm_getUnsyncedCount() : 0;
 
 		var rows = '';
-		if (starts.length === 0) {
-			rows = '<tr><td colspan="4" class="text-center opacity-60 py-8">Keine offenen Starts</td></tr>';
+		if (entries.length === 0) {
+			rows = '<tr><td colspan="3" class="text-center opacity-60 py-8">Noch keine Zielzeiten erfasst</td></tr>';
 		} else {
-			for (var i = 0; i < starts.length; i++) {
-				var s = starts[i];
-				var nr = s.start_nummer || '\u2014';
-				var rn = s.rennen_nummer || '\u2014';
-				var time = s.time_client
-					? new Date(s.time_client).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-					: '\u2014';
-				rows += '<tr class="hover:bg-base-200">' +
-					'<td class="font-mono text-lg font-bold">' + nr + '</td>' +
-					'<td>' + rn + '</td>' +
-					'<td>' + time + '</td>' +
-					'<td><button class="btn btn-sm btn-primary" data-start="' + nr + '">Ziel</button></td>' +
+			for (var i = 0; i < entries.length; i++) {
+				var e = entries[i];
+				var key = e.clientId + ':' + e.seq;
+				var time = formatTime(e.timeClient);
+				var nr = i + 1;
+				var unmatched = !!e.unmatched;
+				var synced = e.zielId !== null && e.zielId !== undefined;
+				var hasNr = !!e.startNummer;
+
+				var cell;
+				if (hasNr && !unmatched) {
+					cell = '<div class="flex gap-2 items-center">' +
+						'<span class="font-mono text-lg font-bold">' + e.startNummer + '</span>' +
+						'<span class="badge badge-ghost badge-sm">wird verarbeitet...</span>' +
+						'<button class="btn btn-sm btn-ghost" data-remove="' + key + '" title="L\u00f6schen">\u00d7</button>' +
+						'</div>';
+				} else {
+					var inputCls = unmatched ? ' input-error' : '';
+					var value = unmatched ? e.startNummer : '';
+					cell = '<div class="flex gap-2 items-center">' +
+						'<input type="text" class="input input-bordered input-sm font-mono' + inputCls + '" placeholder="Startnr" value="' + value + '" data-nr-input="' + key + '" autocomplete="off" />' +
+						'<button class="btn btn-sm btn-primary" data-assign="' + key + '">OK</button>' +
+						'<button class="btn btn-sm btn-ghost" data-remove="' + key + '" title="L\u00f6schen">\u00d7</button>' +
+						'</div>';
+				}
+				if (!synced) {
+					cell += '<div class="mt-1"><span class="badge badge-warning badge-sm">wird synchronisiert...</span></div>';
+				}
+
+				rows += '<tr class="' + (unmatched ? 'bg-error/10' : '') + '">' +
+					'<td class="font-mono text-lg font-bold opacity-50">' + nr + '</td>' +
+					'<td class="font-mono text-xl font-bold">' + time + '</td>' +
+					'<td>' + cell + '</td>' +
 					'</tr>';
 			}
 		}
@@ -89,57 +112,77 @@ script zeitnahmeZiel() {
 			'<h2 class="text-xl font-bold">Zielgericht</h2>' +
 			'<span id="ws-badge-container">' + getWSBadgeHTML() + '</span>' +
 			'</div>' +
-			'<div class="flex gap-2 items-end">' +
-			'<label class="form-control flex-1">' +
-			'<span class="label-text">Startnummer eingeben oder scannen</span>' +
-			'<input type="text" id="start-nr-input" class="input input-bordered font-mono text-xl" placeholder="Startnummer" autofocus />' +
-			'</label>' +
-			'<button id="submit-finish-btn" class="btn btn-primary btn-lg">OK</button>' +
-			'</div>' +
+			'<button id="record-time-btn" class="btn btn-primary btn-lg btn-block text-4xl h-28">ZIEL</button>' +
 			(unsynced > 0 ? '<div class="alert alert-warning">' + unsynced + ' nicht synchronisierte Zeitnahmen (offline)</div>' : '') +
 			'<div class="overflow-x-auto">' +
-			'<table class="table table-zebra">' +
-			'<thead><tr><th>Start-Nr</th><th>Rennen</th><th>Startzeit</th><th>Aktion</th></tr></thead>' +
+			'<table class="table">' +
+			'<thead><tr><th>#</th><th>Zeit</th><th>Startnummer</th></tr></thead>' +
 			'<tbody>' + rows + '</tbody>' +
 			'</table>' +
 			'</div>' +
 			'</div>';
 
-		app.querySelectorAll('[data-start]').forEach(function(btn) {
+		document.getElementById('record-time-btn').addEventListener('click', recordTime);
+
+		app.querySelectorAll('[data-assign]').forEach(function(btn) {
 			btn.addEventListener('click', function() {
-				submitFinish(this.getAttribute('data-start'));
+				assignStart(this.getAttribute('data-assign'));
 			});
 		});
 
-		document.getElementById('submit-finish-btn').addEventListener('click', function() {
-			var input = document.getElementById('start-nr-input');
-			var nr = input.value.trim();
-			if (nr) {
-				submitFinish(nr);
-				input.value = '';
-				input.focus();
-			}
+		app.querySelectorAll('[data-nr-input]').forEach(function(inp) {
+			inp.addEventListener('keydown', function(e) {
+				if (e.key === 'Enter') {
+					e.preventDefault();
+					assignStart(this.getAttribute('data-nr-input'));
+				}
+			});
 		});
 
-		document.getElementById('start-nr-input').addEventListener('keydown', function(e) {
-			if (e.key === 'Enter') {
-				e.preventDefault();
-				document.getElementById('submit-finish-btn').click();
-			}
+		app.querySelectorAll('[data-remove]').forEach(function(btn) {
+			btn.addEventListener('click', function() {
+				removeEntry(this.getAttribute('data-remove'));
+			});
 		});
-
 	}
 
-	function submitFinish(startNr) {
+	function recordTime() {
 		if (!wasmReady) {
 			showToast('WASM wird noch geladen\u2026', 'alert-info');
 			return;
 		}
-		var now = new Date().toISOString();
-		window.__wasm_submitFinish(startNr, now);
+		window.__wasm_recordFinish(new Date().toISOString());
 		airHorn.currentTime = 0;
 		airHorn.play().catch(function() {});
-		showToast('Zielzeit erfasst: ' + startNr, 'alert-success');
+		showToast('Zielzeit erfasst', 'alert-success');
+		var first = document.querySelector('[data-nr-input]');
+		if (first) first.focus();
+	}
+
+	function assignStart(key) {
+		if (!wasmReady) {
+			showToast('WASM wird noch geladen\u2026', 'alert-info');
+			return;
+		}
+		var parts = key.split(':');
+		var clientId = parts[0];
+		var seq = parseInt(parts[1], 10);
+		var inp = document.querySelector('[data-nr-input="' + key + '"]');
+		var nr = inp ? inp.value.trim() : '';
+		if (!nr) {
+			showToast('Bitte Startnummer eingeben', 'alert-warning');
+			if (inp) inp.focus();
+			return;
+		}
+		window.__wasm_assignFinish(clientId, seq, nr);
+		showToast('Zielzeit zugeordnet: ' + nr, 'alert-success');
+		var next = document.querySelector('[data-nr-input]');
+		if (next) next.focus();
+	}
+
+	function removeEntry(key) {
+		var parts = key.split(':');
+		window.__wasm_removePending(parts[0], parseInt(parts[1], 10));
 	}
 
 	function showToast(msg, cls) {
@@ -153,7 +196,7 @@ script zeitnahmeZiel() {
 	}
 
 	function startApp() {
-		if (!window.__wasm_submitFinish) {
+		if (!window.__wasm_recordFinish) {
 			setTimeout(startApp, 100);
 			return;
 		}
@@ -163,9 +206,6 @@ script zeitnahmeZiel() {
 		window.__wasm_onStateChange(renderCurrent);
 		if (window.__wasm_onWSChange) window.__wasm_onWSChange(updateWSBadge);
 		renderCurrent();
-
-		var input = document.getElementById('start-nr-input');
-		if (input) input.focus();
 	}
 
 	function initWasm() {

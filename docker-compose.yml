@@ -91,28 +91,28 @@ services:
       db:
         condition: service_healthy
 
-  api:
-    build:
-      dockerfile: Dockerfile
-      context: ./
-      target: prod
-    develop:
-      watch:
-        - action: rebuild
-          path: ./internal # Watch this directory
-    env_file: ".env"
-    deploy:
-      resources:
-        limits:
-          cpus: '4'
-          memory: 2048M
-    ports:
-      - 8080:8080
-      - 8090:8090
-    volumes:
-      - api-dev-files:/opt/app/files
-    depends_on:
-      gotenberg:
-        condition: service_started
-      db:
-        condition: service_healthy
+  # api:
+  #   build:
+  #     dockerfile: Dockerfile
+  #     context: ./
+  #     target: prod
+  #   develop:
+  #     watch:
+  #       - action: rebuild
+  #         path: ./internal # Watch this directory
+  #   env_file: ".env"
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '4'
+  #         memory: 2048M
+  #   ports:
+  #     - 8080:8080
+  #     - 8090:8090
+  #   volumes:
+  #     - api-dev-files:/opt/app/files
+  #   depends_on:
+  #     gotenberg:
+  #       condition: service_started
+  #     db:
+  #       condition: service_healthy

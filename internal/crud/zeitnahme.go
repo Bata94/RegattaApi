@@ -239,6 +239,37 @@ func CreateZeitnahmeZiel(ctx context.Context, rennNr, startNr *string, timeClien
 	return ZeitnahmeFromSqlcZiel(q), nil
 }
 
+func UpdateZeitnahmeZiel(ctx context.Context, id int32, rennNr, startNr *string) (Zeitnahme, error) {
+	ctx, cancel := getCtx(ctx)
+	defer cancel()
+
+	var rennenNummer, startNummer pgtype.Text
+	if rennNr != nil {
+		rennenNummer = pgtype.Text{String: *rennNr, Valid: true}
+	} else {
+		rennenNummer = pgtype.Text{Valid: false}
+	}
+
+	if startNr != nil {
+		startNummer = pgtype.Text{String: *startNr, Valid: true}
+	} else {
+		startNummer = pgtype.Text{Valid: false}
+	}
+
+	p := sqlc.UpdateZeitnahmeZielParams{
+		ID:           id,
+		RennenNummer: rennenNummer,
+		StartNummer:  startNummer,
+	}
+
+	q, err := DB.Queries.UpdateZeitnahmeZiel(ctx, p)
+	if err != nil {
+		return Zeitnahme{}, err
+	}
+
+	return ZeitnahmeFromSqlcZiel(q), nil
+}
+
 func CreateZeitnahmeErgebnis(ctx context.Context, s, z Zeitnahme, meld Meldung) error {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
