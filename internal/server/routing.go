@@ -71,6 +71,7 @@ func GetRouter() http.Handler {
 	r.Handle("GET", "/internal/profil/password/{uuid}", wrapHandler(components.ChangePasswordGet, true))
 	r.Handle("PUT", "/internal/profil/password/{uuid}", wrapHandler(components.ChangePasswordPost, true))
 	internalLayoutHandler("/internal/zeitnahme", pages.InternalZeitnahme)
+	internalLayoutHandler("/internal/zeitnahme/start", pages.InternalZeitnahmeStart)
 	internalLayoutHandler("/internal/zeitnahme/ziel", pages.InternalZeitnahmeZiel)
 
 	internalLayoutHandler("/internal/startlisten", pages.InternalStartlisten)

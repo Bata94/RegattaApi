@@ -194,6 +194,20 @@ func RennenFromSqlc(rennen sqlc.Rennen, numMeld int, numAbt any) Rennen {
 	}
 }
 
+func MaxStartLanesForWettkampf(w sqlc.Wettkampf) int {
+	switch w {
+	case sqlc.WettkampfLangstrecke:
+		return 1
+	case sqlc.WettkampfKurzstrecke:
+		return 4
+	case sqlc.WettkampfSlalom:
+		return 3
+	case sqlc.WettkampfStaffel:
+		return 2
+	}
+	return 1
+}
+
 type rennenJSON struct {
 	Uuid             uuid.UUID       `json:"uuid"`
 	SortID           int32           `json:"sort_id"`
@@ -214,6 +228,7 @@ type rennenJSON struct {
 	Startzeit        *string         `json:"startzeit,omitempty"`
 	NumMeldungen     *int            `json:"num_meldungen,omitempty"`
 	NumAbteilungen   *int            `json:"num_abteilungen,omitempty"`
+	MaxLanes         int             `json:"max_lanes"`
 	Meldungen        []Meldung       `json:"meldungen,omitempty"`
 }
 
@@ -238,6 +253,7 @@ func (r Rennen) MarshalJSON() ([]byte, error) {
 		Startzeit:        r.GetStartzeit(),
 		NumMeldungen:     r.NumMeldungen,
 		NumAbteilungen:   r.NumAbteilungen,
+		MaxLanes:         MaxStartLanesForWettkampf(r.Wettkampf),
 	}
 	if r.Meldungen != nil {
 		j.Meldungen = r.Meldungen
@@ -341,7 +357,46 @@ func GetAllRennen(ctx context.Context, p GetAllRennenParams) ([]Rennen, error) {
 
 		retLs = append(retLs, r)
 	}
+
+	if !p.ShowStarted {
+		started, err := startedRennenNummern(ctx)
+		if err != nil {
+			slog.Error("Query error", "err", err)
+			return nil, err
+		}
+		retLs = filterStartedRennen(retLs, started)
+	}
+
 	return retLs, nil
+}
+
+func startedRennenNummern(ctx context.Context) (map[string]struct{}, error) {
+	rows, err := DB.Queries.GetAllZeitnahmeStart(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	started := make(map[string]struct{}, len(rows))
+	for _, r := range rows {
+		if r.RennenNummer.Valid {
+			started[r.RennenNummer.String] = struct{}{}
+		}
+	}
+	return started, nil
+}
+
+func filterStartedRennen(rennen []Rennen, started map[string]struct{}) []Rennen {
+	if len(started) == 0 {
+		return rennen
+	}
+
+	retLs := make([]Rennen, 0, len(rennen))
+	for _, r := range rennen {
+		if _, ok := started[r.Nummer]; !ok {
+			retLs = append(retLs, r)
+		}
+	}
+	return retLs
 }
 
 func GetAllRennenWithAthlet(ctx context.Context, p GetAllRennenParams) ([]Rennen, error) {
@@ -360,6 +415,14 @@ func GetAllRennenWithAthlet(ctx context.Context, p GetAllRennenParams) ([]Rennen
 		return nil, err
 	}
 	races := sqlcRennenToCrudRennen(baseRows, p.ShowEmpty)
+
+	if !p.ShowStarted {
+		started, err := startedRennenNummern(ctx)
+		if err != nil {
+			return nil, err
+		}
+		races = filterStartedRennen(races, started)
+	}
 
 	if !p.GetAthleten {
 		return races, nil
@@ -410,8 +473,8 @@ func sqlcRennenToCrudRennen(q []sqlc.GetAllRennenWithMeldRow, getEmptyRennen boo
 		if row.Rennen.Uuid != curRennen.Uuid {
 			if getEmptyRennen || len(curRennen.Meldungen) != 0 {
 				rLs = append(rLs, curRennen)
-				curRennen = RennenFromSqlc(row.Rennen, int(row.NumMeldungen), row.NumAbteilungen)
 			}
+			curRennen = RennenFromSqlc(row.Rennen, int(row.NumMeldungen), row.NumAbteilungen)
 		}
 
 		if row.Uuid != uuid.Nil {

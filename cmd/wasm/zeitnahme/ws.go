@@ -250,6 +250,23 @@ func (c *WSClient) handleMessage(raw string) {
 			c.SendAssignFinish(*pf)
 		}
 
+	case "start_recorded":
+		var data struct {
+			ClientID string      `json:"clientId"`
+			Seq      int         `json:"seq"`
+			Starts   []OpenStart `json:"starts"`
+		}
+		if err := json.Unmarshal(msg.Data, &data); err != nil {
+			slog.Error("unmarshal start_recorded", "err", err)
+			return
+		}
+		ids := make([]int32, 0, len(data.Starts))
+		for _, st := range data.Starts {
+			ids = append(ids, st.ID)
+		}
+		c.store.SetPendingStartSynced(data.ClientID, data.Seq, ids)
+		slog.Info("start recorded", "count", len(data.Starts), "clientId", data.ClientID, "seq", data.Seq)
+
 	case "finish_confirmed":
 		var data struct {
 			ClientID    string  `json:"clientId"`
@@ -336,6 +353,16 @@ func (c *WSClient) SendAssignFinish(pf PendingFinish) {
 	})
 }
 
+func (c *WSClient) SendRecordStart(ps PendingStart) {
+	if ps.StartIDs != nil {
+		return
+	}
+	c.sendMessage(map[string]any{
+		"type": "record_start",
+		"data": ps,
+	})
+}
+
 func (c *WSClient) flushUnsynced() {
 	pending := c.store.GetPendingFinishes()
 	if len(pending) == 0 {
@@ -347,6 +374,17 @@ func (c *WSClient) flushUnsynced() {
 			c.SendRecordFinish(pf)
 		} else if pf.StartNummer != "" && !pf.Unmatched {
 			c.SendAssignFinish(pf)
+		}
+	}
+
+	starts := c.store.GetPendingStarts()
+	if len(starts) == 0 {
+		return
+	}
+	slog.Info("flushing unsynced starts", "count", len(starts))
+	for _, ps := range starts {
+		if ps.StartIDs == nil {
+			c.SendRecordStart(ps)
 		}
 	}
 }

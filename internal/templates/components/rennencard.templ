@@ -71,7 +71,7 @@ templ RennenTab(w sqlc.Wettkampf, urlFormatStr string, showEmpty, showStarted bo
     rennen, err := crud.GetAllRennen(ctx, crud.GetAllRennenParams{
       GetMeldungen:  false,
       ShowEmpty:     showEmpty,
-      ShowStarted:   showEmpty,
+      ShowStarted:   showStarted,
       ShowWettkampf: sqlc.NullWettkampf{Wettkampf: w, Valid: true},
     })
   }}

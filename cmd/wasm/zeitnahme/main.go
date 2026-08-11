@@ -68,6 +68,53 @@ func main() {
 		return nil
 	}))
 
+	js.Global().Set("__wasm_recordStart", js.FuncOf(func(this js.Value, args []js.Value) any {
+		if len(args) < 3 {
+			slog.Warn("__wasm_recordStart: need 3 args")
+			return false
+		}
+		rennNr := args[0].String()
+		var startNummern []string
+		if err := json.Unmarshal([]byte(args[1].String()), &startNummern); err != nil {
+			slog.Error("__wasm_recordStart: unmarshal startNummern", "err", err)
+			return false
+		}
+		timeStr := args[2].String()
+		timeClient, err := time.Parse(time.RFC3339, timeStr)
+		if err != nil {
+			timeClient = time.Now()
+		}
+
+		ps := store.AddPendingStart(rennNr, startNummern, timeClient, int(ws.GetLatencyMs()))
+		ws.SendRecordStart(ps)
+		return true
+	}))
+
+	js.Global().Set("__wasm_getPendingStarts", js.FuncOf(func(this js.Value, args []js.Value) any {
+		pending := store.GetPendingStarts()
+		data, err := json.Marshal(pending)
+		if err != nil {
+			slog.Error("marshal pendingStarts", "err", err)
+			return "[]"
+		}
+		return string(data)
+	}))
+
+	js.Global().Set("__wasm_removePendingStart", js.FuncOf(func(this js.Value, args []js.Value) any {
+		if len(args) < 2 {
+			slog.Warn("__wasm_removePendingStart: need 2 args")
+			return nil
+		}
+		clientID := args[0].String()
+		seq := args[1].Int()
+		store.RemovePendingStart(clientID, seq)
+		return nil
+	}))
+
+	js.Global().Set("__wasm_getUnsyncedStartCount", js.FuncOf(func(this js.Value, args []js.Value) any {
+		return len(store.GetUnsyncedStarts())
+	}))
+
 	js.Global().Set("__wasm_getPendingFinishes", js.FuncOf(func(this js.Value, args []js.Value) any {
 		pending := store.GetPendingFinishes()
 		data, err := json.Marshal(pending)

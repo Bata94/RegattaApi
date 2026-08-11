@@ -71,6 +71,7 @@ type meldungJSON struct {
 	RechnungsNummer    *string   `json:"rechnungs_nummer"`
 	VereinUuid         uuid.UUID `json:"verein_uuid"`
 	RennenUuid         uuid.UUID `json:"rennen_uuid"`
+	TeilnehmerStr      string    `json:"teilnehmer_str"`
 	Rennen             *Rennen   `json:"rennen,omitempty"`
 	Verein             *Verein   `json:"verein,omitempty"`
 	Athleten           []Athlet  `json:"athleten,omitempty"`
@@ -91,6 +92,7 @@ func (m Meldung) MarshalJSON() ([]byte, error) {
 		Kosten:          m.Kosten,
 		VereinUuid:      m.VereinUuid,
 		RennenUuid:      m.RennenUuid,
+		TeilnehmerStr:   m.TeilnehmerString(),
 		Rennen:          m.Rennen,
 		Verein:          m.Verein,
 	}

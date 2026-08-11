@@ -135,6 +135,7 @@ func buildSidebarCategories(currentPath string, caps []string) []ui_components.S
 			RequiredCaps: []string{"allowed_zeitnahme"},
 			IsActive:     strings.HasPrefix(currentPath, "/internal/zeitnahme"),
 			Entries: []ui_components.SidebarEntry{
+				{Name: "Startgericht", URL: "/internal/zeitnahme/start", RequiredCaps: []string{"allowed_zeitnahme"}},
 				{Name: "Zielgericht", URL: "/internal/zeitnahme/ziel", RequiredCaps: []string{"allowed_zeitnahme"}},
 			},
 		},

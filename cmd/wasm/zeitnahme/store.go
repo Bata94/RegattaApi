@@ -32,6 +32,16 @@ type PendingFinish struct {
 	Seq             int       `json:"seq"`
 }
 
+type PendingStart struct {
+	RennenNummer    string    `json:"rennenNummer"`
+	StartNummern    []string  `json:"startNummern"`
+	StartIDs        []int32   `json:"startIds,omitempty"`
+	TimeClient      time.Time `json:"timeClient"`
+	MeasuredLatency int       `json:"measuredLatency"`
+	ClientID        string    `json:"clientId"`
+	Seq             int       `json:"seq"`
+}
+
 type Store struct {
 	mu       sync.RWMutex
 	onChange func()
@@ -267,6 +277,119 @@ func (s *Store) RemovePending(clientID string, seq int) {
 		filtered = append(filtered, pf)
 	}
 	s.setPending(filtered)
+	s.mu.Unlock()
+	s.notify()
+}
+
+func (s *Store) AddPendingStart(rennenNummer string, startNummern []string, timeClient time.Time, latencyMs int) PendingStart {
+	s.mu.Lock()
+
+	clientID := s.getOrCreateClientID()
+	seq := s.getNextSeq()
+
+	if latencyMs < 0 {
+		latencyMs = 0
+	}
+
+	ps := PendingStart{
+		RennenNummer:    rennenNummer,
+		StartNummern:    startNummern,
+		TimeClient:      timeClient,
+		MeasuredLatency: latencyMs,
+		ClientID:        clientID,
+		Seq:             seq,
+	}
+
+	var pending []PendingStart
+	raw := getLS("pendingStarts")
+	if raw != "" {
+		if err := json.Unmarshal([]byte(raw), &pending); err != nil {
+			slog.Error("unmarshal pendingStarts", "err", err)
+		}
+	}
+	pending = append(pending, ps)
+	s.setPendingStarts(pending)
+	s.mu.Unlock()
+	s.notify()
+	return ps
+}
+
+func (s *Store) GetPendingStarts() []PendingStart {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.getPendingStarts()
+}
+
+func (s *Store) getPendingStarts() []PendingStart {
+	raw := getLS("pendingStarts")
+	if raw == "" {
+		return []PendingStart{}
+	}
+	var pending []PendingStart
+	if err := json.Unmarshal([]byte(raw), &pending); err != nil {
+		slog.Error("unmarshal pendingStarts", "err", err)
+		return []PendingStart{}
+	}
+	if pending == nil {
+		return []PendingStart{}
+	}
+	return pending
+}
+
+func (s *Store) GetPendingStart(clientID string, seq int) *PendingStart {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, ps := range s.getPendingStarts() {
+		if ps.ClientID == clientID && ps.Seq == seq {
+			return &ps
+		}
+	}
+	return nil
+}
+
+func (s *Store) setPendingStarts(pending []PendingStart) {
+	data, _ := json.Marshal(pending)
+	setLS("pendingStarts", string(data))
+}
+
+func (s *Store) SetPendingStartSynced(clientID string, seq int, startIDs []int32) {
+	s.mu.Lock()
+	pending := s.getPendingStarts()
+	for i := range pending {
+		if pending[i].ClientID == clientID && pending[i].Seq == seq {
+			pending[i].StartIDs = startIDs
+			break
+		}
+	}
+	s.setPendingStarts(pending)
+	s.mu.Unlock()
+	s.notify()
+}
+
+func (s *Store) GetUnsyncedStarts() []PendingStart {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	all := s.getPendingStarts()
+	filtered := make([]PendingStart, 0, len(all))
+	for _, ps := range all {
+		if ps.StartIDs == nil {
+			filtered = append(filtered, ps)
+		}
+	}
+	return filtered
+}
+
+func (s *Store) RemovePendingStart(clientID string, seq int) {
+	s.mu.Lock()
+	pending := s.getPendingStarts()
+	filtered := make([]PendingStart, 0, len(pending))
+	for _, ps := range pending {
+		if ps.ClientID == clientID && ps.Seq == seq {
+			continue
+		}
+		filtered = append(filtered, ps)
+	}
+	s.setPendingStarts(filtered)
 	s.mu.Unlock()
 	s.notify()
 }

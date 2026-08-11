@@ -1,0 +1,576 @@
+package zeitnahme
+
+import (
+	"github.com/bata94/RegattaApi/internal/crud"
+	"github.com/bata94/RegattaApi/internal/templates/components"
+)
+
+script zeitnahmeStart() {
+	'use strict';
+
+	var wasmReady = false;
+	var currentRace = null;
+	var races = [];
+	var slots = [];
+	var editingSlotIndex = -1;
+
+	try {
+		var dataEl = document.getElementById('start-races-data');
+		if (dataEl) races = JSON.parse(dataEl.textContent) || [];
+	} catch (e) {
+		console.error('parse start-races-data', e);
+		races = [];
+	}
+
+	function renderCurrent() {
+		var pending = [];
+		try { pending = JSON.parse(window.__wasm_getPendingStarts()); } catch (e) { console.error('render pendingStarts', e); }
+		render(pending);
+	}
+
+	function raceCardHTML() {
+		var r = currentRace;
+		if (!r) {
+			return '<div class="card card-sm bg-base-100 shadow-md cursor-pointer hover:shadow-lg" id="race-card">' +
+				'<div class="card-body">' +
+				'<h5 class="card-title">Rennen w\u00e4hlen</h5>' +
+				'<p class="opacity-60">Klicken zum Ausw\u00e4hlen</p>' +
+				'</div></div>';
+		}
+		var numMeld = r.num_meldungen ? r.num_meldungen : (r.meldungen ? r.meldungen.length : 0);
+		var startedCount = 0;
+		if (r._started) {
+			for (var sk in r._started) {
+				if (r._started[sk]) startedCount++;
+			}
+		}
+		var subtitle = startedCount > 0 ? (startedCount + ' / ' + numMeld + ' Meldungen gestartet') : (numMeld + ' Meldungen');
+		return '<div class="card card-sm bg-base-100 shadow-md cursor-pointer hover:shadow-lg" id="race-card">' +
+			'<div class="card-body">' +
+			'<h5 class="card-title">' + r.nummer + ' - ' + r.bezeichnung_lang + '</h5>' +
+			'<p class="opacity-60">' + subtitle + '</p>' +
+			'</div></div>';
+	}
+
+	function slotCardHTML(s, i) {
+		if (s.isEmpty) {
+			return '<div class="card-sm card border-2 border-dashed border-base-300 bg-base-100 shadow-sm cursor-pointer hover:shadow-md" data-slot="' + i + '">' +
+				'<div class="card-body !p-3 flex items-center justify-center">' +
+				'<span class="opacity-50 font-bold">Setzen\u2026</span>' +
+				'</div></div>';
+		}
+		var nr = (s.startNummer || '').trim();
+		var cls = 'card-sm card border-2 border-primary bg-base-100 shadow-md cursor-pointer';
+		var vereinLabel = s.vereinKuerzel || s.vereinName || '';
+		var badges = '';
+		if (s.isManual) {
+			badges = '<span class="badge badge-ghost badge-sm">Manuell</span>';
+		} else if (s.abteilung > 0 || s.bahn > 0) {
+			var parts = [];
+			if (s.abteilung > 0) parts.push('Abt ' + s.abteilung);
+			if (s.bahn > 0) parts.push('Bahn ' + s.bahn);
+			badges = '<span class="badge badge-ghost badge-sm">' + parts.join(' \u00b7 ') + '</span>';
+		}
+		var info = s.isManual ? 'Manueller Eintrag' : (s.teilnehmerStr || vereinLabel || '');
+		return '<div class="' + cls + '" data-slot="' + i + '">' +
+			'<div class="card-body !p-3">' +
+			'<div class="flex items-center justify-between gap-1">' +
+			'<span class="font-mono text-xl font-bold">' + (nr || '?') + '</span>' +
+			badges +
+			'</div>' +
+			(vereinLabel ? '<p class="text-sm font-bold truncate">' + vereinLabel + '</p>' : '') +
+			'<p class="text-sm opacity-70 line-clamp-2">' + info + '</p>' +
+			'</div></div>';
+	}
+
+	function slotsHTML() {
+		if (slots.length === 0) {
+			return '<div class="col-span-full text-center opacity-60 py-8">Kein Rennen ausgew\u00e4hlt \u2014 w\u00e4hle oben ein Rennen.</div>';
+		}
+		var html = '';
+		for (var i = 0; i < slots.length; i++) {
+			html += slotCardHTML(slots[i], i);
+		}
+		return html;
+	}
+
+	function raceTabsHTML() {
+		if (races.length === 0) {
+			return '<div class="text-center opacity-60 py-8">Keine Rennen mit Meldungen vorhanden</div>';
+		}
+		var order = ['Langstrecke', 'Slalom', 'Kurzstrecke', 'Staffel'];
+		var html = '<div class="tabs tabs-box w-full">';
+		for (var j = 0; j < order.length; j++) {
+			var panel = '';
+			var found = false;
+			for (var i = 0; i < races.length; i++) {
+				if ((races[i].wettkampf || '') !== order[j]) continue;
+				found = true;
+				var r = races[i];
+				var numMeld = r.num_meldungen ? r.num_meldungen : (r.meldungen ? r.meldungen.length : 0);
+				panel += '<button class="btn btn-block justify-start" data-select-race="' + i + '">' +
+					'<span class="font-mono font-bold">' + r.nummer + '</span> - ' + r.bezeichnung_lang +
+					'<span class="badge badge-ghost ml-auto">' + numMeld + '</span>' +
+					'</button>';
+			}
+			html += '<input type="radio" name="start_race_tabs" class="tab" aria-label="' + order[j] + '"' + (j === 0 ? ' checked="checked"' : '') + ' />';
+			html += '<div class="tab-content bg-base-100 border-base-300 !px-2 !py-0 !m-0">';
+			html += '<div class="max-h-[50vh] overflow-y-auto flex flex-col gap-1 py-1">';
+			html += found ? panel : '<div class="text-center opacity-60 py-8">Keine Rennen mehr</div>';
+			html += '</div></div>';
+		}
+		html += '</div>';
+		return html;
+	}
+
+	function meldungAssigned(mUuid, excludeIndex) {
+		if (!mUuid) return false;
+		for (var i = 0; i < slots.length; i++) {
+			if (i === excludeIndex) continue;
+			if (slots[i].meldungUuid === mUuid) return true;
+		}
+		return false;
+	}
+
+	function boatOptionsHTML() {
+		var meldungen = (currentRace && currentRace.meldungen) || [];
+		if (meldungen.length === 0) {
+			return '<div class="text-center opacity-60 py-8">Keine Meldungen in diesem Rennen</div>';
+		}
+		var html = '';
+		for (var i = 0; i < meldungen.length; i++) {
+			var m = meldungen[i];
+			var assigned = meldungAssigned(m.uuid, editingSlotIndex);
+			var cur = editingSlotIndex >= 0 && slots[editingSlotIndex] && slots[editingSlotIndex].meldungUuid === m.uuid;
+			var started = currentRace._started && !!currentRace._started[m.uuid];
+			var disabled = (assigned || started) && !cur ? ' disabled' : '';
+			var cls = cur ? 'btn btn-block justify-start btn-primary' : 'btn btn-block justify-start';
+			var verein = '';
+			if (m.verein) verein = m.verein.kuerzel || m.verein.name || '';
+			var parts = [];
+			if (m.abteilung > 0) parts.push('Abt ' + m.abteilung);
+			if (m.bahn > 0) parts.push('Bahn ' + m.bahn);
+			var extra = parts.join(' \u00b7 ');
+			var title = m.teilnehmer_str || verein || 'keine Teilnehmer';
+			var badge = cur
+				? '<span class="text-success ml-1">\u2713</span>'
+				: (started ? '<span class="badge badge-ghost badge-sm ml-auto opacity-60">gestartet</span>' : '');
+			html += '<button class="' + cls + '" data-boat-pick="' + i + '"' + disabled + '>' +
+				'<span class="font-mono font-bold">' + (m.start_nummer || '?') + '</span>' +
+				'<span class="flex-1 text-left truncate min-w-0">' + title + '</span>' +
+				(extra ? '<span class="badge badge-ghost badge-sm ml-auto">' + extra + '</span>' : '') +
+				badge +
+				'</button>';
+		}
+		return html;
+	}
+
+	function pendingRows(pending) {
+		if (pending.length === 0) {
+			return '<tr><td colspan="5" class="text-center opacity-60 py-8">Noch keine Starts erfasst</td></tr>';
+		}
+		var rows = '';
+		for (var i = 0; i < pending.length; i++) {
+			var e = pending[pending.length - 1 - i];
+			var key = e.clientId + ':' + e.seq;
+			var synced = e.startIds && e.startIds.length > 0;
+			var nrs = (e.startNummern || []).join(', ');
+			var status = synced
+				? '<span class="badge badge-success badge-sm">synchronisiert</span>'
+				: '<span class="badge badge-warning badge-sm">wird synchronisiert...</span>';
+			rows += '<tr>' +
+				'<td class="font-mono text-lg font-bold opacity-50">' + (i + 1) + '</td>' +
+				'<td class="font-mono text-xl font-bold">' + ZeitnahmeShared.formatTime(e.timeClient) + '</td>' +
+				'<td class="font-mono">' + (e.rennenNummer || '') + '</td>' +
+				'<td class="font-mono">' + nrs + '</td>' +
+				'<td>' + status + ' ' +
+				'<button class="btn btn-sm btn-ghost" data-remove-start="' + key + '" title="L\u00f6schen">\u00d7</button>' +
+				'</td>' +
+				'</tr>';
+		}
+		return rows;
+	}
+
+	function render(pending) {
+		var app = document.getElementById('start-app');
+		if (!app) return;
+
+		var unsynced = window.__wasm_getUnsyncedStartCount ? window.__wasm_getUnsyncedStartCount() : 0;
+		var minusDisabled = slots.length > 1 ? '' : ' disabled';
+		var plusDisabled = slots.length >= maxLanesFor(currentRace) ? ' disabled' : '';
+
+		app.innerHTML =
+			'<div class="flex flex-col gap-4">' +
+			'<div class="flex items-center justify-between">' +
+			'<h2 class="text-xl font-bold">Startgericht</h2>' +
+			'<span id="ws-badge-container">' + ZeitnahmeShared.getWSBadgeHTML() + '</span>' +
+			'</div>' +
+			(unsynced > 0 ? '<div class="alert alert-warning">' + unsynced + ' nicht synchronisierte Starts (offline)</div>' : '') +
+			'<div class="flex flex-col sm:flex-row gap-4 items-stretch">' +
+			'<div class="flex-1">' + raceCardHTML() + '</div>' +
+			'<div class="flex gap-2 items-center">' +
+			'<button id="start-time-btn" class="btn btn-primary btn-lg text-3xl h-24 flex-1">START</button>' +
+			'<button id="airhorn-test-btn" class="btn btn-ghost btn-lg text-xl h-24" title="Airhorn testen">Horn</button>' +
+			'</div>' +
+			'</div>' +
+			'<div class="flex items-center justify-between mt-2">' +
+			'<h3 class="text-lg font-bold">Teilnehmer</h3>' +
+			'<div class="flex gap-2">' +
+			'<button id="minus-btn" class="btn btn-sm btn-ghost" title="Letzten Platz entfernen"' + minusDisabled + '>\u2212</button>' +
+			'<button id="plus-btn" class="btn btn-sm btn-ghost" title="Platz hinzuf\u00fcgen"' + plusDisabled + '>+</button>' +
+			'</div>' +
+			'</div>' +
+			'<div id="teilnehmer-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">' + slotsHTML() + '</div>' +
+			'<div class="overflow-x-auto">' +
+			'<table class="table">' +
+			'<thead><tr><th>#</th><th>Zeit</th><th>Rennen</th><th>Startnummern</th><th>Status</th></tr></thead>' +
+			'<tbody>' + pendingRows(pending) + '</tbody>' +
+			'</table>' +
+			'</div>' +
+			'<dialog id="race-select-dialog" class="modal">' +
+			'<div class="modal-box w-full max-w-2xl">' +
+			'<h3 class="font-bold text-lg mb-2">Rennen w\u00e4hlen</h3>' +
+			raceTabsHTML() +
+			'<div class="divider text-xs uppercase tracking-wide opacity-50">oder manuell</div>' +
+			'<div class="flex gap-2">' +
+			'<input type="text" id="race-manual-input" class="input input-bordered font-mono flex-1" placeholder="Rennennummer" autocomplete="off" />' +
+			'<button id="race-manual-add" class="btn btn-ghost">Hinzuf\u00fcgen</button>' +
+			'</div>' +
+			'<div class="modal-action">' +
+			'<button id="race-select-close" class="btn">Schlie\u00dfen</button>' +
+			'</div>' +
+			'<form method="dialog" class="modal-backdrop"><button>close</button></form>' +
+			'</dialog>' +
+			'<dialog id="boat-select-dialog" class="modal">' +
+			'<div class="modal-box w-full max-w-2xl">' +
+			'<h3 class="font-bold text-lg mb-1">Boot w\u00e4hlen</h3>' +
+			(currentRace ? '<p class="opacity-60 text-sm mb-2">' + currentRace.nummer + ' - ' + currentRace.bezeichnung_lang + '</p>' : '') +
+			'<div class="max-h-[45vh] overflow-y-auto flex flex-col gap-1 py-1">' + boatOptionsHTML() + '</div>' +
+			'<div class="divider text-xs uppercase tracking-wide opacity-50">Manuell</div>' +
+			'<div class="flex gap-2">' +
+			'<input type="text" id="boat-manual-input" class="input input-bordered font-mono flex-1" placeholder="Startnummer" autocomplete="off" />' +
+			'<button id="boat-manual-add" class="btn btn-ghost">Hinzuf\u00fcgen</button>' +
+			'</div>' +
+			'<div class="modal-action">' +
+			'<button id="boat-select-close" class="btn">Schlie\u00dfen</button>' +
+			'</div>' +
+			'<form method="dialog" class="modal-backdrop"><button>close</button></form>' +
+			'</dialog>' +
+			'</div>';
+
+		document.getElementById('race-card').addEventListener('click', openRaceSelect);
+		document.getElementById('start-time-btn').addEventListener('click', recordStart);
+		document.getElementById('airhorn-test-btn').addEventListener('click', function() { ZeitnahmeShared.playAirHorn(); });
+		document.getElementById('plus-btn').addEventListener('click', addSlot);
+		document.getElementById('minus-btn').addEventListener('click', removeSlot);
+		document.getElementById('race-select-close').addEventListener('click', closeRaceSelect);
+		document.getElementById('race-manual-add').addEventListener('click', addManualRace);
+		var raceManualInput = document.getElementById('race-manual-input');
+		raceManualInput.addEventListener('keydown', function(ev) {
+			if (ev.key === 'Enter') {
+				ev.preventDefault();
+				addManualRace();
+			}
+		});
+
+		app.querySelectorAll('[data-select-race]').forEach(function(btn) {
+			btn.addEventListener('click', function() {
+				selectRace(parseInt(this.getAttribute('data-select-race'), 10));
+			});
+		});
+
+		app.querySelectorAll('[data-slot]').forEach(function(card) {
+			card.addEventListener('click', function() {
+				openBoatSelect(parseInt(this.getAttribute('data-slot'), 10));
+			});
+		});
+
+		app.querySelectorAll('[data-boat-pick]').forEach(function(btn) {
+			btn.addEventListener('click', function() {
+				pickBoat(parseInt(this.getAttribute('data-boat-pick'), 10));
+			});
+		});
+
+		document.getElementById('boat-manual-add').addEventListener('click', addManualBoat);
+		document.getElementById('boat-select-close').addEventListener('click', closeBoatSelect);
+		var boatManualInput = document.getElementById('boat-manual-input');
+		boatManualInput.addEventListener('keydown', function(ev) {
+			if (ev.key === 'Enter') {
+				ev.preventDefault();
+				addManualBoat();
+			}
+		});
+
+		app.querySelectorAll('[data-remove-start]').forEach(function(btn) {
+			btn.addEventListener('click', function() {
+				removePendingStart(this.getAttribute('data-remove-start'));
+			});
+		});
+	}
+
+	function openRaceSelect() {
+		var dialogEl = document.getElementById('race-select-dialog');
+		if (dialogEl && !dialogEl.open) dialogEl.showModal();
+	}
+
+	function closeRaceSelect() {
+		var dialogEl = document.getElementById('race-select-dialog');
+		if (dialogEl) dialogEl.close();
+	}
+
+	function selectRace(index) {
+		var r = races[index];
+		if (!r) return;
+		if (!r._started) r._started = {};
+		currentRace = r;
+		slots = buildSlots(r);
+		closeRaceSelect();
+		renderCurrent();
+	}
+
+	function maxLanesFor(r) {
+		if (r && typeof r.max_lanes === 'number' && r.max_lanes > 0) return r.max_lanes;
+		return 99999;
+	}
+
+	function buildSlots(r) {
+		var list = [];
+		var meldungen = r.meldungen || [];
+		var maxLanes = maxLanesFor(r);
+		var taken = 0;
+		for (var i = 0; i < meldungen.length && taken < maxLanes; i++) {
+			var m = meldungen[i];
+			if (r._started && r._started[m.uuid]) continue;
+			list.push(slotFromMeldung(m));
+			taken++;
+		}
+		return list;
+	}
+
+	function addManualRace() {
+		var input = document.getElementById('race-manual-input');
+		var nr = input ? input.value.trim() : '';
+		if (!nr) {
+			ZeitnahmeShared.showToast('Bitte eine Rennennummer eingeben', 'alert-warning');
+			if (input) input.focus();
+			return;
+		}
+		currentRace = {
+			nummer: nr,
+			bezeichnung_lang: 'Manuell',
+			wettkampf: null,
+			num_meldungen: 0,
+			meldungen: [],
+			_started: {}
+		};
+		currentRace.max_lanes = 99999;
+		slots = buildSlots(currentRace);
+		closeRaceSelect();
+		if (input) input.value = '';
+		renderCurrent();
+	}
+
+	function slotFromMeldung(m) {
+		var kuerzel = '';
+		var vereinName = '';
+		if (m.verein) {
+			kuerzel = m.verein.kuerzel || '';
+			vereinName = m.verein.name || '';
+		}
+		return {
+			startNummer: m.start_nummer ? String(m.start_nummer) : '',
+			meldungUuid: m.uuid || null,
+			vereinKuerzel: kuerzel,
+			vereinName: vereinName,
+			teilnehmerStr: m.teilnehmer_str || '',
+			abteilung: m.abteilung || 0,
+			bahn: m.bahn || 0,
+			isManual: false,
+			isEmpty: false
+		};
+	}
+
+	function openBoatSelect(i) {
+		if (!currentRace || i < 0 || i >= slots.length) return;
+		editingSlotIndex = i;
+		var dialogEl = document.getElementById('boat-select-dialog');
+		if (dialogEl && !dialogEl.open) dialogEl.showModal();
+	}
+
+	function closeBoatSelect() {
+		editingSlotIndex = -1;
+		var dialogEl = document.getElementById('boat-select-dialog');
+		if (dialogEl) dialogEl.close();
+	}
+
+	function pickBoat(meldungIndex) {
+		if (editingSlotIndex < 0) return;
+		var meldungen = (currentRace && currentRace.meldungen) || [];
+		var m = meldungen[meldungIndex];
+		if (!m) return;
+		if (meldungAssigned(m.uuid, editingSlotIndex)) return;
+		if (currentRace._started && currentRace._started[m.uuid]) return;
+		slots[editingSlotIndex] = slotFromMeldung(m);
+		closeBoatSelect();
+		renderCurrent();
+	}
+
+	function addManualBoat() {
+		if (editingSlotIndex < 0) return;
+		var input = document.getElementById('boat-manual-input');
+		var nr = input ? input.value.trim() : '';
+		if (!nr) {
+			ZeitnahmeShared.showToast('Bitte eine Startnummer eingeben', 'alert-warning');
+			if (input) input.focus();
+			return;
+		}
+		slots[editingSlotIndex] = {
+			startNummer: nr,
+			meldungUuid: null,
+			vereinKuerzel: '',
+			vereinName: '',
+			teilnehmerStr: '',
+			abteilung: 0,
+			bahn: 0,
+			isManual: true,
+			isEmpty: false
+		};
+		closeBoatSelect();
+		renderCurrent();
+	}
+
+	function addSlot() {
+		if (!currentRace) {
+			ZeitnahmeShared.showToast('Bitte zuerst ein Rennen w\u00e4hlen', 'alert-warning');
+			return;
+		}
+		var maxLanes = maxLanesFor(currentRace);
+		if (slots.length >= maxLanes) {
+			ZeitnahmeShared.showToast('Maximal ' + maxLanes + ' Boot(e) pro Start', 'alert-warning');
+			return;
+		}
+		slots.push({
+			startNummer: '',
+			meldungUuid: null,
+			vereinKuerzel: '',
+			vereinName: '',
+			teilnehmerStr: '',
+			abteilung: 0,
+			bahn: 0,
+			isManual: false,
+			isEmpty: true
+		});
+		renderCurrent();
+		openBoatSelect(slots.length - 1);
+	}
+
+	function removeSlot() {
+		if (slots.length <= 1) return;
+		slots.pop();
+		renderCurrent();
+	}
+
+	function recordStart() {
+		if (!wasmReady) {
+			ZeitnahmeShared.showToast('WASM wird noch geladen\u2026', 'alert-info');
+			return;
+		}
+		if (!currentRace) {
+			ZeitnahmeShared.showToast('Bitte zuerst ein Rennen w\u00e4hlen', 'alert-warning');
+			return;
+		}
+		var nrs = [];
+		var missing = 0;
+		for (var i = 0; i < slots.length; i++) {
+			var s = slots[i];
+			if (s.isEmpty) continue;
+			var nr = (s.startNummer || '').trim();
+			if (!nr) {
+				missing++;
+				continue;
+			}
+			nrs.push(nr);
+		}
+		if (nrs.length === 0) {
+			ZeitnahmeShared.showToast('Keine Teilnehmer mit Startnummer ausgew\u00e4hlt', 'alert-warning');
+			return;
+		}
+		var ok = false;
+		try {
+			ok = window.__wasm_recordStart(currentRace.nummer, JSON.stringify(nrs), new Date().toISOString()) === true;
+		} catch (e) {
+			ok = false;
+		}
+		if (!ok) {
+			ZeitnahmeShared.showToast('Start konnte nicht erfasst werden \u2014 bitte erneut versuchen', 'alert-error');
+			return;
+		}
+		ZeitnahmeShared.playAirHorn();
+		if (!currentRace._started) currentRace._started = {};
+		for (var i = 0; i < slots.length; i++) {
+			var s = slots[i];
+			if (s.isEmpty || !s.meldungUuid) continue;
+			currentRace._started[s.meldungUuid] = true;
+		}
+		var meldungen = currentRace.meldungen || [];
+		var remaining = 0;
+		for (var k = 0; k < meldungen.length; k++) {
+			if (!currentRace._started[meldungen[k].uuid]) remaining++;
+		}
+		var msg = 'Start erfasst: ' + nrs.length + ' Boot(e)';
+		if (missing > 0) msg += ' (' + missing + ' ohne Startnummer \u00fcbersprungen)';
+		if (remaining > 0) {
+			slots = buildSlots(currentRace);
+			renderCurrent();
+			msg += ' \u2014 ' + remaining + ' von ' + meldungen.length + ' Meldungen \u00fcbrig';
+		} else {
+			for (var j = 0; j < races.length; j++) {
+				if (races[j] === currentRace) {
+					races.splice(j, 1);
+					break;
+				}
+			}
+			currentRace = null;
+			slots = [];
+			renderCurrent();
+			if (meldungen.length > 0) msg += ' \u2014 Rennen vollst\u00e4ndig gestartet';
+		}
+		ZeitnahmeShared.showToast(msg, 'alert-success');
+	}
+
+	function removePendingStart(key) {
+		var parts = key.split(':');
+		window.__wasm_removePendingStart(parts[0], parseInt(parts[1], 10));
+	}
+
+	function startApp() {
+		if (!window.__wasm_recordStart) {
+			setTimeout(startApp, 100);
+			return;
+		}
+		wasmReady = true;
+		window.__wasm_onStateChange(renderCurrent);
+		if (window.__wasm_onWSChange) {
+			window.__wasm_onWSChange(function() { ZeitnahmeShared.updateWSBadge('ws-badge-container'); });
+		}
+		renderCurrent();
+	}
+
+	if (window.__wasm_initialized) {
+		startApp();
+	} else {
+		ZeitnahmeShared.loadWasm(startApp, 'start-app');
+	}
+}
+
+templ Start(rennen []crud.Rennen) {
+	<script src="/assets/js/wasm_exec.js"></script>
+	<script src="/assets/js/zeitnahme_shared.js"></script>
+	@templ.JSONScript("start-races-data", rennen)
+	@ui_components.InternalPageDivCol() {
+		<div id="start-app" class="min-h-[60vh] flex items-center justify-center">
+			<span class="loading loading-spinner loading-lg"></span>
+		</div>
+		@zeitnahmeStart()
+	}
+}

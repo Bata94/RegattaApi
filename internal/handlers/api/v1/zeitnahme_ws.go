@@ -34,6 +34,15 @@ type submitFinishPayload struct {
 	Seq             int       `json:"seq"`
 }
 
+type submitStartPayload struct {
+	RennenNummer    string    `json:"rennenNummer"`
+	StartNummern    []string  `json:"startNummern"`
+	TimeClient      time.Time `json:"timeClient"`
+	MeasuredLatency int       `json:"measuredLatency"`
+	ClientID        string    `json:"clientId"`
+	Seq             int       `json:"seq"`
+}
+
 type assignFinishPayload struct {
 	ClientID    string `json:"clientId"`
 	Seq         int    `json:"seq"`
@@ -128,6 +137,8 @@ func readPump(client *handlers.Client) {
 			handleRecordFinish(client, msg.Data)
 		case "assign_finish":
 			handleAssignFinish(client, msg.Data)
+		case "record_start":
+			handleRecordStart(client, msg.Data)
 		case "sync_batch":
 			handleSyncBatch(client, msg.Data)
 		case "ping":
@@ -196,6 +207,54 @@ func handleRecordFinish(client *handlers.Client, raw json.RawMessage) {
 	default:
 		slog.Warn("WS finish_recorded send buffer full")
 	}
+}
+
+func handleRecordStart(client *handlers.Client, raw json.RawMessage) {
+	var p submitStartPayload
+	if err := json.Unmarshal(raw, &p); err != nil {
+		slog.Error("WS record_start unmarshal error", "err", err)
+		return
+	}
+	if len(p.StartNummern) == 0 {
+		slog.Warn("WS record_start: no start numbers provided")
+		return
+	}
+
+	var rennNr *string
+	if p.RennenNummer != "" {
+		rennNr = &p.RennenNummer
+	}
+
+	ctx := context.TODO()
+	starts, err := crud.CreateZeitnahmeStart(ctx, rennNr, p.StartNummern, p.TimeClient, p.MeasuredLatency)
+	if err != nil {
+		slog.Error("CreateZeitnahmeStart failed", "err", err)
+		return
+	}
+
+	msg, err := json.Marshal(map[string]any{
+		"type": "start_recorded",
+		"data": map[string]any{
+			"clientId": p.ClientID,
+			"seq":      p.Seq,
+			"starts":   starts,
+		},
+	})
+	if err != nil {
+		slog.Error("start_recorded marshal error", "err", err)
+		return
+	}
+
+	select {
+	case client.Send <- msg:
+	default:
+		slog.Warn("WS start_recorded send buffer full")
+	}
+
+	client.Hub.BroadcastJSON(map[string]any{
+		"type": "new_start",
+		"data": starts,
+	})
 }
 
 func handleAssignFinish(client *handlers.Client, raw json.RawMessage) {

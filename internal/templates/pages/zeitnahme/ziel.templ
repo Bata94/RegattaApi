@@ -5,54 +5,7 @@ import "github.com/bata94/RegattaApi/internal/templates/components"
 script zeitnahmeZiel() {
 	'use strict';
 
-	var airHorn = new Audio('/assets/sound/airHorn.mp3');
-	airHorn.preload = 'auto';
-
-	if (window.__wasm_initialized) {
-		wasmReady = true;
-		renderCurrent();
-		window.__wasm_onStateChange(renderCurrent);
-		if (window.__wasm_onWSChange) window.__wasm_onWSChange(updateWSBadge);
-		return;
-	}
-
 	var wasmReady = false;
-
-	function failApp(msg) {
-		var app = document.getElementById('ziel-app');
-		if (app) app.innerHTML = '<div class="alert alert-error">' + msg + '</div>';
-	}
-
-	function getWSBadgeHTML() {
-		if (window.__wasm_getWSConnected && window.__wasm_getWSConnected()) {
-			var latMs = window.__wasm_getLatencyMs ? window.__wasm_getLatencyMs() : -1;
-			var latText = '';
-			if (latMs > 0) { latText = ' (' + latMs + 'ms)'; }
-			else if (latMs === 0) { latText = ' (<1ms)'; }
-			return '<span id="ws-status" class="badge badge-success">Verbunden' + latText + '</span>';
-		}
-		var reconnecting = window.__wasm_isReconnecting ? window.__wasm_isReconnecting() : false;
-		if (reconnecting) {
-			return '<span id="ws-status" class="badge badge-error gap-2">Getrennt — Verbindung wird hergestellt...<span class="loading loading-spinner loading-xs"></span></span>';
-		}
-		return '<span id="ws-status" class="badge badge-error cursor-pointer">Getrennt — klicken zum Verbinden</span>';
-	}
-
-	function updateWSBadge() {
-		var container = document.getElementById('ws-badge-container');
-		if (!container) return;
-		container.innerHTML = getWSBadgeHTML();
-		var badge = document.getElementById('ws-status');
-		if (badge && (!window.__wasm_getWSConnected || !window.__wasm_getWSConnected())) {
-			badge.addEventListener('click', function() {
-				if (window.__wasm_forceReconnect) window.__wasm_forceReconnect();
-			});
-		}
-	}
-
-	function formatTime(iso) {
-		return new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-	}
 
 	function renderCurrent() {
 		var raw = window.__wasm_getPendingFinishes();
@@ -72,7 +25,7 @@ script zeitnahmeZiel() {
 			for (var i = 0; i < entries.length; i++) {
 				var e = entries[i];
 				var key = e.clientId + ':' + e.seq;
-				var time = formatTime(e.timeClient);
+				var time = ZeitnahmeShared.formatTime(e.timeClient);
 				var nr = i + 1;
 				var unmatched = !!e.unmatched;
 				var synced = e.zielId !== null && e.zielId !== undefined;
@@ -110,7 +63,7 @@ script zeitnahmeZiel() {
 			'<div class="flex flex-col gap-4">' +
 			'<div class="flex items-center justify-between">' +
 			'<h2 class="text-xl font-bold">Zielgericht</h2>' +
-			'<span id="ws-badge-container">' + getWSBadgeHTML() + '</span>' +
+			'<span id="ws-badge-container">' + ZeitnahmeShared.getWSBadgeHTML() + '</span>' +
 			'</div>' +
 			'<button id="record-time-btn" class="btn btn-primary btn-lg btn-block text-4xl h-28">ZIEL</button>' +
 			(unsynced > 0 ? '<div class="alert alert-warning">' + unsynced + ' nicht synchronisierte Zeitnahmen (offline)</div>' : '') +
@@ -148,20 +101,19 @@ script zeitnahmeZiel() {
 
 	function recordTime() {
 		if (!wasmReady) {
-			showToast('WASM wird noch geladen\u2026', 'alert-info');
+			ZeitnahmeShared.showToast('WASM wird noch geladen\u2026', 'alert-info');
 			return;
 		}
 		window.__wasm_recordFinish(new Date().toISOString());
-		airHorn.currentTime = 0;
-		airHorn.play().catch(function() {});
-		showToast('Zielzeit erfasst', 'alert-success');
+		ZeitnahmeShared.playAirHorn();
+		ZeitnahmeShared.showToast('Zielzeit erfasst', 'alert-success');
 		var first = document.querySelector('[data-nr-input]');
 		if (first) first.focus();
 	}
 
 	function assignStart(key) {
 		if (!wasmReady) {
-			showToast('WASM wird noch geladen\u2026', 'alert-info');
+			ZeitnahmeShared.showToast('WASM wird noch geladen\u2026', 'alert-info');
 			return;
 		}
 		var parts = key.split(':');
@@ -170,12 +122,12 @@ script zeitnahmeZiel() {
 		var inp = document.querySelector('[data-nr-input="' + key + '"]');
 		var nr = inp ? inp.value.trim() : '';
 		if (!nr) {
-			showToast('Bitte Startnummer eingeben', 'alert-warning');
+			ZeitnahmeShared.showToast('Bitte Startnummer eingeben', 'alert-warning');
 			if (inp) inp.focus();
 			return;
 		}
 		window.__wasm_assignFinish(clientId, seq, nr);
-		showToast('Zielzeit zugeordnet: ' + nr, 'alert-success');
+		ZeitnahmeShared.showToast('Zielzeit zugeordnet: ' + nr, 'alert-success');
 		var next = document.querySelector('[data-nr-input]');
 		if (next) next.focus();
 	}
@@ -185,52 +137,29 @@ script zeitnahmeZiel() {
 		window.__wasm_removePending(parts[0], parseInt(parts[1], 10));
 	}
 
-	function showToast(msg, cls) {
-		var container = document.getElementById('toast-container');
-		if (!container) return;
-		var t = document.createElement('div');
-		t.className = 'alert ' + (cls || 'alert-info') + ' shadow-lg';
-		t.textContent = msg;
-		container.appendChild(t);
-		setTimeout(function() { t.remove(); }, 4000);
-	}
-
 	function startApp() {
 		if (!window.__wasm_recordFinish) {
 			setTimeout(startApp, 100);
 			return;
 		}
 		wasmReady = true;
-		window.__wasm_initialized = true;
-
 		window.__wasm_onStateChange(renderCurrent);
-		if (window.__wasm_onWSChange) window.__wasm_onWSChange(updateWSBadge);
+		if (window.__wasm_onWSChange) {
+			window.__wasm_onWSChange(function() { ZeitnahmeShared.updateWSBadge('ws-badge-container'); });
+		}
 		renderCurrent();
 	}
 
-	function initWasm() {
-		if (!WebAssembly.instantiateStreaming) {
-			failApp('Dein Browser unterst\u00fctzt kein WebAssembly.');
-			return;
-		}
-
-		var go = new Go();
-		WebAssembly.instantiateStreaming(fetch('/public/wasm/zeitnahme.wasm'), go.importObject)
-			.then(function(result) {
-				go.run(result.instance);
-				startApp();
-			})
-			.catch(function(err) {
-				console.error('WASM load failed', err);
-				failApp('WASM konnte nicht geladen werden: ' + err.message);
-			});
+	if (window.__wasm_initialized) {
+		startApp();
+	} else {
+		ZeitnahmeShared.loadWasm(startApp, 'ziel-app');
 	}
-
-	initWasm();
 }
 
 templ Ziel() {
 	<script src="/assets/js/wasm_exec.js"></script>
+	<script src="/assets/js/zeitnahme_shared.js"></script>
 	@ui_components.InternalPageDivCol() {
 		<div id="ziel-app" class="min-h-[60vh] flex items-center justify-center">
 			<span class="loading loading-spinner loading-lg"></span>

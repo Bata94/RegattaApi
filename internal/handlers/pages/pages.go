@@ -60,6 +60,26 @@ func InternalZeitnahmeZiel(c *handler.Context) (templ.Component, error) {
 	return zeitnahme.Ziel(), nil
 }
 
+func InternalZeitnahmeStart(c *handler.Context) (templ.Component, error) {
+	rennen, err := crud.GetAllRennenWithAthlet(c.Request.Context(), crud.GetAllRennenParams{
+		GetMeldungen: true,
+		GetAthleten:  true,
+		ShowEmpty:    false,
+		ShowStarted:  false,
+	})
+	if err != nil {
+		return nil, handler.InternalError("Fehler beim Laden der Rennen")
+	}
+
+	for i := range rennen {
+		for j := range rennen[i].Meldungen {
+			rennen[i].Meldungen[j].Rennen = nil
+		}
+	}
+
+	return zeitnahme.Start(rennen), nil
+}
+
 func InternalStartlisten(c *handler.Context) (templ.Component, error) {
 	return startlisten.Startlisten(), nil
 }
