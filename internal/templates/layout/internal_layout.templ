@@ -12,15 +12,17 @@ templ internalLayoutBody(body templ.Component, sidebarCats []ui_components.Sideb
 		<input id="sidebar-drawer-desktop" type="checkbox" checked class="hidden peer" />
 
 		<!-- Desktop sidebar (lg+) -->
-		<aside class="hidden lg:flex flex-col w-0 shrink-0 overflow-hidden peer-checked:w-72 transition-all duration-300 bg-base-200 text-base-content border-r border-base-300">
-			<div class="w-72 shrink-0 h-screen">
+		<div id="desktop-sidebar-wrap" class="hidden lg:block shrink-0 relative" style="width: 18rem;">
+			<aside class="flex flex-col h-full bg-base-200 text-base-content border-r border-base-300 transition-all duration-300">
 				@ui_components.Sidebar(sidebarCats, userCaps, username)
-			</div>
-		</aside>
+			</aside>
+			<!-- Resize handle -->
+			<div id="resize-handle" class="resize-handle absolute top-0 bottom-0 right-0 w-1.5 cursor-col-resize bg-base-300 hover:bg-primary transition-colors z-10"></div>
+		</div>
 
 		<!-- Shared content area -->
 		<div class="flex-1 flex flex-col min-w-0 bg-base-100">
-			@ui_components.TopBar(pageTitle, "sidebar-drawer-mobile", "sidebar-drawer-desktop")
+			@ui_components.TopBar(pageTitle, string(username[0]), "sidebar-drawer-mobile", "sidebar-drawer-desktop")
 
 			<main id="main-content" class="flex-1 p-4 md:p-6 lg:p-8 overflow-auto">
 				@body
