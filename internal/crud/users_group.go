@@ -1,19 +1,24 @@
 package crud
 
 import (
+	"context"
 	"github.com/bata94/RegattaApi/internal/db"
-	"github.com/bata94/RegattaApi/internal/handlers/api"
+	apierr "github.com/bata94/RegattaApi/internal/errors"
 	"github.com/bata94/RegattaApi/internal/sqlc"
-	"github.com/oklog/ulid/v2"
+	"github.com/google/uuid"
 )
+
+type UsersGroup struct {
+	sqlc.UsersGroup
+}
 
 type UsersGroupWithUsers struct {
 	sqlc.UsersGroup
 	Users []ReturnUserMinimal
 }
 
-func GetAllUsersGroups() ([]sqlc.UsersGroup, error) {
-	ctx, cancel := getCtxWithTo()
+func GetAllUsersGroups(ctx context.Context) ([]sqlc.UsersGroup, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	ugLs, err := DB.Queries.GetAllUserGroup(ctx)
@@ -28,14 +33,14 @@ func GetAllUsersGroups() ([]sqlc.UsersGroup, error) {
 	return ugLs, nil
 }
 
-func GetUsersGroupsMinimal(ulid ulid.ULID) (sqlc.UsersGroup, error) {
-	ctx, cancel := getCtxWithTo()
+func GetUsersGroupsMinimal(ctx context.Context, id uuid.UUID) (sqlc.UsersGroup, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	ug, err := DB.Queries.GetUserGroupMinimal(ctx, ulid.String())
+	ug, err := DB.Queries.GetUserGroupMinimal(ctx, id)
 	if err != nil {
 		if isNoRowError(err) {
-			return sqlc.UsersGroup{}, &api.NOT_FOUND
+			return sqlc.UsersGroup{}, apierr.ErrNotFound
 		}
 		return sqlc.UsersGroup{}, err
 	}
@@ -43,14 +48,14 @@ func GetUsersGroupsMinimal(ulid ulid.ULID) (sqlc.UsersGroup, error) {
 	return ug, nil
 }
 
-func UGwUsersFromSQLC(q []sqlc.GetUserGroupRow, ulid ulid.ULID) (UsersGroupWithUsers, error) {
+func UGwUsersFromSQLC(ctx context.Context, q []sqlc.GetUserGroupRow, id uuid.UUID) (UsersGroupWithUsers, error) {
 	users := []ReturnUserMinimal{}
 	var (
 		ug  sqlc.UsersGroup
 		err error
 	)
 	if len(q) == 0 {
-		ug, err = GetUsersGroupsMinimal(ulid)
+		ug, err = GetUsersGroupsMinimal(ctx, id)
 		if err != nil {
 			return UsersGroupWithUsers{}, err
 		}
@@ -58,7 +63,7 @@ func UGwUsersFromSQLC(q []sqlc.GetUserGroupRow, ulid ulid.ULID) (UsersGroupWithU
 		ug = q[0].UsersGroup
 		for _, u := range q {
 			users = append(users, ReturnUserMinimal{
-				Ulid:     u.User.Ulid,
+				Uuid:     u.User.Uuid,
 				Username: u.User.Username,
 			})
 		}
@@ -70,34 +75,57 @@ func UGwUsersFromSQLC(q []sqlc.GetUserGroupRow, ulid ulid.ULID) (UsersGroupWithU
 	}, nil
 }
 
-func GetUsersGroup(ulid ulid.ULID) (UsersGroupWithUsers, error) {
-	ctx, cancel := getCtxWithTo()
+func GetUsersGroup(ctx context.Context, id uuid.UUID) (UsersGroupWithUsers, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	q, err := DB.Queries.GetUserGroup(ctx, ulid.String())
+	q, err := DB.Queries.GetUserGroup(ctx, id)
 	if err != nil {
 		if isNoRowError(err) {
-			return UsersGroupWithUsers{}, &api.NOT_FOUND
+			return UsersGroupWithUsers{}, apierr.ErrNotFound
 		}
 		return UsersGroupWithUsers{}, err
 	}
 
-	return UGwUsersFromSQLC(q, ulid)
+	return UGwUsersFromSQLC(ctx, q, id)
 }
 
-func GetUsersGroupByName(name string) (UsersGroupWithUsers, error) {
-	ctx, cancel := getCtxWithTo()
+func GetUsersGroupByName(ctx context.Context, name string) (UsersGroupWithUsers, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	ulidStr, err := DB.Queries.GetUserGroupUlidByName(ctx, name)
+	id, err := DB.Queries.GetUserGroupUuidByName(ctx, name)
 	if err != nil {
 		return UsersGroupWithUsers{}, err
 	}
 
-	ulid, err := ulid.Parse(ulidStr)
+	return GetUsersGroup(ctx, id)
+}
+
+func CreateUserGroup(ctx context.Context, ugParams sqlc.CreateUserGroupParams) (sqlc.UsersGroup, error) {
+	ctx, cancel := getCtx(ctx)
+	defer cancel()
+
+	ug, err := DB.Queries.CreateUserGroup(ctx, ugParams)
 	if err != nil {
-		return UsersGroupWithUsers{}, err
+		return sqlc.UsersGroup{}, err
 	}
 
-	return GetUsersGroup(ulid)
+	return ug, nil
+}
+
+func UpdateUserGroup(ctx context.Context, uuid uuid.UUID, uParams sqlc.UpdateUserGroupParams) error {
+	ctx, cancel := getCtx(ctx)
+	defer cancel()
+
+	err := DB.Queries.UpdateUserGroup(ctx, sqlc.UpdateUserGroupParams{
+		Uuid:         uuid,
+		Name:         uParams.Name,
+		Capabilities: uParams.Capabilities,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

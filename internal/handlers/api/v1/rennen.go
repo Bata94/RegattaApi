@@ -2,34 +2,32 @@ package api_v1
 
 import (
 	"github.com/bata94/RegattaApi/internal/crud"
-	"github.com/bata94/RegattaApi/internal/handlers/api"
+	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/bata94/RegattaApi/internal/sqlc"
-	"github.com/gofiber/fiber/v2"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
 
-// TODO: Implement queryParams
-func GetRennen(c *fiber.Ctx) error {
-	uuid, err := api.GetUuidFromCtx(c)
+func GetRennen(c *handler.Context) error {
+	uuid, err := c.GetUUID("uuid")
+	if err != nil {
+		return handler.BadRequest(err.Error())
+	}
+
+	r, err := crud.GetRennen(c.Request.Context(), uuid)
 	if err != nil {
 		return err
 	}
 
-	r, err := crud.GetRennen(*uuid)
-	if err != nil {
-		return err
-	}
-
-	return api.JSON(c, r)
+	return c.JSON(r)
 }
 
-func GetAllRennen(c *fiber.Ctx) error {
-	getMeld := api.GetQueryParamBoolFromCtx(c, "getMeld", false)
-	getAthleten := api.GetQueryParamBoolFromCtx(c, "getAthleten", false)
-	showEmpty := api.GetQueryParamBoolFromCtx(c, "showEmpty", true)
-	showStarted := api.GetQueryParamBoolFromCtx(c, "showStarted", true)
-	showWettkampfStr := c.Query("wettkampf", "")
+func GetAllRennen(c *handler.Context) error {
+	getMeld := c.Query("getMeld") == "true"
+	getAthleten := c.Query("getAthleten") == "true"
+	showEmpty := c.Query("showEmpty") != "false"
+	showStarted := c.Query("showStarted") != "false"
+	showWettkampfStr := c.Query("wettkampf")
 	showWettkampf := sqlc.NullWettkampf{}
 	if showWettkampfStr != "" {
 		caser := cases.Title(language.German)
@@ -41,9 +39,7 @@ func GetAllRennen(c *fiber.Ctx) error {
 	}
 
 	if getAthleten && !getMeld {
-		retErr := &api.BAD_REQUEST
-		retErr.Msg = "Query param getAthleten requires getMeldungen to be true"
-		return retErr
+		return handler.BadRequest("Query param getAthleten requires getMeldungen to be true")
 	}
 
 	searchParams := crud.GetAllRennenParams{
@@ -55,18 +51,18 @@ func GetAllRennen(c *fiber.Ctx) error {
 	}
 
 	if getAthleten {
-		retLs, err := crud.GetAllRennenWithAthlet(searchParams)
+		retLs, err := crud.GetAllRennenWithAthlet(c.Request.Context(), searchParams)
 		if err != nil {
 			return err
 		}
 
-		return api.JSON(c, retLs)
+		return c.JSON(retLs)
 	}
 
-	rLs, err := crud.GetAllRennen(searchParams)
+	rLs, err := crud.GetAllRennen(c.Request.Context(), searchParams)
 	if err != nil {
 		return err
 	}
 
-	return api.JSON(c, rLs)
+	return c.JSON(rLs)
 }

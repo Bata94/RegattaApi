@@ -1,0 +1,170 @@
+package zeitnahme
+
+import "github.com/bata94/RegattaApi/internal/templates/components"
+
+script zeitnahmeZiel() {
+	'use strict';
+
+	var wasmReady = false;
+
+	function renderCurrent() {
+		var raw = window.__wasm_getPendingFinishes();
+		try { render(JSON.parse(raw)); } catch (e) { console.error('render pendingFinishes', e); }
+	}
+
+	function render(entries) {
+		var app = document.getElementById('ziel-app');
+		if (!app) return;
+
+		var unsynced = window.__wasm_getUnsyncedCount ? window.__wasm_getUnsyncedCount() : 0;
+
+		var rows = '';
+		if (entries.length === 0) {
+			rows = '<tr><td colspan="3" class="text-center opacity-60 py-8">Noch keine Zielzeiten erfasst</td></tr>';
+		} else {
+			entries.reverse();
+			for (var i = 0; i < entries.length; i++) {
+				var e = entries[i];
+				var key = e.clientId + ':' + e.seq;
+				var time = ZeitnahmeShared.formatTime(e.timeClient);
+				var nr = i + 1;
+				var unmatched = !!e.unmatched;
+				var synced = e.zielId !== null && e.zielId !== undefined;
+				var hasNr = !!e.startNummer;
+
+				var cell;
+				if (hasNr && !unmatched) {
+					cell = '<div class="flex gap-2 items-center">' +
+						'<span class="font-mono text-lg font-bold">' + e.startNummer + '</span>' +
+						'<span class="badge badge-ghost badge-sm">wird verarbeitet...</span>' +
+						'<button class="btn btn-sm btn-ghost" data-remove="' + key + '" title="L\u00f6schen">\u00d7</button>' +
+						'</div>';
+				} else {
+					var inputCls = '';
+					var value = unmatched ? e.startNummer : '';
+					cell = '<div class="flex gap-2 items-center">' +
+						'<input type="text" class="input input-bordered input-sm font-mono' + inputCls + '" placeholder="Startnr" value="' + value + '" data-nr-input="' + key + '" autocomplete="off" />' +
+						'<button class="btn btn-sm btn-primary" data-assign="' + key + '">OK</button>' +
+						'<button class="btn btn-sm btn-ghost" data-remove="' + key + '" title="L\u00f6schen">\u00d7</button>' +
+						'</div>';
+				}
+				if (!synced) {
+					cell += '<div class="mt-1"><span class="badge badge-warning badge-sm">wird synchronisiert...</span></div>';
+				}
+
+				rows += '<tr>' +
+					'<td class="font-mono text-lg font-bold opacity-50">' + nr + '</td>' +
+					'<td class="font-mono text-xl font-bold">' + time + '</td>' +
+					'<td>' + cell + '</td>' +
+					'</tr>';
+			}
+		}
+
+		app.innerHTML =
+			'<div class="flex flex-col gap-4">' +
+			'<div class="flex items-center justify-between">' +
+			'<h2 class="text-xl font-bold">Zielgericht</h2>' +
+			'<span id="ws-badge-container">' + ZeitnahmeShared.getWSBadgeHTML() + '</span>' +
+			'</div>' +
+			'<button id="record-time-btn" class="btn btn-primary btn-lg btn-block text-4xl h-28">ZIEL</button>' +
+			(unsynced > 0 ? '<div class="alert alert-warning">' + unsynced + ' nicht synchronisierte Zeitnahmen (offline)</div>' : '') +
+			'<div class="overflow-x-auto">' +
+			'<table class="table">' +
+			'<thead><tr><th>#</th><th>Zeit</th><th>Startnummer</th></tr></thead>' +
+			'<tbody>' + rows + '</tbody>' +
+			'</table>' +
+			'</div>' +
+			'</div>';
+
+		document.getElementById('record-time-btn').addEventListener('click', recordTime);
+
+		app.querySelectorAll('[data-assign]').forEach(function(btn) {
+			btn.addEventListener('click', function() {
+				assignStart(this.getAttribute('data-assign'));
+			});
+		});
+
+		app.querySelectorAll('[data-nr-input]').forEach(function(inp) {
+			inp.addEventListener('keydown', function(e) {
+				if (e.key === 'Enter') {
+					e.preventDefault();
+					assignStart(this.getAttribute('data-nr-input'));
+				}
+			});
+		});
+
+		app.querySelectorAll('[data-remove]').forEach(function(btn) {
+			btn.addEventListener('click', function() {
+				removeEntry(this.getAttribute('data-remove'));
+			});
+		});
+	}
+
+	function recordTime() {
+		if (!wasmReady) {
+			ZeitnahmeShared.showToast('WASM wird noch geladen\u2026', 'alert-info');
+			return;
+		}
+		window.__wasm_recordFinish(new Date().toISOString());
+		ZeitnahmeShared.playAirHorn();
+		ZeitnahmeShared.showToast('Zielzeit erfasst', 'alert-success');
+		var first = document.querySelector('[data-nr-input]');
+		if (first) first.focus();
+	}
+
+	function assignStart(key) {
+		if (!wasmReady) {
+			ZeitnahmeShared.showToast('WASM wird noch geladen\u2026', 'alert-info');
+			return;
+		}
+		var parts = key.split(':');
+		var clientId = parts[0];
+		var seq = parts[1];
+		var inp = document.querySelector('[data-nr-input="' + key + '"]');
+		var nr = inp ? inp.value.trim() : '';
+		if (!nr) {
+			ZeitnahmeShared.showToast('Bitte Startnummer eingeben', 'alert-warning');
+			if (inp) inp.focus();
+			return;
+		}
+		window.__wasm_assignFinish(clientId, seq, nr);
+		ZeitnahmeShared.showToast('Zielzeit zugeordnet: ' + nr, 'alert-success');
+		var next = document.querySelector('[data-nr-input]');
+		if (next) next.focus();
+	}
+
+	function removeEntry(key) {
+		var parts = key.split(':');
+		window.__wasm_removePending(parts[0], parts[1]);
+	}
+
+	function startApp() {
+		if (!window.__wasm_recordFinish) {
+			setTimeout(startApp, 100);
+			return;
+		}
+		wasmReady = true;
+		window.__wasm_onStateChange(renderCurrent);
+		if (window.__wasm_onWSChange) {
+			window.__wasm_onWSChange(function() { ZeitnahmeShared.updateWSBadge('ws-badge-container'); });
+		}
+		renderCurrent();
+	}
+
+	if (window.ZeitnahmeShared) {
+		ZeitnahmeShared.bootApp(startApp, 'ziel-app');
+	} else {
+		(window.__zeitnahmeBootQueue = window.__zeitnahmeBootQueue || []).push({ fn: startApp, appId: 'ziel-app' });
+	}
+}
+
+templ Ziel() {
+	<script src="/assets/js/wasm_exec.js"></script>
+	<script src="/assets/js/zeitnahme_shared.js"></script>
+	@ui_components.InternalPageDivCol() {
+		<div id="ziel-app" class="min-h-[60vh] flex items-center justify-center">
+			<span class="loading loading-spinner loading-lg"></span>
+		</div>
+		@zeitnahmeZiel()
+	}
+}

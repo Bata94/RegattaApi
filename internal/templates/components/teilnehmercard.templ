@@ -1,0 +1,54 @@
+package ui_components
+
+import (
+  "github.com/bata94/RegattaApi/internal/crud"
+)
+
+templ TeilnehmerCard(a crud.Athlet, navOpt HXNavigationOptions) {
+  {{
+    cardClass := "card bg-base-100 shadow-md"
+    if navOpt.URL != "" {
+      cardClass += " hover:cursor-pointer"
+    }
+    navArguments := navOpt.Render()
+  }}
+  <div
+    class={cardClass}
+    {navArguments}
+  >
+    <div class="card-body">
+      <h5 class="card-title">{a.FullName()}</h5>
+      <div class="divider m-0 p-0"/>
+      <p
+        class="card-text"
+      >
+        Verein: {a.Verein.Name}<br/>
+        Geschlecht: {a.GeschlechtStr()}<br/>
+        Jahrgang: {a.Jahrgang}<br/>
+        Startberechtigung: {a.StartberechtigungStr()}<br/>
+        Gewicht: {a.GewichtStr()}<br/>
+      </p>
+      if a.ErstesRennen != nil {
+        <p
+          class="card-text"
+        >
+          Erster Start: {a.ErstesRennen.Tag.String()} {a.ErstesRennen.StartzeitStr()} Uhr<br/>
+          {a.ErstesRennen.Nummer} - {a.ErstesRennen.BezeichnungLang}<br/>
+        </p>
+      }
+    </div>
+  </div>
+}
+
+templ TeilnehmerCardList(athleten []crud.Athlet, navOptIn HXNavigationOptions) {
+  <div class="flex flex-col gap-4">
+    for _, a := range athleten {
+      {{
+        navOpt := navOptIn
+        navOpt.URL = navOptIn.URL + "/" + a.Uuid.String()
+      }}
+
+      @TeilnehmerCard(a, navOpt)
+    }
+  </div>
+}

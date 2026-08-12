@@ -24,6 +24,7 @@ internal/templates/**/*.txt
 internal/templates/**/*_templ.go
 drvFiles/
 files/*
+assets/css/output.css
 
 # Embedded Replicas (Turso/LibSQL)
 **/*.db
@@ -44,7 +45,11 @@ files/*
 .env
 .env.dev
 .env.prod
+.direnv/
+caddy/
 
 # Project build
 bin/
 **/*.fiber.gz
+public/
+RegattaApi

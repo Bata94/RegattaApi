@@ -1,29 +1,26 @@
 volumes:
-  api-dev-files:
-  postgres:
+  postgres-data:
+  postgres-config:
   pgadmin:
-  tailscale-state:
+  api-dev-files:
 
 services:
-  tailscale:
-    image: tailscale/tailscale:latest
-    hostname: docker-xps
-    environment:
-      - TS_AUTHKEY=tskey-auth-kwVs44FFW311CNTRL-RB2LaBrke2VFgtdCRGZR2V4jwf4ayPFUV
-      - TS_STATE_DIR=/var/lib/tailscale
+  caddy:
+    image: caddy:2.11-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "9090:9090"
     volumes:
-      - tailscale-state:/var/lib/tailscale
-      - /dev/net/tun:/dev/net/tun
-    cap_add:
-      - net_admin
-      - sys_module
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./caddy/config:/config
+      - ./caddy/data:/data
     restart: unless-stopped
 
-
   gotenberg:
-    image: gotenberg/gotenberg:8
-    ports:
-      - "3000:3000"
+    image: gotenberg/gotenberg:8.35
+    # ports:
+    #   - "3000:3000"
     command:
       - "gotenberg"
       - "--chromium-clear-cache=true"
@@ -31,18 +28,18 @@ services:
 
   db:
     platform: linux/amd64
-    build:
-      dockerfile: Dockerfile
-      context: ./
-      target: pg
+    image: postgres:18.4
+    # For Dev Migrations only!
     ports:
       - 5432:5432
     volumes:
-      - postgres:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql
+      - postgres-config:/etc/postgresql/postgresql.conf
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     environment:
-      PGUSER: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      PGUSER: ${DB_USER}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     command: ["postgres", "-c", "log_statement=all", "-c", "log_destination=stderr"] # For Dev only!
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready", "-d", "postgres" ]
@@ -54,17 +51,17 @@ services:
 
   pgadmin:
     platform: linux/amd64
-    image: dpage/pgadmin4:latest
+    image: dpage/pgadmin4:9.17
     depends_on:
       - db
-    ports:
-      # - "5431:53603"
-      - "5430:80"
+    # ports:
+    #   - "5430:80"
     volumes:
       - pgadmin:/var/lib/pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@sits.ruhr
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: ${PG_MAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PG_PW}
+      PGADMIN_CONFIG_CHECK_EMAIL_DELIVERABILITY: "False"
     restart: unless-stopped
 
   api-dev:
@@ -76,35 +73,46 @@ services:
     stdin_open: true
     volumes:
       - ./assets:/opt/app/assets
+      - ./cmd:/opt/app/cmd
       - ./docs:/opt/app/docs
       - ./internal:/opt/app/internal
       - ./sqlc:/opt/app/sqlc
       - api-dev-files:/opt/app/files
       - ./main.go:/opt/app/main.go
-    ports:
-      - 8081:8080
-    env_file: "dev.env"
-    depends_on:
-      - gotenberg
-      - db
-
-  api:
-    build:
-      dockerfile: Dockerfile
-      context: ./
-      target: prod
     # ports:
-    #   - 8080:8080
-    env_file: "prod.env"
-    network_mode: service:tailscale
-    deploy:
-      resources:
-        limits:
-          cpus: '4'
-          memory: 2048M
-    volumes:
-      - api-dev-files:/opt/app/files
+    #   - 8081:8080
+    #   - 8090:8090
+    env_file: ".env"
     depends_on:
-      - tailscale
-      - gotenberg
-      - db
+      gotenberg:
+        condition: service_started
+      caddy:
+        condition: service_started
+      db:
+        condition: service_healthy
+
+  # api:
+  #   build:
+  #     dockerfile: Dockerfile
+  #     context: ./
+  #     target: prod
+  #   develop:
+  #     watch:
+  #       - action: rebuild
+  #         path: ./internal # Watch this directory
+  #   env_file: ".env"
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '4'
+  #         memory: 2048M
+  #   ports:
+  #     - 8080:8080
+  #     - 8090:8090
+  #   volumes:
+  #     - api-dev-files:/opt/app/files
+  #   depends_on:
+  #     gotenberg:
+  #       condition: service_started
+  #     db:
+  #       condition: service_healthy

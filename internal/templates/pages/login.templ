@@ -1,0 +1,21 @@
+package ui_pages
+
+import ui_components "github.com/bata94/RegattaApi/internal/templates/components"
+
+templ Login(msg string, fieldErrors map[string]string) {
+	<div class="max-w-md mx-auto mt-8" id="login-container">
+		<div class="card bg-base-200 shadow-xl">
+			<div class="card-body">
+				<h2 class="card-title text-2xl mb-4 !mt-2 !pt-0">Anmelden</h2>
+				<form hx-post="/login" hx-target="#login-container" hx-swap="outerHTML">
+					@ui_components.LineInput("username", "Benutzername", "", "text", true, fieldErrors["username"])
+					@ui_components.LineInput("password", "Passwort", "", "password", true, fieldErrors["password"])
+
+					<div class="form-control mt-6 w-full card-actions">
+						<button type="submit" class="btn btn-primary mx-auto">Abschicken</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+}

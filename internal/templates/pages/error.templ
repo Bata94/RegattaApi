@@ -1,0 +1,8 @@
+package ui_pages
+
+import "github.com/bata94/RegattaApi/internal/templates/layout"
+import "github.com/bata94/RegattaApi/internal/templates/components"
+
+templ Error(code int, detailedMessage string) {
+  @ui_layouts.MinimalLayout(ui_components.ErrorBody(code, detailedMessage))
+}

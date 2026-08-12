@@ -1,0 +1,126 @@
+package ui_components
+
+import (
+  "github.com/google/uuid"
+	"github.com/bata94/RegattaApi/internal/crud"
+	"github.com/bata94/RegattaApi/internal/sqlc"
+)
+
+templ UserEdit(u crud.User, msg string, fieldErrors map[string]string) {
+  {{
+    var title, uuidStr string
+    isNew := u.Uuid == uuid.Nil
+    if isNew {
+      title = "Neuer Nutzer"
+      uuidStr = "new"
+    } else {
+      title = "Nutzer bearbeiten"
+      uuidStr = u.Uuid.String()
+    }
+
+    userGroups, errUserGroups := crud.GetAllUsersGroups(ctx)
+
+    dropDownOptions := make([]string, 0, len(userGroups))
+    dropDownValues := make([]string, 0, len(userGroups))
+    for _, ug := range userGroups {
+      dropDownOptions = append(dropDownOptions, ug.Name)
+      dropDownValues = append(dropDownValues, ug.Uuid.String())
+    }
+  }}
+  if errUserGroups != nil {
+    @ErrorBody(500, errUserGroups.Error())
+    {{return}}
+  }
+
+  <div id="user_edit_dialog" class="w-full flex flex-col">
+    @PageHeader(title)
+
+    <form
+      class="w-full mt-4"
+      hx-post={"/internal/admin/user/" + uuidStr}
+      hx-target="#user_edit_dialog"
+      hx-on::response="if (event.detail.xhr.getResponseHeader('HX-Redirect')) { table_dialog.close(); htmx.ajax('GET', '/internal/admin/users', {target: 'main', swap: 'innerHTML'}); }"
+    >
+      if msg != "" {
+        <div class="alert alert-error mb-4">
+          <span>{msg}</span>
+        </div>
+      }
+
+      <div class="flex flex-col gap-4">
+        @LineInput("username", "Benutzername", u.Username, "text", true, fieldErrors["username"])
+
+        @LineInput("password", "Passwort", "", "password", isNew, fieldErrors["password"])
+
+        @Toggle("is_not_active", "Nutzer gesperrt?", !isNew && !u.IsActive, false, fieldErrors["is_not_active"])
+
+        @DropDown("user_group_uuid", "Nutzergruppe", dropDownOptions, dropDownValues, u.UserGroup.Uuid.String(), true, fieldErrors["user_group_uuid"], "Nutzergruppe")
+      </div>
+      @SubmitButton("Speichern", Success)
+    </form>
+  </div>
+}
+
+type capConfig struct {
+  Name  string
+  Label string
+  Value sqlc.UserCapability
+}
+
+var capabilityConfigs = []capConfig{
+  {"allowed_admin", "Admin", sqlc.UserCapabilityAllowedAdmin},
+  {"allowed_zeitnahme", "Zeitnahme", sqlc.UserCapabilityAllowedZeitnahme},
+  {"allowed_startlisten", "Startlisten", sqlc.UserCapabilityAllowedStartlisten},
+  {"allowed_regattabuero", "Regattabüro", sqlc.UserCapabilityAllowedRegattabuero},
+  {"allowed_regattaleitung", "Regattaleitung", sqlc.UserCapabilityAllowedRegattaleitung},
+}
+
+templ UserGroupEdit(ug sqlc.UsersGroup, msg string, fieldErrors map[string]string) {
+  {{
+    var title, uuidStr string
+    if ug.Uuid != uuid.Nil {
+      title = "Nutzergruppe bearbeiten"
+      uuidStr = ug.Uuid.String()
+    } else {
+      title = "Neue Nutzergruppe"
+      uuidStr = "new"
+    }
+  }}
+
+  <div id="user_edit_dialog" class="w-full flex flex-col">
+    @PageHeader(title)
+
+    <form
+      class="w-full mt-4"
+      hx-post={"/internal/admin/usergroups/" + uuidStr}
+      hx-target="#user_edit_dialog"
+      hx-on::response="if (event.detail.xhr.getResponseHeader('HX-Redirect')) { table_dialog.close(); htmx.ajax('GET', '/internal/admin/users', {target: 'main', swap: 'innerHTML'}); }"
+    >
+      if msg != "" {
+        <div class="alert alert-error mb-4">
+          <span>{msg}</span>
+        </div>
+      }
+      <div class="flex flex-col gap-4">
+        @LineInput("name", "Gruppenname", ug.Name, "text", true, fieldErrors["name"])
+
+        for _, cfg := range capabilityConfigs {
+          {{
+            checked := uuidStr != "new"
+            if checked {
+              checked = false
+              for _, c := range ug.Capabilities {
+                if c == cfg.Value {
+                  checked = true
+                  break
+                }
+              }
+            }
+          }}
+          @Toggle(cfg.Name, cfg.Label + " Berechtigung?", checked, false, fieldErrors[cfg.Name])
+        }
+      </div>
+      @SubmitButton("Speichern", Success)
+    </form>
+  </div>
+}

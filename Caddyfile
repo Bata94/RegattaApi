@@ -1,0 +1,32 @@
+dev.localhost {
+    @ws path /ws/*
+    reverse_proxy @ws api-dev:8080
+
+    reverse_proxy api-dev:8090 {
+        # Force the browser to never cache by overwriting headers
+        header_up Cache-Control "no-cache, no-store, must-revalidate"
+        header_up Pragma "no-cache"
+        header_up Expires "0"
+
+        # Alternatively, manipulate the response headers sent back to the browser
+        header_down Cache-Control "no-cache, no-store, must-revalidate"
+    }
+}
+
+stag.localhost {
+    reverse_proxy api-dev:8080
+    encode gzip
+}
+
+localhost, mrg.sievers.ruhr, anakin.headscale.sievers.ruhr {
+    reverse_proxy api:8080
+    encode gzip
+}
+
+pg.localhost {
+    reverse_proxy pgadmin:80
+}
+
+:9090 {
+    metrics /metrics
+}

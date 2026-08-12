@@ -1,0 +1,70 @@
+package ui_components
+
+type SidebarEntry struct {
+	Name         string
+	URL          string
+	RequiredCaps []string
+}
+
+type SidebarCategory struct {
+	Name         string
+	URL          string
+	RequiredCaps []string
+	Entries      []SidebarEntry
+	IsActive     bool
+}
+
+templ sidebarCategory(cat SidebarCategory, userCaps []string) {
+	if !hasCapability(userCaps, cat.RequiredCaps) {
+		{{return}}
+	}
+	<li class="w-full">
+		<details if cat.IsActive { open } class="w-full">
+			<summary
+				class="font-semibold text-sm cursor-pointer"
+				hx-get={cat.URL}
+				hx-target="#main-content"
+				hx-push-url="true"
+			>
+				{cat.Name}
+			</summary>
+			<ul class="ml-2 w-full">
+				for _, entry := range cat.Entries {
+					@sidebarEntry(entry, userCaps)
+				}
+			</ul>
+		</details>
+	</li>
+}
+
+templ sidebarEntry(entry SidebarEntry, userCaps []string) {
+	if !hasCapability(userCaps, entry.RequiredCaps) {
+		{{return}}
+	}
+	<li class="w-full">
+		<a
+			class="sidebar-link text-sm w-full no-underline"
+			hx-get={entry.URL}
+			hx-target="#main-content"
+			hx-push-url="true"
+			href={entry.URL}
+		>
+			{entry.Name}
+		</a>
+	</li>
+}
+
+templ Sidebar(cats []SidebarCategory, userCaps []string, username string) {
+	<div class="internal-sidebar flex flex-col h-full w-full">
+		<div class="flex items-center gap-2 px-3 py-3 border-b border-base-300 h-14">
+			/* <img src="/assets/icons/mrg_logo.png" alt="MRG-Logo" class="w-8 h-auto shrink-0" /> */
+			<span class="text-sm font-bold text-mrgblau truncate">MRG Regatta Intern</span>
+		</div>
+
+		<ul class="menu p-2 gap-1 flex-1 overflow-y-auto overflow-x-hidden flex-nowrap min-h-0 w-full">
+			for _, cat := range cats {
+				@sidebarCategory(cat, userCaps)
+			}
+		</ul>
+	</div>
+}

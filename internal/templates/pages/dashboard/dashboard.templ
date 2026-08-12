@@ -1,0 +1,24 @@
+package dashboard
+
+import "github.com/bata94/RegattaApi/internal/templates/components"
+
+templ Dashboard(userCaps []string) {
+  @ui_components.InternalPageDivCol() {
+    <div class="w-auto h-auto m-auto text-center">
+			<img src="/assets/icons/mrg_logo.png" alt="MRG-Logo" class="w-42 h-auto shrink-0 mx-auto" />
+
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold !m-0 text-mrgblau">Willkommen im internen Bereich der MRG Regatta</h1>
+      </div>
+
+      <div class="divider divider-primary h-0 p-0 m-0"/>
+
+      <div class="my-8">
+        <p class="">
+          Wähle über die Seitenleiste eine Kategorie aus, um die jeweiligen Funktionen zu nutzen.<br/>
+          Klicke das "MRG Logo" um die Seitenleiste umzuschalten.
+        </p>
+      </div>
+  </div>
+  }
+}

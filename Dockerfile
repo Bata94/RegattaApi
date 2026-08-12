@@ -1,91 +1,62 @@
-FROM golang:1.23 AS base
+# Stage 1: Toolchain — install compilers, code generators, and Node.js
+# Almost never changes -> maximale Cache-Nutzung
+FROM golang:1.26-trixie AS toolchain
 
-# RUN apk add --no-cache git
-# RUN apk add --no-cache ca-certificates
-
-# add a user here because addgroup and adduser are not available in scratch
-# RUN addgroup -S myapp && adduser -S -u 10000 -g myapp myapp
-
-WORKDIR /opt/app
-
-RUN go install github.com/a-h/templ/cmd/templ@latest
-RUN go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
-RUN go install github.com/pressly/goose/v3/cmd/goose@latest
-
-COPY ./go.mod ./go.sum ./
-RUN go mod download
-
-COPY sqlc.yml .
-
-RUN go mod tidy
-
-COPY package.json .
-COPY tailwind.config.js .
+RUN go install github.com/a-h/templ/cmd/templ@latest && \
+    go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest && \
+    go install github.com/pressly/goose/v3/cmd/goose@latest && \
+    go install github.com/air-verse/air@latest
 
 RUN apt-get update && apt-get install -y nodejs npm
-RUN npm install
 
-# RUN apk add --no-cache make
-COPY Makefile .
-
-FROM base AS prod-builder
+# Stage 2: Dependencies — Go modules + npm packages
+# Nur invalidated wenn go.mod/go.sum/package.json/package-lock.json sich aendern
+FROM toolchain AS deps
 
 WORKDIR /opt/app
 
-RUN apt-get update && apt-get install -y dumb-init
+COPY go.mod go.sum package.json package-lock.json ./
 
-COPY --from=base /opt/app/node_modules /opt/app/node_modules
-COPY .air.toml .
-COPY ./assets ./assets
-COPY ./docs ./docs
-COPY ./internal ./internal
-COPY ./sqlc ./sqlc
-COPY ./main.go ./main.go
-RUN rm -rf ./tmp
-RUN go mod tidy
+# go mod tidy NICHT hier — wuerde Layer aufblaehen und Cache zerstoeren.
+# go build holt fehlende Module automatisch.
+RUN go mod download && npm ci
 
-RUN make full-build
+# Stage 3: Production Build — kompiliert Binary + generiert alle Assets
+FROM deps AS build
 
-FROM gcr.io/distroless/base-debian11 AS prod
+RUN apt-get update && apt-get install -y just dumb-init
+
+COPY . .
+
+RUN mkdir -p /opt/app/files /opt/app/public
+
+# full-build: templ -> tailwind -> sqlc -> wasm -> CGO_ENABLED=1 go build
+RUN just full-build
+
+# Stage 4: Production Runtime — minimiertes Distroless-Image
+FROM gcr.io/distroless/base-debian13 AS prod
 
 EXPOSE 8000
 WORKDIR /opt/app
 
-COPY --from=prod-builder /usr/bin/dumb-init /usr/bin/dumb-init
-COPY --from=prod-builder /opt/app/bin/mainDocker /opt/app/main
-COPY --from=prod-builder /opt/app/assets /opt/app/assets
-COPY --from=prod-builder /opt/app/docs /opt/app/docs
+COPY --from=build /usr/bin/dumb-init /usr/bin/dumb-init
+COPY --from=build /opt/app/bin/mainDocker /opt/app/main
+COPY --from=build /opt/app/assets /opt/app/assets
+COPY --from=build /opt/app/public /opt/app/public
+COPY --from=build /opt/app/files /opt/app/files
+# cmd/ wird NICHT kopiert — WASM-Quellcode nur zur Build-Zeit noetig,
+# das kompilierte WASM liegt in public/wasm/
 
-USER nonroot:nonroot
-
-USER nonroot:nonroot
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["./main"]
 
-FROM base AS dev
+# Stage 5: Development — Hot-Reload mit air (alles wird via bind mount
+# ueberschrieben, daher kein vorheriges Build notwendig)
+FROM deps AS dev
 
-EXPOSE 8000
-WORKDIR /opt/app
+RUN apt-get update && apt-get install -y just
 
-COPY .air.toml .
-COPY ./assets ./assets
-COPY ./docs ./docs
-COPY ./internal ./internal
-COPY ./sqlc ./sqlc
-COPY ./main.go ./main.go
+COPY . .
 
-RUN go install github.com/air-verse/air@latest
-RUN go mod tidy
-
-CMD ["make", "watch"]
-
-FROM postgres:16 AS pg
-
-WORKDIR /root
-
-RUN apt-get update && apt-get install -y wget
-
-RUN wget https://github.com/pksunkara/pgx_ulid/releases/download/v0.1.5/pgx_ulid-v0.1.5-pg16-amd64-linux-gnu.deb
-RUN dpkg -i pgx_ulid-v0.1.5-pg16-amd64-linux-gnu.deb
-
-CMD ["postgres"]
+# Vorkompilieren nicht noetig — just watch im CMD macht alles bei Start
+CMD ["just", "watch"]

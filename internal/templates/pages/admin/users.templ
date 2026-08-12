@@ -1,0 +1,77 @@
+package admin
+
+import (
+  "github.com/bata94/RegattaApi/internal/templates/components"
+  "github.com/bata94/RegattaApi/internal/crud"
+	"github.com/bata94/RegattaApi/internal/utils"
+	"time"
+)
+
+templ Users() {
+  {{
+    users, err := crud.GetAllUsers(ctx)
+    userGroups, errUserGroups := crud.GetAllUsersGroups(ctx)
+    userRows := []ui_components.TableRowParams{}
+  }}
+  if err != nil {
+    @ui_components.ErrorBody(500, err.Error())
+    {{return}}
+  }
+  if errUserGroups != nil {
+    @ui_components.ErrorBody(500, errUserGroups.Error())
+    {{return}}
+  }
+
+  {{
+    for _, u := range users {
+      groupStr := ""
+      for _, ug := range userGroups {
+        if ug.Uuid == u.GroupUuid {
+          groupStr = ug.Name
+          break
+        }
+      }
+
+      userRows = append(userRows, ui_components.TableRowParams{
+        ID: u.Uuid.String(),
+        Content: []string{
+          u.Username,
+          groupStr,
+          utils.BoolToJaNein(!u.IsActive),
+          time.Unix(u.Uuid.Time().UnixTime()).Format("02.01.2006 15:04"),
+        },
+        OnClickDialogSrc: "/internal/admin/user/" + u.Uuid.String(),
+      })
+    }
+
+  }}
+
+  @ui_components.InternalPageDivCol() {
+
+    <div class="flex flex-row justify-between items-center">
+      @ui_components.PageHeader("Nutzer")
+      <button
+        class="btn btn-primary ml-auto"
+        hx-target="#table_dialog_content"
+        hx-swap="innerHTML"
+        hx-get="/internal/admin/user/new"
+        hx-trigger="click"
+        hx-boost="true"
+        onclick="table_dialog.showModal()"
+      >
+        Neuer Nutzer
+      </button>
+    </div>
+
+    @ui_components.Table(ui_components.TableParams{
+      Zebra: true,
+      Columns: []ui_components.TableColumnParams{
+        {Title: "Nutzername", WidthClass: ""},
+        {Title: "Rolle", WidthClass: ""},
+        {Title: "Gesperrt", WidthClass: ""},
+        {Title: "Erstellt am", WidthClass: ""},
+      },
+      Rows: userRows,
+    })
+  }
+}

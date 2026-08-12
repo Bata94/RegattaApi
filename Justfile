@@ -4,13 +4,15 @@ BINARY_NAME := "regattaapi"
 DOCKER_REGISTRY := "ghcr.io/bata94/"
 # EXPORT_RESULT := false # for CI please set EXPORT_RESULT to true
 
+default:
+  @just --list
 
 build-docker:
 	docker build --target prod --tag $(BINARY_NAME) .
 
 release-docker:
-	docker tag $(BINARY_NAME) $(DOCKER_REGISTRY)$(BINARY_NAME):latest
-	docker push $(DOCKER_REGISTRY)$(BINARY_NAME):latest
+	docker tag ${BINARY_NAME} ${DOCKER_REGISTRY}${BINARY_NAME}:latest
+	docker push ${DOCKER_REGISTRY}${BINARY_NAME}:latest
 
 sqlc-gen:
 	@echo "Generating SQLC..."
@@ -18,37 +20,34 @@ sqlc-gen:
 
 # Run like 'NEW_MIG=<MigrationName> make goose-new'
 db-new:
-	GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose create $(NEW_MIG) sql
+	GOOSE_DRIVER=${GOOSE_DRIVER} GOOSE_DBSTRING=${GOOSE_DBSTRING} GOOSE_MIGRATION_DIR=${GOOSE_MIGRATION_DIR} goose create ${NEW_MIG} sql
 
 db-up:
-	GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose up
+	GOOSE_DRIVER=${GOOSE_DRIVER} GOOSE_DBSTRING=${GOOSE_DBSTRING} GOOSE_MIGRATION_DIR=${GOOSE_MIGRATION_DIR} goose up
 
 db-up-by-one:
-	GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose up-by-one
+	GOOSE_DRIVER=${GOOSE_DRIVER} GOOSE_DBSTRING=${GOOSE_DBSTRING} GOOSE_MIGRATION_DIR=${GOOSE_MIGRATION_DIR} goose up-by-one
 
 db-down:
-	GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose down
+	GOOSE_DRIVER=${GOOSE_DRIVER} GOOSE_DBSTRING=${GOOSE_DBSTRING} GOOSE_MIGRATION_DIR=${GOOSE_MIGRATION_DIR} goose down
 
 db-reset:
-	GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose reset
+	GOOSE_DRIVER=${GOOSE_DRIVER} GOOSE_DBSTRING=${GOOSE_DBSTRING} GOOSE_MIGRATION_DIR=${GOOSE_MIGRATION_DIR} goose reset
 
 db-redo:
-	GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose redo
+	GOOSE_DRIVER=${GOOSE_DRIVER} GOOSE_DBSTRING=${GOOSE_DBSTRING} GOOSE_MIGRATION_DIR=${GOOSE_MIGRATION_DIR} goose redo
 
 db-status:
-	GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) GOOSE_MIGRATION_DIR=$(GOOSE_MIGRATION_DIR) goose status 
+	GOOSE_DRIVER=${GOOSE_DRIVER} GOOSE_DBSTRING=${GOOSE_DBSTRING} GOOSE_MIGRATION_DIR=${GOOSE_MIGRATION_DIR} goose status
 
 # Generate Templ
 templ:
 	@echo "Generating Templ..."
 	templ generate
 
-templ-proxy:
-	templ generate --path="./internal/templates" --watch --proxy="http://localhost:"$(PORT) --proxybind="0.0.0.0"
-
 tailwind-gen:
 	@echo "Generating TailwindCSS..."
-	npx tailwindcss -i ./assets/css/input.css -o ./assets/css/global.css
+	npx @tailwindcss/cli -i ./assets/css/input.css -o ./public/css_global.css --minify
 
 # Generate Swagger Docs
 swagger-gen:
@@ -63,14 +62,23 @@ mod-tidy:
 	@echo "go mod tidy ..."
 	go mod tidy
 
+# Build WASM module for Zielgericht
+wasm-build:
+	@echo "Building WASM module..."
+	GOOS=js GOARCH=wasm go build -o public/wasm/zeitnahme.wasm ./cmd/wasm/zeitnahme/
+
 # Build the application
-build: templ tailwind-gen # swagger-gen
+build: templ tailwind-gen wasm-build # swagger-gen
 	@echo "Building..."
 	go build -o bin/main main.go
 
-full-build: templ tailwind-gen sqlc-gen # db-up # swagger-fmt build
+build-air: templ tailwind-gen wasm-build # swagger-gen
+	@echo "Building..."
+	go build -o tmp/main main.go
+
+full-build: templ tailwind-gen sqlc-gen wasm-build # db-up # swagger-fmt build
 	@echo "Full-Building..."
-	CGO_ENABLED=0 go build -installsuffix 'static' -o bin/mainDocker main.go
+	CGO_ENABLED=1 go build -o bin/mainDocker main.go
 
 # Run the application
 run: sqlc-gen
@@ -89,18 +97,53 @@ clean:
 
 # Live Reload
 watch: sqlc-gen db-up build
-	@if command -v air > /dev/null; then \
-	    air; \
-	    echo "Watching...";\
-	else \
-	    read -p "Go's 'air' is not installed on your machine. Do you want to install it? [Y/n] " choice; \
-	    if [ "$$choice" != "n" ] && [ "$$choice" != "N" ]; then \
-	        go install github.com/air-verse/air@latest; \
-	        air; \
-	        echo "Watching...";\
-	    else \
-	        echo "You chose not to install air. Exiting..."; \
-	        exit 1; \
-	    fi; \
-	fi
+  @echo "Watching..."
+  air
 
+watch-prod:
+  @echo "Watching..."
+  docker compose watch api
+
+# Docker Compose commands
+dev:
+  @echo "Starting dev environment with Caddy..."
+  docker compose up api-dev caddy
+
+dev-debug:
+  @echo "Starting dev environment (direct access)..."
+  docker compose up api-dev
+
+prod:
+  @echo "Starting prod environment with Caddy..."
+  docker compose up api caddy
+
+down:
+  @echo "Stopping all services..."
+  docker compose down
+
+lint-docker:
+  @echo "Linting Dockerfile..."
+  hadolint Dockerfile
+
+check:
+  just fmt
+  just lint
+  just test
+  just build
+
+fmt:
+	go fmt ./...
+
+lint:
+	golangci-lint run
+
+# Poke the hole
+open-firewall:
+    sudo iptables -I INPUT 1 -p tcp --dport 8080 -j ACCEPT
+
+# Close the hole
+close-firewall:
+    sudo iptables -D INPUT -p tcp --dport 8080 -j ACCEPT
+
+verify-firewall:
+  sudo iptables -L INPUT -n --line-numbers | grep 8080

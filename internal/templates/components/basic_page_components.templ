@@ -1,0 +1,110 @@
+package ui_components
+
+import "fmt"
+
+type BreadcrumbsEntries struct {
+  Title string
+  Paths string
+}
+
+templ Breadcrumbs(entries []BreadcrumbsEntries) {
+  <div class="breadcrumbs text-sm !m-0 !p-4">
+    <ul class="!m-0 !p-0">
+      for _, e := range entries {
+        {{
+          titleClass := "text-sm"
+        }}
+
+        if e.Paths == "" {
+          {{
+            titleClass += " cursor-default hover:no-underline"
+          }}
+          <li>
+            <h6
+              class={titleClass}
+            >
+              {e.Title}
+            </h6>
+          </li>
+        } else {
+          {{
+            titleClass += " font-semibold"
+          }}
+          <li>
+            <h6
+              class={titleClass}
+              hx-boost="true"
+              hx-get={e.Paths}
+              hx-target="main"
+              hx-swap="innerHTML"
+              hx-push-url="true"
+            >
+              {e.Title}
+            </h6>
+          </li>
+        }
+      }
+    </ul>
+  </div>
+}
+
+templ PageHeader(title string) {
+  <h2 class="!m-0 !p-0">{title}</h2>
+}
+
+templ PageHeaderSubtext(subtext string) {
+  <p class="!m-0 !px-0 !py-4">{subtext}</p>
+}
+
+templ PageHeaderSubtextComp(comp templ.Component) {
+  <div class="!m-0 !px-0 !py-4">
+    @comp
+  </div>
+}
+
+templ InternalPageDivCol() {
+  <div class="w-full flex flex-col py-4 px-2 md:px-6 lg:px-12">
+    { children... }
+  </div>
+}
+
+templ LandingPageDivCol() {
+  <div class="w-full flex flex-col pt-10 pb-4 px-2 md:px-6 lg:px-12">
+    { children... }
+  </div>
+}
+
+templ Toast(msg string, color InputColor) {
+  {{
+    var alertColor string
+
+    switch color {
+    case Primary:
+      alertColor = "alert-primary"
+    case Secondary:
+      alertColor = "alert-secondary"
+    case Success:
+      alertColor = "alert-success"
+    case Error:
+      alertColor = "alert-error"
+    case Warning:
+      alertColor = "alert-warning"
+    case Info:
+      alertColor = "alert-info"
+    case Mrgblau:
+      alertColor = "alert-mrgblau"
+    default:
+      alertColor = "alert-ghost"
+    }
+
+    alertColor = fmt.Sprintf("alert %s", alertColor)
+  }}
+
+  <div class={"alert " + alertColor + " flex flex-row justify-between items-center gap-2"}>
+    <span>{msg}</span>
+    <button
+      class="btn btn-sm btn-circle btn-ghost"
+      onclick="this.parentElement.remove()"
+    >✕</button>
+  </div>
+}

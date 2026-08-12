@@ -1,49 +1,56 @@
 package main
 
 import (
+	"log"
+	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 
-	"github.com/bata94/RegattaApi/internal/db"
+	"github.com/bata94/RegattaApi/internal/config"
+	DB "github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/server"
 	"github.com/bata94/RegattaApi/internal/utils"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
 
 	_ "github.com/joho/godotenv/autoload"
 )
 
 func main() {
-	DB.InitConnection(DB.DBServerOptions{
-		Host:     os.Getenv("DB_HOST"),
-		Port:     os.Getenv("DB_PORT"),
-		User:     os.Getenv("DB_USER"),
-		Password: os.Getenv("DB_PASSWORD"),
-		Name:     os.Getenv("DB_NAME"),
-		Sslmode:  os.Getenv("DB_SSLMODE"),
-	})
-	defer DB.ShutdownConnection()
+	config.Load()
 
-	if !fiber.IsChild() {
-		utils.InitEmail()
+	DB.InitConnection(DB.DBServerOptions{
+		Host:     config.C.DB.Host,
+		Port:     config.C.DB.Port,
+		User:     config.C.DB.User,
+		Password: config.C.DB.Password,
+		Name:     config.C.DB.Name,
+		Sslmode:  config.C.DB.SSLMode,
+	})
+	defer func() {
+		if err := DB.ShutdownConnection(); err != nil {
+			log.Printf("Error shutting down DB connection: %v", err)
+		}
+	}()
+
+	utils.InitEmail()
+	if err := os.MkdirAll(config.C.Paths.PublicDir, os.ModePerm); err != nil {
+		log.Printf("Error creating public dir: %v", err)
 	}
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
 		for sig := range c {
-			log.Error(sig)
+			log.Println("Received signal:", sig)
 			if sig == os.Interrupt {
-				DB.ShutdownConnection()
+				if err := DB.ShutdownConnection(); err != nil {
+					log.Printf("Error shutting down DB connection: %v", err)
+				}
 				os.Exit(0)
 			}
 		}
 	}()
 
-	port, err := strconv.Atoi(os.Getenv("PORT"))
-	if err != nil || port <= 0 {
-		port = 3000
-	}
-	server.Init(true, true, port)
+	addr := config.C.Server.Host + ":" + config.C.Server.Port
+	log.Printf("Starting server on %s", addr)
+	log.Fatal(http.ListenAndServe(addr, server.GetRouter()))
 }

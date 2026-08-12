@@ -1,0 +1,163 @@
+package regattaleitung
+
+import "github.com/bata94/RegattaApi/internal/templates/components"
+import "github.com/bata94/RegattaApi/internal/crud"
+import "github.com/bata94/RegattaApi/internal/sqlc"
+import "fmt"
+
+templ Pausen() {
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Pausen verwalten")
+    @ui_components.PageHeaderSubtext("")
+
+    <div
+      id="pausen-rennen-wahl"
+      class="w-full h-full "
+    >
+      <!-- name of each tab group should be unique -->
+      <div class="tabs tabs-box w-full">
+        <input type="radio" name="pausen_rennen_tabs" class="tab" aria-label="Samstag" checked="checked" />
+        <div
+          class="tab-content bg-base-100 border-base-300 !px-2 !py-0 !m-0"
+        >
+          <div id="tab-content-langstrecke" class="w-full h-full flex flex-col justify-center items-center">
+            @pausenRennenWahlWettkampf(sqlc.WettkampfLangstrecke)
+            @pausenRennenWahlWettkampf(sqlc.WettkampfSlalom)
+          </div>
+        </div>
+
+        <input type="radio" name="pausen_rennen_tabs" class="tab" aria-label="Sonntag" />
+        <div
+          class="tab-content bg-base-100 border-base-300 !px-2 !py-0 !m-0"
+        >
+          <div id="tab-content-slalom" class="w-full h-full flex flex-col justify-center items-center">
+            @pausenRennenWahlWettkampf(sqlc.WettkampfKurzstrecke)
+            @pausenRennenWahlWettkampf(sqlc.WettkampfStaffel)
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+}
+
+templ pausenRennenWahlWettkampf(wettkampf sqlc.Wettkampf) {
+  {{
+    pausen, pausenErr := crud.GetPausenByWettkampf(ctx, []sqlc.Wettkampf{wettkampf})
+    rennen, rennenErr := crud.GetAllRennen(ctx, crud.GetAllRennenParams{
+      GetMeldungen:  false,
+      ShowEmpty:     true,
+      ShowStarted:   true,
+      ShowWettkampf: sqlc.NullWettkampf{Wettkampf: wettkampf, Valid: true},
+    })
+  }}
+  if pausenErr != nil {
+    @ui_components.ErrorBody(404, pausenErr.Error())
+    {{return}}
+  }
+  if rennenErr != nil {
+    @ui_components.ErrorBody(404, rennenErr.Error())
+    {{return}}
+  }
+
+  <div
+    class="w-full flex flex-col"
+  >
+    <h2
+      class="text-mrgblau underline"
+    >
+      {wettkampf}:
+    </h2>
+
+    for _, r := range rennen {
+      {{
+        var pause crud.Pause
+        pausenIndex := -1
+        for i, p := range pausen {
+          if p.NachRennenUuid == r.Uuid {
+            pausenIndex = i
+            break
+          }
+        }
+        if pausenIndex != -1 {
+          pause = pausen[pausenIndex]
+        } else {
+          pause = crud.Pause{Pause: sqlc.Pause{ID: int32(-1), NachRennenUuid: r.Uuid, Laenge: 0}}
+        }
+      }}
+
+      @pausenRennenEntry(r, pause)
+      @PausenEntry(pause)
+    }
+  </div>
+}
+
+templ pausenRennenEntry(r crud.Rennen, p crud.Pause) {
+  <div
+    id={fmt.Sprintf("rennen-%s", r.Uuid.String())}
+    class="w-full flex flex-row justify-between items-center"
+  >
+    <h4 class="">{r.Nummer} - {r.BezeichnungLang}</h4>
+    if p.ID != -1 {
+      <button
+        class="btn btn-circle btn-ghost tooltip tooltip-left !mb-1 !mt-auto"
+        data-tooltip="Pause löschen"
+        hx-delete={fmt.Sprintf("/internal/regattaleitung/pausen/%d#rennen-%s", p.ID, r.Uuid.String())}
+        hx-target="main"
+        hx-swap="innerHTML"
+      >
+        <i class="fa fa-trash-o fa-2x text-error"></i>
+      </button>
+    } else {
+      <button
+        class="btn btn-circle btn-ghost tooltip tooltip-left !mb-1 !mt-auto"
+        data-tooltip="Pause anlegen"
+        hx-get={"/internal/regattaleitung/pausen/new/" + r.Uuid.String()}
+        hx-target={"#pause-nach-" + r.Uuid.String()}
+        hx-swap="outerHTML"
+      >
+        <i class="fa fa-plus-circle fa-2x text-success"></i>
+      </button>
+    }
+  </div>
+}
+
+templ PausenEntry(p crud.Pause) {
+  if p.ID == -1 {
+    <div
+      id={"pause-nach-" + p.NachRennenUuid.String()}
+      class="divider divider-primary"
+    />
+  } else {
+    <div
+      id={"pause-nach-" + p.NachRennenUuid.String()}
+      class="border-base-300 border-2 rounded-md"
+    >
+      <form
+        class="w-full md:h-32 flex flex-col md:flex-row justify-between items-center p-4"
+        hx-post={fmt.Sprintf("/internal/regattaleitung/pausen#rennen-%s", p.NachRennenUuid.String())}
+        hx-target="main"
+        hx-swap="innerHTML"
+      >
+        <input type="hidden" name="id" value={p.ID} />
+        <input type="hidden" name="nach_rennen_uuid" value={p.NachRennenUuid.String()} />
+        <div class="w-fit flex flex-col">
+          if p.ID < 0 {
+            <h4 class="!mt-0 !pt-0">
+              Neue Pause anlegen
+            </h4>
+            <p class="text-error">
+              (noch nicht gespeichert):
+            </p>
+          } else {
+            <h4 class="!mt-0 !pt-0">
+              Pause anpassen:
+            </h4>
+          }
+        </div>
+
+        @ui_components.RangeStepInput("laenge", "Pausenlänge in Minuten", int(p.Laenge), 0, 120, 15, true, "")
+        @ui_components.SubmitButton("Pause speichern", ui_components.Success)
+      </form>
+    </div>
+  }
+}

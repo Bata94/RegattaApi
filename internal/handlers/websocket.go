@@ -1,82 +1,90 @@
 package handlers
 
 import (
-	"fmt"
-	"time"
+	"encoding/json"
+	"log/slog"
+	"sync"
 
-	"github.com/gofiber/contrib/websocket"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
+	"github.com/gorilla/websocket"
 )
 
-type Client struct{} // Add more data to this type if needed
-
-var Clients = make(map[*websocket.Conn]Client) // Note: although large maps with pointer-like types (e.g. strings) as keys are slow, using pointers themselves as keys is acceptable and fast
-var Register = make(chan *websocket.Conn)
-var Broadcast = make(chan string)
-var Unregister = make(chan *websocket.Conn)
-
-func WsUpgrade(c *fiber.Ctx) error {
-	// IsWebSocketUpgrade returns true if the client
-	// requested upgrade to the WebSocket protocol.
-	if websocket.IsWebSocketUpgrade(c) {
-		c.Locals("allowed", true)
-		return c.Next()
-	}
-	return fiber.ErrUpgradeRequired
+type Client struct {
+	Hub  *Hub
+	Conn *websocket.Conn
+	Send chan []byte
 }
 
-func sendPing(conn *websocket.Conn, interval int) {
-	pingPeriod := time.Duration(interval) * time.Second
-	pingTicker := time.NewTicker(pingPeriod)
-	defer pingTicker.Stop()
-	time.Sleep(pingPeriod) // wait a while before start ping,
-	for {
-		select {
-		case <-pingTicker.C:
-			pingMsg := fmt.Sprint("ping ", time.Now().Format("2006-01-02_15-04-05.999"), " UTC")
-			log.Debug(pingMsg)
-			err := conn.WriteControl(websocket.PingMessage, []byte(pingMsg), time.Now().Add(time.Second*5))
-			if err != nil {
-				log.Error(err)
-			}
-			err = conn.WriteMessage(websocket.TextMessage, []byte(pingMsg))
-			if err != nil {
-				log.Error(err)
-			}
+type Hub struct {
+	mu         sync.RWMutex
+	Clients    map[*Client]bool
+	Register   chan *Client
+	Unregister chan *Client
+	Broadcast  chan []byte
+}
+
+var (
+	hubInstance *Hub
+	hubOnce     sync.Once
+)
+
+func GetHub() *Hub {
+	hubOnce.Do(func() {
+		hubInstance = &Hub{
+			Clients:    make(map[*Client]bool),
+			Register:   make(chan *Client),
+			Unregister: make(chan *Client),
+			Broadcast:  make(chan []byte, 256),
 		}
-	}
+	})
+	return hubInstance
 }
 
 func RunHub() {
+	hub := GetHub()
 	for {
 		select {
-		case connection := <-Register:
-			// go sendPing(connection, 2)
+		case client := <-hub.Register:
+			hub.mu.Lock()
+			hub.Clients[client] = true
+			hub.mu.Unlock()
+			slog.Debug("WS client registered", "total", len(hub.Clients))
 
-			Clients[connection] = Client{}
-			log.Debug("connection registered")
-			// Broadcast <- "New Client"
+		case client := <-hub.Unregister:
+			hub.mu.Lock()
+			if _, ok := hub.Clients[client]; ok {
+				delete(hub.Clients, client)
+				close(client.Send)
+			}
+			hub.mu.Unlock()
+			slog.Debug("WS client unregistered", "total", len(hub.Clients))
 
-		case message := <-Broadcast:
-			log.Debug("message received:", message)
-
-			// Send the message to all clients
-			for connection := range Clients {
-				if err := connection.WriteMessage(websocket.TextMessage, []byte(message)); err != nil {
-					log.Debug("write error:", err)
-
-					Unregister <- connection
-					connection.WriteMessage(websocket.CloseMessage, []byte{})
-					connection.Close()
+		case msg := <-hub.Broadcast:
+			hub.mu.RLock()
+			for client := range hub.Clients {
+				select {
+				case client.Send <- msg:
+				default:
+					slog.Warn("WS client send buffer full, dropping client")
+					close(client.Send)
+					delete(hub.Clients, client)
 				}
 			}
-
-		case connection := <-Unregister:
-			// Remove the client from the hub
-			delete(Clients, connection)
-
-			log.Debug("connection unregistered")
+			hub.mu.RUnlock()
 		}
 	}
+}
+
+func (h *Hub) BroadcastJSON(v any) {
+	data, err := json.Marshal(v)
+	if err != nil {
+		slog.Error("BroadcastJSON marshal error", "err", err)
+		return
+	}
+	h.Broadcast <- data
+}
+
+func (h *Hub) Count() int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return len(h.Clients)
 }

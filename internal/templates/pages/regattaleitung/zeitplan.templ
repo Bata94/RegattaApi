@@ -1,0 +1,46 @@
+package regattaleitung
+
+import "github.com/bata94/RegattaApi/internal/templates/components"
+
+templ Zeitplan(msg string, fieldErrors map[string]string) {
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Zeitplan")
+    @ui_components.PageHeaderSubtext("")
+
+    <div
+      id="zeitplan-create"
+      class="card bg-base-100 min-w-96 shadow-sm w-fit mx-auto"
+    >
+      <form
+        class=""
+        hx-post="/internal/regattaleitung/zeitplan"
+      >
+        <div
+        class="card-body"
+        >
+          <h2
+            class="card-title w-fit mx-auto mt-2"
+          >
+            Zeitplan erstellen
+          </h2>
+          <div class="divider"></div>
+          if msg != "" {
+            <div class="alert alert-error mb-4">
+              <span>{msg}</span>
+            </div>
+          }
+          <h4 class="text-center !my-2 !p-0">
+            Startzeit in vollen Stunden (z.B. 9 -> 09:00)
+          </h4>
+          <div class="form-control">
+            @ui_components.LineInput("startzeit_sa", "Samstag", "9", "number", true, fieldErrors["startzeit_sa"])
+            @ui_components.LineInput("startzeit_so", "Sonntag", "9", "number", true, fieldErrors["startzeit_so"])
+          </div>
+          <div class="w-fit mx-auto">
+            @ui_components.SubmitButton("Zeitplan erstellen", ui_components.Success)
+          </div>
+        </div>
+      </form>
+    </div>
+  }
+}

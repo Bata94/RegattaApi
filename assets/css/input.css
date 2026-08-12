@@ -1,9 +1,141 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --text-md: 1rem;
+  --text-md--line-height: 1.5rem;
+  --text-md--letter-spacing: 0.125rem;
+  --text-md--font-weight: 500;
+
+  --text-2xs: 0.6rem;
+  --text-2xs--line-height: 0.8rem;
+  --text-2xs--letter-spacing: 0.1rem;
+  --text-2xs--font-weight: 400;
+
+  --text-3xs: 0.45rem;
+  --text-3xs--line-height: 0.6rem;
+  --text-3xs--letter-spacing: 0.075rem;
+  --text-3xs--font-weight: 300;
+
+  --color-mrgblau: #183b93
+}
+
+@plugin "daisyui" {
+  themes: light --default, dark --prefersdark;
+}
+
+html {
+  scroll-behavior: smooth;
+  --sidebar-width: 18rem;
+}
 
 @media print {
   div.no-break {
     break-inside: avoid;
   }
+}
+
+.htmx-indicator {
+  display: none;
+}
+
+.htmx-request .htmx-indicator {
+  display: inline;
+}
+
+.htmx-request.htmx-indicator {
+  display: inline;
+}
+
+.input-error {
+  @apply border-error;
+}
+
+.select-error {
+  @apply border-error;
+}
+
+.file-input-error {
+  @apply border-error;
+}
+
+.text-error {
+  @apply text-error;
+}
+
+/* Override DaisyUI menu fit-content so sidebar categories span full width */
+.internal-sidebar .menu {
+  width: 100%;
+}
+
+/* Sidebar resize handle */
+.resize-handle {
+  opacity: 0.4;
+  transition: opacity 0.2s ease;
+}
+
+aside:hover .resize-handle,
+aside:focus-within .resize-handle {
+  opacity: 1;
+}
+
+.resize-handle:active {
+  background-color: oklch(var(--p));
+  opacity: 1;
+}
+
+/* Only apply these to touch devices */
+@media (pointer: coarse) {
+  body {
+    /* Prevent "pull-to-refresh" and "overscroll glow" */
+    overscroll-behavior-y: contain;
+
+    /* Prevent the magnifying glass/selection menu from appearing on long-press */
+    -webkit-user-select: none;
+    user-select: none;
+
+    /* Disables the "gray flash" when tapping links/buttons */
+    -webkit-tap-highlight-color: transparent;
+
+    /* Smooth scrolling for touch */
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Re-enable selection for inputs so users can still type */
+  input,
+  textarea {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  input,
+  button,
+  select {
+    /* Removes the default 3D/rounded styling on buttons and inputs */
+    appearance: none;
+    -webkit-appearance: none;
+    border-radius: 4px;
+    /* Give it a consistent native radius */
+  }
+
+  /* Standard Android touch target is roughly 48px */
+  button,
+  .clickable-element {
+    min-height: 48px;
+    min-width: 48px;
+  }
+
+  html,
+  body {
+    /* Disable double-tap to zoom */
+    touch-action: manipulation;
+  }
+}
+
+body {
+  /* Ensures your content stays within the "safe" area of the screen */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }

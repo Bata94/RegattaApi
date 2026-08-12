@@ -1,17 +1,10 @@
 package api_v1
 
 import (
-	"fmt"
-	"strconv"
-
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/log"
-	"github.com/google/uuid"
+	"log/slog"
 
 	"github.com/bata94/RegattaApi/internal/crud"
-	"github.com/bata94/RegattaApi/internal/handlers"
-	"github.com/bata94/RegattaApi/internal/handlers/api"
-	pdf_templates "github.com/bata94/RegattaApi/internal/templates/pdf"
+	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/bata94/RegattaApi/internal/utils"
 )
 
@@ -19,25 +12,30 @@ type AbmeldungsParams struct {
 	Uuid string `json:"uuid"`
 }
 
-func StartnummernAusgabe(c *fiber.Ctx) error {
-	return &api.NOT_FOUND
+func StartnummernAusgabe(c *handler.Context) error {
+	return handler.NotFound("Not found")
 }
 
-func StartnummernWechsel(c *fiber.Ctx) error {
-	return &api.NOT_FOUND
+func StartnummernWechsel(c *handler.Context) error {
+	return handler.NotFound("Not found")
 }
 
-func KasseEinzahlung(c *fiber.Ctx) error {
-	return &api.NOT_FOUND
+func KasseEinzahlung(c *handler.Context) error {
+	return handler.NotFound("Not found")
 }
 
-func GenerateRechnugnPDF(uuid uuid.UUID) error {
-	v, err := crud.GetVereinMinimal(uuid)
+func KasseCreateRechnungPDF(c *handler.Context) error {
+	uuid, err := c.GetUUID("uuid")
+	if err != nil {
+		return handler.BadRequest(err.Error())
+	}
+
+	v, err := crud.GetVereinMinimal(c.Request.Context(), uuid)
 	if err != nil {
 		return err
 	}
 
-	reNr, err := v.GetNextRechnungsnummer()
+	reNr, err := v.GetNextRechnungsnummer(c.Request.Context())
 	if err != nil {
 		return err
 	}
@@ -51,10 +49,10 @@ func GenerateRechnugnPDF(uuid uuid.UUID) error {
 	if err != nil {
 		return err
 	}
-	log.Debug(filePath)
+	slog.Info("Generated", "file", filePath)
 
 	toMail := []string{}
-	obleute, err := crud.GetAllObmannForVerein(v.Uuid)
+	obleute, err := crud.GetAllObmannForVerein(c.Request.Context(), v.Uuid)
 	if err != nil {
 		return err
 	}
@@ -69,7 +67,7 @@ func GenerateRechnugnPDF(uuid uuid.UUID) error {
 		To:      toMail,
 		CC:      []string{},
 		Subject: "MRG Regatta 24 - Rechnung " + reNr,
-		Body:    "Anbei finden Sie eine neu erstellte Rechnung für Ihren Verein.\nDies ist eine automatische Nachricht, sollte ein Fehler o.ä. auffallen Antworten Sie gerne direkt auf diese eMail!",
+		Body:    "Anbei finden Sie eine neu erstellte Rechnung für Ihren Verein.",
 		Files:   []string{filePath},
 	})
 
@@ -77,111 +75,100 @@ func GenerateRechnugnPDF(uuid uuid.UUID) error {
 		return err
 	}
 
-	return nil
+	return c.JSON("success")
 }
 
-func KasseCreateRechnungPDF(c *fiber.Ctx) error {
-	uuid, err := api.GetUuidFromCtx(c)
-	if err != nil {
-		return err
-	}
-
-	err = GenerateRechnugnPDF(*uuid)
-	if err != nil {
-		return err
-	}
-
-	// return c.SendFile(filePath, true)
-	return api.JSON(c, "success")
-}
-
-func KasseCreateRechnungAllVereine(c *fiber.Ctx) error {
-	vereine, err := crud.GetAllVerein()
+func KasseCreateRechnungAllVereine(c *handler.Context) error {
+	vereine, err := crud.GetAllVerein(c.Request.Context())
 	if err != nil {
 		return err
 	}
 
 	errLs := []error{}
 	for _, v := range vereine {
-		err := GenerateRechnugnPDF(v.Uuid)
+		reNr, err := v.GetNextRechnungsnummer(c.Request.Context())
 		if err != nil {
-			log.Error("Error in CreateRechnungAllVereine: ", v.Name, err)
 			errLs = append(errLs, err)
+			continue
 		}
+
+		filePath, err := utils.SavePDFfromHTML(
+			"buero/kasse/rechnung/"+v.Uuid.String(),
+			"rechnung/"+v.Kuerzel,
+			reNr,
+			true,
+		)
+		if err != nil {
+			errLs = append(errLs, err)
+			continue
+		}
+		slog.Info("Generated", "file", filePath)
 	}
 
 	if len(errLs) > 0 {
-		return api.JSON(c, errLs)
+		return c.JSON(errLs)
 	}
-	return api.JSON(c, "success")
+	return c.JSON("success")
 }
 
-func KasseCreateRechnungHTML(c *fiber.Ctx) error {
-	uuid, err := api.GetUuidFromCtx(c)
+func KasseCreateRechnungHTML(c *handler.Context) error {
+	uuid, err := c.GetUUID("uuid")
+	if err != nil {
+		return handler.BadRequest(err.Error())
+	}
+
+	v, err := crud.GetVereinMinimal(c.Request.Context(), uuid)
 	if err != nil {
 		return err
 	}
 
-	v, err := crud.GetVereinMinimal(*uuid)
+	meld, err := crud.GetAllMeldungForVerein(c.Request.Context(), v.Uuid)
 	if err != nil {
 		return err
 	}
 
-	meld, err := crud.GetAllMeldungForVerein(v.Uuid)
+	reNr, err := v.GetNextRechnungsnummer(c.Request.Context())
 	if err != nil {
 		return err
 	}
 
-	reNr, err := v.GetNextRechnungsnummer()
-	if err != nil {
-		return err
+	type RechnungEntry struct {
+		Tag         string
+		Startnummer string
+		Rennen      string
+		Preis       string
 	}
 
-	pdfParams := pdf_templates.RechnungParams{
-		Entries:         []pdf_templates.RechnungEntry{},
-		SumPreis:        0,
-		RechnungsNummer: reNr,
-	}
+	entries := []RechnungEntry{}
+	sumPreis := 0
 
 	for _, m := range meld {
 		if m.RechnungsNummer.String != "" {
 			continue
 		}
 
-		pdfParams.Entries = append(pdfParams.Entries, pdf_templates.RechnungEntry{
+		entries = append(entries, RechnungEntry{
 			Tag:         string(m.Rennen.Tag),
-			Startnummer: strconv.Itoa(int(m.StartNummer)),
+			Startnummer: string(rune(int(m.StartNummer) + '0')),
 			Rennen:      m.Rennen.Bezeichnung,
-			Preis:       strconv.Itoa(int(m.Kosten)) + ",00 €",
+			Preis:       string(rune(int(m.Kosten)+'0')) + ",00 €",
 		})
-		pdfParams.SumPreis += int(m.Kosten)
-		// TODO: Use a Transaction
-		err := crud.SetMeldungRechnungsNummer(m.Uuid, reNr)
+		sumPreis += int(m.Kosten)
+
+		err := crud.SetMeldungRechnungsNummer(c.Request.Context(), m.Uuid, reNr)
 		if err != nil {
-			log.Error(err)
+			slog.Error("Error", "err", err)
 		}
 	}
 
-	if len(pdfParams.Entries) == 0 {
-		retErr := api.NOT_FOUND
-		retErr.Msg = "Keine Meldungen gefunden, welche nicht schon abgerechnet sind!"
-		return &retErr
+	if len(entries) == 0 {
+		return handler.NotFound("Keine Meldungen gefunden!")
 	}
 
-	err = crud.CreateRechnung(reNr, v.Uuid, pdfParams.SumPreis)
+	err = crud.CreateRechnung(c.Request.Context(), reNr, v.Uuid, sumPreis)
 	if err != nil {
 		return err
 	}
 
-	fileName := fmt.Sprintf("Rechnung_%s", reNr)
-	return handlers.RenderPdf(
-		c,
-		fileName,
-		pdf_templates.VereinsBericht(
-			v.Name,
-			"Rechnung",
-			false,
-			pdf_templates.Rechnung(pdfParams),
-		),
-	)
+	return c.JSON("Rechnung generated")
 }

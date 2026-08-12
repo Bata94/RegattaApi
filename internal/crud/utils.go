@@ -2,14 +2,16 @@ package crud
 
 import (
 	"context"
-	"strings"
+	"errors"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 func isNoRowError(err error) bool {
-	return strings.Contains(err.Error(), "no rows in result set")
+	return errors.Is(err, pgx.ErrNoRows)
 }
 
-func getCtxWithTo() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), 60*time.Second)
+func getCtx(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(ctx, 60*time.Second)
 }

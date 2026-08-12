@@ -1,15 +1,15 @@
 package handlers
 
 import (
+	"context"
+
+	"github.com/a-h/templ"
+	"github.com/bata94/RegattaApi/internal/handler"
 	pdf_templates "github.com/bata94/RegattaApi/internal/templates/pdf"
-
-  "github.com/a-h/templ"
-
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/adaptor"
 )
 
-func RenderPdf(c *fiber.Ctx, title string, comp templ.Component) error {
-  comp = pdf_templates.PdfLayout(title, comp)
-	return adaptor.HTTPHandler(templ.Handler(comp))(c)
+func RenderPdf(c *handler.Context, title string, comp templ.Component) error {
+	comp = pdf_templates.PdfLayout(title, comp)
+	c.Writer.Header().Set("Content-Type", "text/html")
+	return comp.Render(context.Background(), c.Writer)
 }

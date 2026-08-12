@@ -1,0 +1,54 @@
+package ui_pages
+
+templ Metrics() {
+	<div class="flex flex-col gap-6">
+		<h2>Systemmetriken</h2>
+		<p class="text-sm opacity-70">Aktualisiert alle 1 Sekunde - Wenn Charts nicht angezeigt werden, versuche die Seite neu zu laden.</p>
+
+		<div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+			<div class="card bg-base-200 p-4">
+				<h3 class="text-center mb-2">CPU</h3>
+				<canvas id="cpu-chart"></canvas>
+				<p id="cpu-value" class="text-center text-lg font-bold mt-2">--%</p>
+			</div>
+			<div class="card bg-base-200 p-4">
+				<h3 class="text-center mb-2">RAM</h3>
+				<canvas id="ram-chart"></canvas>
+				<p id="ram-value" class="text-center text-lg font-bold mt-2">--.- / --.- GB (--%)</p>
+			</div>
+			<div class="card bg-base-200 p-4">
+				<h3 class="text-center mb-2">Verbindungen</h3>
+				<canvas id="connections-chart"></canvas>
+				<p id="connections-value" class="text-center text-lg font-bold mt-2">--</p>
+			</div>
+			<div class="card bg-base-200 p-4">
+				<h3 class="text-center mb-2">Load (1m)</h3>
+				<canvas id="load-chart"></canvas>
+				<p id="load-value" class="text-center text-lg font-bold mt-2">--</p>
+			</div>
+			<div class="card bg-base-200 p-4">
+				<h3 class="text-center mb-2">Latenz</h3>
+				<canvas id="latency-chart"></canvas>
+				<p id="latency-value" class="text-center text-lg font-bold mt-2">-- ms</p>
+			</div>
+			<div class="card bg-base-200 p-4">
+				<h3 class="text-center mb-2">Goroutines</h3>
+				<canvas id="goroutines-chart"></canvas>
+				<p id="goroutines-value" class="text-center text-lg font-bold mt-2">--</p>
+			</div>
+			<div class="card bg-base-200 p-4">
+				<h3 class="text-center mb-2">Heap Memory</h3>
+				<canvas id="heap-chart"></canvas>
+				<p id="heap-value" class="text-center text-lg font-bold mt-2">-- / -- MB</p>
+			</div>
+			<div class="card bg-base-200 p-4">
+				<h3 class="text-center mb-2">Netzwerk I/O</h3>
+				<canvas id="network-chart"></canvas>
+				<p id="network-value" class="text-center text-lg font-bold mt-2">Sent: -- | Recv: --</p>
+			</div>
+		</div>
+	</div>
+
+	<script src="/assets/js/charts.js"></script>
+	<script src="/assets/js/metrics.js"></script>
+}

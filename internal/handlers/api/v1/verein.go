@@ -2,71 +2,70 @@ package api_v1
 
 import (
 	"github.com/bata94/RegattaApi/internal/crud"
-	"github.com/bata94/RegattaApi/internal/handlers/api"
-	"github.com/gofiber/fiber/v2"
+	"github.com/bata94/RegattaApi/internal/handler"
 )
 
-func GetAllVerein(c *fiber.Ctx) error {
-	vLs, err := crud.GetAllVerein()
+func GetAllVerein(c *handler.Context) error {
+	vLs, err := crud.GetAllVerein(c.Request.Context())
 	if err != nil {
 		return err
 	}
 
-	return api.JSON(c, vLs)
+	return c.JSON(vLs)
 }
 
-func GetVerein(c *fiber.Ctx) error {
-	uuid, err := api.GetUuidFromCtx(c)
+func GetVerein(c *handler.Context) error {
+	uuid, err := c.GetUUID("uuid")
+	if err != nil {
+		return handler.BadRequest(err.Error())
+	}
+
+	v, err := crud.GetVerein(c.Request.Context(), uuid)
 	if err != nil {
 		return err
 	}
 
-	v, err := crud.GetVerein(*uuid)
-	if err != nil {
-		return err
-	}
-
-	return api.JSON(c, v)
+	return c.JSON(v)
 }
 
-func GetAllAthletenForVerein(c *fiber.Ctx) error {
-	uuid, err := api.GetUuidFromCtx(c)
+func GetAllAthletenForVerein(c *handler.Context) error {
+	uuid, err := c.GetUUID("uuid")
+	if err != nil {
+		return handler.BadRequest(err.Error())
+	}
+
+	aLs, err := crud.GetAllAthletenForVerein(c.Request.Context(), uuid)
 	if err != nil {
 		return err
 	}
 
-	aLs, err := crud.GetAllAthletenForVerein(*uuid)
-	if err != nil {
-		return err
-	}
-
-	return api.JSON(c, aLs)
+	return c.JSON(aLs)
 }
 
-func GetAllAthletenForVereinMissStartber(c *fiber.Ctx) error {
-	uuid, err := api.GetUuidFromCtx(c)
+func GetAllAthletenForVereinMissStartber(c *handler.Context) error {
+	uuid, err := c.GetUUID("uuid")
+	if err != nil {
+		return handler.BadRequest(err.Error())
+	}
+
+	aLs, err := crud.GetAllAthletenForVereinMissStartber(c.Request.Context(), uuid)
 	if err != nil {
 		return err
 	}
 
-	aLs, err := crud.GetAllAthletenForVereinMissStartber(*uuid)
-	if err != nil {
-		return err
-	}
-
-	return api.JSON(c, aLs)
+	return c.JSON(aLs)
 }
 
-func GetAllAthletenForVereinWaage(c *fiber.Ctx) error {
-	uuid, err := api.GetUuidFromCtx(c)
+func GetAllAthletenForVereinWaage(c *handler.Context) error {
+	uuid, err := c.GetUUID("uuid")
+	if err != nil {
+		return handler.BadRequest(err.Error())
+	}
+
+	aLs, err := crud.GetAllAthletenForVereinWaage(c.Request.Context(), uuid)
 	if err != nil {
 		return err
 	}
 
-	aLs, err := crud.GetAllAthletenForVereinWaage(*uuid)
-	if err != nil {
-		return err
-	}
-
-	return api.JSON(c, aLs)
+	return c.JSON(aLs)
 }

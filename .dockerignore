@@ -1,1 +1,7 @@
 node_modules/
+bin/
+tmp/
+public/
+files/
+.direnv/
+.git/

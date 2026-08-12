@@ -6,27 +6,33 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, flake-utils, ... }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = nixpkgs.legacyPackages.${system};
-      in {
-        devShell = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            just
-            go
-            air
-            golangci-lint
+  outputs = {
+    self,
+    nixpkgs,
+    flake-utils,
+    ...
+  }:
+    flake-utils.lib.eachDefaultSystem (system: let
+      pkgs = nixpkgs.legacyPackages.${system};
+    in {
+      devShell = pkgs.mkShell {
+        buildInputs = with pkgs; [
+          just
+          opencode
 
-            sqlc
-            goose
-          ];
-          shellHook = ''
-            echo "Go version:"
-            go version
-            go mod tidy
-          '';
-        };
-      });
+          go
+          air
+
+          golangci-lint
+          gotools
+          gopls
+
+          templ
+          nodejs
+
+          sqlc
+          goose
+        ];
+      };
+    });
 }
-

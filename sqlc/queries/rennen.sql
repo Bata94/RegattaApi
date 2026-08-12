@@ -3,7 +3,7 @@ SELECT * FROM rennen
 WHERE uuid = $1 LIMIT 1;
 
 -- name: GetRennen :many
-SELECT 
+SELECT
   sqlc.embed(rennen),
   sqlc.embed(meldung),
   sqlc.embed(athlet),
@@ -16,7 +16,7 @@ FULL JOIN
 ON
   rennen.uuid = meldung.rennen_uuid
 FULL JOIN
-  link_meldung_athlet 
+  link_meldung_athlet
 ON
   meldung.uuid = link_meldung_athlet.meldung_uuid
 FULL JOIN
@@ -51,8 +51,8 @@ SELECT
   (SELECT COALESCE(MAX(meldung.abteilung),0) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid) as num_abteilungen
 FROM
   rennen
-FULL
-  JOIN meldung
+FULL JOIN
+  meldung
 ON
   rennen.uuid = meldung.rennen_uuid
 FULL JOIN
@@ -64,37 +64,68 @@ WHERE
 ORDER BY
   rennen.sort_id;
 
--- name: GetAllRennenWithAthlet :many
-SELECT 
-  sqlc.embed(rennen),
+-- name: GetAllRennenMeldungen :many
+SELECT
   sqlc.embed(meldung),
   sqlc.embed(athlet),
   sqlc.embed(verein),
-  link_meldung_athlet.position, link_meldung_athlet.rolle,
-  (SELECT COUNT(meldung.uuid) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid AND meldung.abgemeldet = false) as num_meldungen,
-  (SELECT COALESCE(MAX(meldung.abteilung),0) FROM meldung WHERE rennen.uuid = meldung.rennen_uuid) as num_abteilungen
-FROM 
-  rennen
-JOIN 
+  link_meldung_athlet.rolle,
+  link_meldung_athlet.position
+FROM
   meldung
-ON 
-  rennen.uuid = meldung.rennen_uuid
-JOIN 
-  verein
-ON 
-  meldung.verein_uuid = verein.uuid
-JOIN 
+JOIN
   link_meldung_athlet
-ON 
-  meldung.uuid = link_meldung_athlet.meldung_uuid
-JOIN 
+ON
+  link_meldung_athlet.meldung_uuid = meldung.uuid
+JOIN
   athlet
-ON 
+ON
   link_meldung_athlet.athlet_uuid = athlet.uuid
-WHERE 
+JOIN
+  verein
+ON
+  meldung.verein_uuid = verein.uuid
+WHERE
+  meldung.rennen_uuid = $1
+ORDER BY
+  meldung.abteilung, meldung.bahn, link_meldung_athlet.rolle, link_meldung_athlet.position;
+
+-- name: GetAllRennenAthletRows :many
+SELECT
+  r.uuid         AS rennen_uuid,
+  m.uuid         AS meldung_uuid,
+  link_meldung_athlet.position,
+  link_meldung_athlet.rolle,
+  sqlc.embed(athlet),
+  sqlc.embed(verein)
+FROM rennen r
+JOIN meldung m
+  ON r.uuid = m.rennen_uuid
+JOIN link_meldung_athlet
+  ON m.uuid = link_meldung_athlet.meldung_uuid
+JOIN athlet
+  ON link_meldung_athlet.athlet_uuid = athlet.uuid
+JOIN verein
+  ON athlet.verein_uuid = verein.uuid
+WHERE r.wettkampf = ANY($1::wettkampf[])
+ORDER BY r.sort_id, m.abteilung, m.bahn, link_meldung_athlet.rolle, link_meldung_athlet.position;
+-- name: GetRennenZeitplan :many
+SELECT
+  uuid,
+  sort_id,
+  nummer,
+  bezeichnung,
+  bezeichnung_lang,
+  zusatz,
+  wettkampf,
+  tag,
+  startzeit
+FROM
+  rennen
+WHERE
   wettkampf = ANY($1::wettkampf[])
-ORDER BY 
-  rennen.sort_id, meldung.uuid, link_meldung_athlet.rolle, link_meldung_athlet.position;
+ORDER BY
+  sort_id ASC;
 
 -- name: UpdateStartZeit :exec
 UPDATE rennen SET startzeit = $1 WHERE uuid = $2;

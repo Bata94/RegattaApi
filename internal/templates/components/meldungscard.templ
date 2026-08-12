@@ -1,0 +1,101 @@
+package ui_components
+
+import (
+  "fmt"
+  "github.com/bata94/RegattaApi/internal/crud"
+)
+
+type HXNavigationOptions struct {
+  URL    string
+  Target string
+  Push   bool
+  Method HXNavigationMethod
+}
+
+type HXNavigationMethod int
+
+const (
+  GET HXNavigationMethod = iota
+  POST
+  PUT
+  DELETE
+)
+
+func DefaultGetHXNavigationOptions(url string) HXNavigationOptions {
+  return HXNavigationOptions{
+    URL:    url,
+    Target: "main",
+    Push:   true,
+    Method: GET,
+  }
+}
+
+func NoNavHXNavigationOptions() HXNavigationOptions {
+  return HXNavigationOptions{
+    URL:    "",
+    Target: "",
+    Push:   false,
+    Method: GET,
+  }
+}
+
+func (m HXNavigationOptions) Render() string {
+  if m.URL == "" {
+    return ""
+  }
+
+  str := fmt.Sprintf("hx-boost=true hx-target=%s href=%s ", m.Target, m.URL)
+
+  switch m.Method {
+  case GET:
+    str += fmt.Sprintf("hx-get=%s ", m.URL)
+  case POST:
+    str += fmt.Sprintf("hx-post=%s ", m.URL)
+  case PUT:
+    str += fmt.Sprintf("hx-put=%s ", m.URL)
+  case DELETE:
+    str += fmt.Sprintf("hx-delete=%s ", m.URL)
+  default:
+    str += fmt.Sprintf("hx-get=%s ", m.URL)
+  }
+
+  if m.Push {
+    str += " hx-push-url=true"
+  }
+
+  return str
+}
+
+templ MeldungsCard(m crud.Meldung, navOpt HXNavigationOptions) {
+  {{
+    cardClass := "card bg-base-100 shadow-md"
+    if navOpt.URL != "" {
+      cardClass += " hover:cursor-pointer"
+    }
+    navArguments := navOpt.Render()
+  }}
+  <div
+    class={cardClass}
+    {navArguments}
+  >
+    <div class="card-body">
+      if m.Rennen != nil {
+        <h5 class="card-title h-24">Rennen: {m.Rennen.Nummer} - {m.Rennen.BezeichnungLang}</h5>
+      }
+      <p
+        class="card-text"
+      >
+        Startnummer: {m.StartNummer}
+        if m.Verein != nil {
+          - Verein: {m.Verein.Name}
+        }
+        if m.Athleten != nil {
+          <br/>
+          Teilnehmer: {m.TeilnehmerString()}
+        }
+        <br/>
+        Startzeit: {m.Rennen.Tag.String()} {m.Rennen.StartzeitStr()}
+      </p>
+    </div>
+  </div>
+}

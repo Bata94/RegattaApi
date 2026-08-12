@@ -1,0 +1,251 @@
+package regattabuero
+
+import (
+  "fmt"
+
+  "github.com/bata94/RegattaApi/internal/crud"
+  "github.com/bata94/RegattaApi/internal/templates/components"
+)
+
+templ Abmeldung(v crud.Verein, meldungen []crud.Meldung) {
+  {{
+    var curDay crud.Tag
+  }}
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Abmeldung für " + v.Name)
+    @ui_components.PageHeaderSubtext("Bereits abgemeldete Meldungen werden nicht angezeigt")
+    <div class="flex flex-col gap-4">
+      for _, m := range meldungen {
+        if curDay != m.Rennen.Tag {
+          {{
+            curDay = m.Rennen.Tag
+          }}
+          <div class="text-xl font-bold text-mrgblau">{curDay}:</div>
+          <div class="divider h-4 m-0 mb-2 p-0"/>
+        }
+        if !m.Abgemeldet {
+          @ui_components.MeldungsCard(m, ui_components.DefaultGetHXNavigationOptions(fmt.Sprintf("/internal/regattabuero/%s/abmeldung/%s", v.Uuid, m.Uuid)))
+        }
+      }
+    </div>
+  }
+}
+
+templ AbmeldungMeldung(v crud.Verein, m crud.Meldung) {
+  {{
+    yesUrl := fmt.Sprintf("/internal/regattabuero/%s/abmeldung/%s", v.Uuid, m.Uuid)
+    noUrl := fmt.Sprintf("/internal/regattabuero/%s/abmeldung", v.Uuid)
+  }}
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Abmeldung für " + v.Name)
+    @ui_components.PageHeaderSubtext("")
+
+    <p>Sind Sie sicher, dass Sie die folgende Meldung abmelden möchten?</p>
+    <div class="flex flex-col gap-4 items-center">
+      <div class="card bg-base-100 p-4 rounded-md shadow-md">
+        <h5 class="text-xl font-bold">Zu Rennen: {m.Rennen.Nummer} - {m.Rennen.BezeichnungLang}</h5>
+        <p class="text-xl">Startnummer: {m.StartNummer} Verein: {v.Name}</p>
+        <p class="text-xl">Teilnehmer: {m.TeilnehmerString()}</p>
+      </div>
+      <div class="flex flex-row gap-4">
+        <button
+          class="btn btn-warning"
+          hx-delete={yesUrl}
+          hx-target="main"
+          hx-push-url="true"
+          href={yesUrl}
+        >
+          Ja
+        </button>
+        <button
+          class="btn btn-primary"
+          hx-get={noUrl}
+          hx-boost="true"
+          hx-target="main"
+          hx-push-url="true"
+          href={noUrl}
+        >
+          Nein
+        </button>
+      </div>
+    </div>
+  }
+}
+
+templ Ummeldung(v crud.Verein, meldungen []crud.Meldung) {
+  {{
+    var curDay crud.Tag
+  }}
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Ummeldung für " + v.Name)
+    @ui_components.PageHeaderSubtext("")
+    <div class="flex flex-col gap-4">
+      for _, m := range meldungen {
+        if curDay != m.Rennen.Tag {
+          {{
+            curDay = m.Rennen.Tag
+          }}
+          <div class="text-xl font-bold text-mrgblau">{curDay}:</div>
+          <div class="divider h-4 m-0 mb-2 p-0"/>
+        }
+        if !m.Abgemeldet {
+          @ui_components.MeldungsCard(m, ui_components.DefaultGetHXNavigationOptions(fmt.Sprintf("/internal/regattabuero/%s/ummeldung/%s", v.Uuid, m.Uuid)))
+        }
+      }
+    </div>
+  }
+}
+
+// TODO: Check for previous Ummeldungen, only 50% + Stm is allowed!
+templ UmmeldungMeldung(v crud.Verein, m crud.Meldung, athleten []crud.Athlet, msg string, fieldErrors map[string]string) {
+  {{
+    yesUrl := fmt.Sprintf("/internal/regattabuero/%s/ummeldung/%s", v.Uuid, m.Uuid)
+    noUrl := fmt.Sprintf("/internal/regattabuero/%s/ummeldung", v.Uuid)
+
+    athletLabels := []string{}
+    athletValues := []string{}
+    for _, a := range athleten {
+      athletLabels = append(athletLabels, a.AthletString())
+      athletValues = append(athletValues, a.Uuid.String())
+    }
+  }}
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Ummeldung für " + v.Name)
+    @ui_components.PageHeaderSubtext("")
+
+    <form
+      hx-post={yesUrl}
+      hx-target="main"
+      hx-push-url="true"
+    >
+      <div class="flex flex-col gap-4 items-center">
+        <div class="card bg-base-100 p-4 rounded-md shadow-md">
+          <h5 class="text-xl font-bold">Zu Rennen: {m.Rennen.Nummer} - {m.Rennen.BezeichnungLang}</h5>
+          <p class="text-xl">Startnummer: {m.StartNummer} Verein: {v.Name}</p>
+          if msg != "" {
+            <div class="alert alert-error mb-4">
+              <span>{msg}</span>
+            </div>
+          }
+          <p class="text-xl">Teilnehmer:</p>
+          for i, a := range m.Athleten {
+            @ui_components.DropDown(fmt.Sprintf("athleten_%d", i), fmt.Sprintf("Athlet %d", i+1), athletLabels, athletValues, a.Uuid.String(), false, fieldErrors[fmt.Sprintf("athleten_%d", i)], "")
+          }
+        </div>
+        <div class="flex flex-row gap-4">
+          @ui_components.SubmitButton("Ja", ui_components.Success)
+          <button
+            class="btn btn-primary mt-6"
+            hx-get={noUrl}
+            hx-boost="true"
+            hx-target="main"
+            hx-push-url="true"
+            href={noUrl}
+          >
+            Nein
+          </button>
+        </div>
+      </div>
+    </form>
+  }
+}
+
+templ Nachmeldung(v crud.Verein) {
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Nachmeldung für " + v.Name)
+    @ui_components.PageHeaderSubtext("")
+
+    @ui_components.RennenTabs("/internal/regattabuero/" + v.Uuid.String() + "/nachmeldung/%25s", false, false) // %25 -> % in url
+  }
+}
+
+templ NachmeldungMeldung(v crud.Verein, r crud.Rennen, athleten []crud.Athlet, msg string, fieldErrors map[string]string) {
+  {{
+    formUrl := fmt.Sprintf("/internal/regattabuero/%s/nachmeldung/%s", v.Uuid, r.Uuid)
+    numAthletes, stmRequired := r.GetTeilnehmerMeldeParams()
+
+    athletLabels := []string{"--- Bitte Teilnehmer auswählen ---"}
+    athletValues := []string{""}
+    for _, a := range athleten {
+      athletLabels = append(athletLabels, a.AthletString())
+      athletValues = append(athletValues, a.Uuid.String())
+    }
+  }}
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Nachmeldung für " + v.Name)
+    @ui_components.PageHeaderSubtext("")
+
+    <form
+      hx-post={formUrl}
+      hx-target="main"
+      hx-push-url="true"
+      href={formUrl}
+    >
+      <div class="flex flex-col gap-4 items-center">
+        <div class="card bg-base-100 p-4 rounded-md shadow-md">
+          <div class="card-body">
+            <h5 class="card-title">Rennen: {r.Nummer} - {r.BezeichnungLang}</h5>
+            <div class="divider m-0 p-0"/>
+            if msg != "" {
+              <div class="alert alert-error mb-4">
+                <span>{msg}</span>
+              </div>
+            }
+            <p class="text-xl">Teilnehmer:</p>
+            for i := range numAthletes {
+              @ui_components.DropDown(fmt.Sprintf("athleten_%d", i), fmt.Sprintf("Ruderer %d:", i+1), athletLabels, athletValues, "", true, "", "")
+            }
+
+            if stmRequired {
+              @ui_components.DropDown("stm", "Stm.:", athletLabels, athletValues, "", true, "", "")
+            }
+
+            @ui_components.Toggle("doppeltes_meldentgeld_befreiung", "Befreiung vom doppelten Meldeentgeld", false, false, "")
+            <input type="hidden" name="verein_uuid" value={v.Uuid.String()}/>
+            <input type="hidden" name="rennen_uuid" value={r.Uuid.String()}/>
+          </div>
+        </div>
+
+        <div class="flex flex-row gap-4">
+          @ui_components.SubmitButton("Ja", ui_components.Success)
+          <button
+            class="btn btn-primary mt-6"
+            hx-get={formUrl}
+            hx-boost="true"
+            hx-target="main"
+            hx-push-url="true"
+            href={formUrl}
+          >
+            Nein
+          </button>
+        </div>
+      </div>
+    </form>
+  }
+}
+
+templ NachmeldungSuccess(m crud.Meldung) {
+  {{
+    backUrl := fmt.Sprintf("/internal/regattabuero/%s/nachmeldung", m.Verein.Uuid)
+  }}
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Nachmeldung erfolgreich!")
+    @ui_components.PageHeaderSubtext("")
+
+    @ui_components.MeldungsCard(m, ui_components.NoNavHXNavigationOptions())
+
+    // TODO: Add Rennen Info and direct Link to Setzungsänderung
+    // TODO: Add Btn to give out Startnummer
+
+    <button
+      class="btn btn-primary mt-6"
+      hx-get={backUrl}
+      hx-boost="true"
+      hx-target="main"
+      hx-push-url="true"
+      href={backUrl}
+    >
+      Zurück
+    </button>
+  }
+}

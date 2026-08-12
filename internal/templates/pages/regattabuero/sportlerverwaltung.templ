@@ -1,0 +1,207 @@
+package regattabuero
+
+import (
+  "fmt"
+
+  "github.com/bata94/RegattaApi/internal/crud"
+	"github.com/bata94/RegattaApi/internal/templates/components"
+)
+
+templ WaageWahl(v crud.Verein, athleten []crud.Athlet) {
+  {{
+    navOpts := ui_components.HXNavigationOptions{
+      URL:    "/internal/regattabuero/" + v.Uuid.String() + "/waage",
+      Target: "main",
+      Push:   true,
+      Method: ui_components.GET,
+    }
+  }}
+
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Waage für " + v.Name)
+    @ui_components.PageHeaderSubtext("")
+
+    @ui_components.TeilnehmerCardList(athleten, navOpts)
+  }
+}
+
+templ Waage(a crud.Athlet, msg string, fieldErrors map[string]string) {
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Waage für " + a.FullName())
+    @ui_components.PageHeaderSubtext("")
+
+    <h5 class="card-title">Verein: {a.Verein.Name}</h5>
+    if a.ErstesRennen != nil {
+      <p class="card-text">Erster Start: {a.ErstesRennen.Tag.String()} {a.ErstesRennen.StartzeitStr()} Uhr</p>
+    }
+
+    <h5 class="card-title mt-4">Meldungen:</h5>
+    <div class="divider m-0 p-0"/>
+    <div class="flex flex-row gap-4">
+      for _, r := range a.Meldungen {
+        @ui_components.MeldungsCard(r, ui_components.NoNavHXNavigationOptions())
+      }
+    </div>
+    <div class="divider m-0 p-0"/>
+
+    if msg != "" {
+      <div class="alert alert-error mb-4">
+        <span>{msg}</span>
+      </div>
+    }
+
+    <form
+      hx-post={"/internal/regattabuero/" + a.Verein.Uuid.String() + "/waage/" + a.Uuid.String()}
+      hx-target="main"
+      hx-push-url="true"
+    >
+      <div class="flex flex-col gap-4 w-full md:w-2/3 lg:w-1/2 md:mx-auto mt-4">
+        <input type="hidden" name="uuid" value={a.Uuid.String()}/>
+        @ui_components.LineInput("gewicht", "Gewicht", "", "float", true, fieldErrors["gewicht"])
+
+        <div class="flex flex-row gap-4 justify-center my-4">
+          @ui_components.SubmitButton("Speichern", ui_components.Success)
+          <button
+            type="button"
+            class="btn btn-primary mt-6"
+            hx-get={"/internal/regattabuero/" + a.Verein.Uuid.String() + "/waage"}
+            hx-target="main"
+            hx-push-url="true"
+          >
+            Abbrechen
+          </button>
+        </div>
+      </div>
+    </form>
+  }
+}
+
+templ StartberechtigungWahl(v crud.Verein, athleten []crud.Athlet) {
+  {{
+    navOpts := ui_components.HXNavigationOptions{
+      URL:    "/internal/regattabuero/" + v.Uuid.String() + "/startberechtigung",
+      Target: "main",
+      Push:   true,
+      Method: ui_components.GET,
+    }
+  }}
+
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Fehlende Startberechtigungen für " + v.Name)
+    @ui_components.PageHeaderSubtext("")
+
+    @ui_components.TeilnehmerCardList(athleten, navOpts)
+  }
+}
+
+// TODO: Add FileUpload/PhotoUpload for Ärztliche Bescheinigung
+templ Startberechtigung(a crud.Athlet, msg string, fieldErrors map[string]string) {
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Startberechtigung für " + a.FullName())
+    @ui_components.PageHeaderSubtext("")
+
+    <h5 class="card-title">Verein: {a.Verein.Name}</h5>
+    if a.ErstesRennen != nil {
+      <p class="card-text">Erster Start: {a.ErstesRennen.Tag.String()} {a.ErstesRennen.StartzeitStr()} Uhr</p>
+    }
+
+    <h5 class="card-title mt-4">Meldungen:</h5>
+    <div class="divider m-0 p-0"/>
+    <div class="flex flex-row gap-4">
+      for _, r := range a.Meldungen {
+        @ui_components.MeldungsCard(r, ui_components.NoNavHXNavigationOptions())
+      }
+    </div>
+    <div class="divider m-0 p-0"/>
+
+    if msg != "" {
+      <div class="alert alert-error mb-4">
+        <span>{msg}</span>
+      </div>
+    }
+
+    <form
+      hx-post={"/internal/regattabuero/" + a.Verein.Uuid.String() + "/startberechtigung/" + a.Uuid.String()}
+      hx-target="main"
+      hx-push-url="true"
+    >
+      <div class="flex flex-col gap-4 w-full md:w-2/3 lg:w-1/2 md:mx-auto mt-4">
+        <input type="hidden" name="uuid" value={a.Uuid.String()}/>
+        <h5>Haben Sie die Unterlagen vollständig vorliegen und haben diese im besten Fall digital gespeichert?</h5>
+
+        @ui_components.Toggle("startberechtigt", "Ärztliche Bescheinigung vorliegend und vollständig ausgefüllt?", false, true, fieldErrors["startberechtigt"])
+
+        <div class="flex flex-row gap-4 justify-center my-4">
+          @ui_components.SubmitButton("Speichern", ui_components.Success)
+          <button
+            type="button"
+            class="btn btn-primary mt-6"
+            hx-get={"/internal/regattabuero/" + a.Verein.Uuid.String() + "/startberechtigung"}
+            hx-target="main"
+            hx-push-url="true"
+          >
+            Abbrechen
+          </button>
+        </div>
+      </div>
+    </form>
+  }
+}
+
+templ NewAthlet(v crud.Verein, msg string, fieldErrors map[string]string) {
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("Neuen Sportler anlegen für " + v.Name)
+    @ui_components.PageHeaderSubtext("")
+
+    if msg != "" {
+      <div class="alert alert-error mb-4">
+        <span>{msg}</span>
+      </div>
+    }
+
+    <form
+      hx-post={"/internal/regattabuero/" + v.Uuid.String() + "/new_athlet"}
+      hx-target="main"
+      hx-push-url="true"
+    >
+      <div class="flex flex-col gap-4 w-full md:w-2/3 lg:w-1/2 md:mx-auto mt-4">
+        @ui_components.LineInput("vorname", "Vorname", "", "text", true, fieldErrors["vorname"])
+        @ui_components.LineInput("name", "Name", "", "text", true, fieldErrors["name"])
+        @ui_components.LineInput("jahrgang", "Jahrgang", "", "text", true, fieldErrors["jahrgang"])
+        @ui_components.GenderSelect("geschlecht", "m", fieldErrors["geschlecht"])
+        @ui_components.Toggle("startberechtigt", "Startberechtigt", false, false, fieldErrors["startberechtigt"])
+        <div class="flex flex-row gap-4 justify-center my-4">
+          @ui_components.SubmitButton("Speichern", ui_components.Success)
+          <button
+            type="button"
+            class="btn btn-primary mt-6"
+            hx-get="/internal/regattabuero/vereinswahl?next=new_athlet&title=Vereinswahl%20für%20Neuen%20Sportler%20anlegen"
+            hx-target="main"
+            hx-push-url="true"
+          >
+            Abbrechen
+          </button>
+        </div>
+      </div>
+    </form>
+  }
+}
+
+templ NewAthletSuccess(a crud.Athlet) {
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader(fmt.Sprintf("Sportler %s erfolgreich angelegt", a.FullName()))
+    @ui_components.PageHeaderSubtext("")
+
+    @ui_components.TeilnehmerCard(a, ui_components.NoNavHXNavigationOptions())
+
+    <button
+      type="button"
+      class="btn btn-primary mt-6 mx-auto"
+      hx-get="/internal/regattabuero/vereinswahl?next=new_athlet&title=Vereinswahl%20für%20Neuen%20Sportler%20anlegen"
+      hx-target="main"
+      hx-push-url="true"
+    >
+      Zurück
+    </button>
+  }
+}

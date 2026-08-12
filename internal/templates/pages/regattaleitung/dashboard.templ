@@ -1,0 +1,39 @@
+package regattaleitung
+
+import "github.com/bata94/RegattaApi/internal/templates/components"
+
+templ meldeschlussHelpBody() {
+  <div class="">
+    <p class="m-0">Bei Meldeschluss ist der Ablauf wie folgt:</p>
+    <ol
+      type="1"
+      class="mx-6"
+    >
+      <li>Meldungen schließen & veröffentlichen im Meldeportal</li>
+      <li>Meldungen im Meldeportal exportieren (JSON Format)</li>
+      <li>DRV Datei hier hochladen</li>
+      <li>Setzung hier auslosen</li>
+      <li>Pausen hier nach Ausschreibung eintragen, Länge erstmal nicht so wichtig</li>
+      <li>Zeitplan hier erstellen, dabei werden Sa und So erster Startzeit festgelegt</li>
+      <li>Startnummern hier verteilen, ggf. Startnummerbereiche anpassen und nicht verfügbare Nummern eintragen</li>
+      <li>Setzungen überprüfen, ggf. PDF Meldeergebnis erstellen wenn einfacher zu bearbeiten</li>
+      <li>Setzungen hier anpassen</li>
+      <li>Wenn Setzung korrekt ist, erneut Startnummern verteilen</li>
+      <li>Zeitplan inkl. Rennabstände überprüfen, ggf. Pausen bzw. Sa/So erster Startzeit anpassen</li>
+      <li>PDF Meldeergebnis erstellen</li>
+      <li>eMail an Vereine senden, mit Meldeergebnis als PDF und den anderen Dokumenten</li>
+    </ol>
+  </div>
+}
+
+templ Dashboard() {
+  @ui_components.InternalPageDivCol() {
+
+    @ui_components.PageHeader("Regattaleitung")
+    @ui_components.PageHeaderSubtext("Hier kannst du die Regattaleitung-Funktionen nutzen.")
+
+    <div class="mb-4">
+      @ui_components.Collapse("Meldeschluss, was tun?", meldeschlussHelpBody())
+    </div>
+  }
+}

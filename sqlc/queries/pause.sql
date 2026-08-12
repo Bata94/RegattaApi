@@ -2,6 +2,13 @@
 SELECT * FROM pause
 ORDER BY id ASC;
 
+-- name: GetPausenByWettkampf :many
+SELECT * FROM pause
+WHERE nach_rennen_uuid IN (
+  SELECT uuid FROM rennen WHERE wettkampf = ANY($1::wettkampf[])
+)
+ORDER BY id ASC;
+
 -- name: GetPause :one
 SELECT * FROM pause
 WHERE id = $1 LIMIT 1;

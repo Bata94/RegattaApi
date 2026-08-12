@@ -1,0 +1,206 @@
+package ui_components
+
+import (
+	"fmt"
+	"net/url"
+	"strings"
+	"strconv"
+	"github.com/bata94/RegattaApi/internal/utils"
+)
+
+// TODO: Skeleton sizing should be more infeared instead of fixed!
+
+type ImageOptions struct {
+  Width string
+  Height string
+  Quality float32
+  Lossless bool
+  ClassImage string
+  ClassSkeleton string
+  LazyLoading bool
+  VeryLazyLoading bool
+}
+
+func DefaultImageOptions() ImageOptions {
+  return ImageOptions{
+    Width: "100%",
+    Height: "100%",
+    Quality:  utils.WEBP_DEFAULT_QUALITY,
+    Lossless: false,
+    ClassImage: "",
+    ClassSkeleton: "",
+    LazyLoading: true,
+    VeryLazyLoading: false,
+  }
+}
+
+// WithWidth sets the width of the imageFile
+func WithWidth(width string) func(ImageOptions) ImageOptions {
+  return func(opts ImageOptions) ImageOptions {
+    opts.Width = width
+    return opts
+  }
+}
+
+// WithHeight sets the height of the imageFile
+func WithHeight(height string) func(ImageOptions) ImageOptions {
+  return func(opts ImageOptions) ImageOptions {
+    opts.Height = height
+    return opts
+  }
+}
+
+// WithQuality sets the quality of the imageFile
+func WithQuality(quality float32) func(ImageOptions) ImageOptions {
+  return func(opts ImageOptions) ImageOptions {
+    opts.Quality = quality
+    return opts
+  }
+}
+
+func WithLossless() func(ImageOptions) ImageOptions {
+  return func(opts ImageOptions) ImageOptions {
+    opts.Lossless = true
+    return opts
+  }
+}
+
+// WithSkeletonClass sets (sizing) classes for the loading skeleton
+// Skeleton is only shown if the image is not loaded yet, and LazyLoading active.
+func WithSkeletonClass(class string) func(ImageOptions) ImageOptions {
+  return func(opts ImageOptions) ImageOptions {
+    opts.ClassSkeleton = class
+    return opts
+  }
+}
+
+// WithImageClass sets classes for the Image
+func WithImageClass(class string) func(ImageOptions) ImageOptions {
+  return func(opts ImageOptions) ImageOptions {
+    opts.ClassImage = class
+    return opts
+  }
+}
+
+// WithoutLazyLoading disables lazy loading
+// It bypasses the HTMX trigger and loads the image immediately
+// With LazyLoading Images are requested when DOM rendering is complete
+func WithoutLazyLoading() func(ImageOptions) ImageOptions {
+  return func(opts ImageOptions) ImageOptions {
+    opts.LazyLoading = false
+    return opts
+  }
+}
+
+// WithVeryLazyLoading enables very lazy loading
+// Now the HTMX trigger is set to "intersect once" and the image is loaded on Viewport intersection
+func WithVeryLazyLoading() func(ImageOptions) ImageOptions {
+  return func(opts ImageOptions) ImageOptions {
+    opts.VeryLazyLoading = true
+    return opts
+  }
+}
+
+func mergeImageOpts(opts ...func(ImageOptions) ImageOptions) ImageOptions {
+  c := DefaultImageOptions()
+  for _, o := range opts {
+    c = o(c)
+  }
+  return c
+}
+
+templ Image(src, alt string, opts ...func(ImageOptions) ImageOptions) {
+  {{
+    c := mergeImageOpts(opts...)
+    u, _ := url.Parse("/comp/image")
+    q := u.Query()
+    q.Set("src", src)
+    q.Set("alt", alt)
+    q.Set("width", c.Width)
+    q.Set("height", c.Height)
+    q.Set("quality", strconv.FormatFloat(float64(c.Quality), 'f', 2, 32))
+    q.Set("lossless", strconv.FormatBool(c.Lossless))
+    q.Set("class", c.ClassImage)
+    q.Set("skeleton", c.ClassSkeleton)
+    u.RawQuery = q.Encode()
+    hx_src := u.String()
+    skeletonClass := "skeleton w-32 h-32"
+
+    hx_trigger := "load"
+    if c.VeryLazyLoading {
+      hx_trigger = "intersect once"
+    }
+
+    if c.ClassSkeleton != "" {
+      skeletonClass = fmt.Sprintf("skeleton %s", c.ClassSkeleton)
+      if !strings.Contains(c.ClassSkeleton, "w-") {
+        skeletonClass += " w-32"
+      }
+      if !strings.Contains(c.ClassSkeleton, "h-") {
+        skeletonClass += " h-32"
+      }
+    }
+  }}
+
+  if c.LazyLoading {
+    <div
+      hx-get={hx_src}
+      hx-target="this"
+      hx-swap="outerHTML"
+      hx-trigger={hx_trigger}
+    >
+      <div class={skeletonClass}></div>
+    </div>
+  } else {
+    @RawImageComponent(src, alt, c)
+  }
+}
+
+templ RawImageComponent(src, alt string, c ImageOptions) {
+  {{
+   width, err := strconv.Atoi(c.Width)
+     if err == nil {
+       width = 0
+     }
+   height, err := strconv.Atoi(c.Height)
+     if err == nil {
+       height = 0
+     }
+
+    srcFileNameLS := strings.Split(src, "/")
+    srcFileNameLS = srcFileNameLS[len(srcFileNameLS)-1:]
+    srcFileNameWithExt := srcFileNameLS[0]
+    srcFileName := srcFileNameWithExt[:strings.LastIndex(srcFileNameWithExt, ".")]
+
+    webpSrc := fmt.Sprintf("/public/img_%s_w%d_h%d_q%d_l%t.webp", srcFileName, width, height, int(c.Quality), c.Lossless)
+    fmt.Println(webpSrc)
+    var errConv error
+
+    if !utils.FileExists(webpSrc[1:]) {
+      imgParams := utils.NewConvertResizeParams()
+
+      imgParams.Width = uint(width)
+      imgParams.Height = uint(height)
+      imgParams.Quality = c.Quality
+      imgParams.Lossless = c.Lossless
+
+      errConv = utils.ConvertAndResizeImage(src[1:], webpSrc[1:], imgParams)
+    } else {
+      fmt.Println("File exists, skipping conversion")
+    }
+  }}
+  if errConv != nil {
+    {{fmt.Println(errConv)}}
+  }
+
+  <img
+    src={webpSrc}
+    alt={alt}
+    class={c.ClassImage}
+    width={c.Width}
+    height={c.Height}
+    if c.LazyLoading {
+      loading="lazy"
+    }
+  />
+}

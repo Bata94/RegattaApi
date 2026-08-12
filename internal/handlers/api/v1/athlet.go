@@ -3,12 +3,10 @@ package api_v1
 import (
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
-
 	"github.com/bata94/RegattaApi/internal/crud"
-	api "github.com/bata94/RegattaApi/internal/handlers/api"
+	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/bata94/RegattaApi/internal/sqlc"
+	"github.com/google/uuid"
 )
 
 type NewAthletParams struct {
@@ -20,54 +18,53 @@ type NewAthletParams struct {
 	Geschlecht      string `json:"geschlecht"`
 }
 
-func GetAthlet(c *fiber.Ctx) error {
-	id, err := api.GetUuidFromCtx(c)
+func GetAthlet(c *handler.Context) error {
+	id, err := c.GetUUID("uuid")
+	if err != nil {
+		return handler.BadRequest(err.Error())
+	}
+
+	a, err := crud.GetAthletMinimal(c.Request.Context(), id)
 	if err != nil {
 		return err
 	}
 
-	a, err := crud.GetAthletMinimal(*id)
-	if err != nil {
-		return err
-	}
-
-	return api.JSON(c, a)
+	return c.JSON(a)
 }
 
-func GetAllAthlet(c *fiber.Ctx) error {
-	aLs, err := crud.GetAllAthlet()
+func GetAllAthlet(c *handler.Context) error {
+	aLs, err := crud.GetAllAthlet(c.Request.Context())
 	if err != nil {
 		return err
 	}
 
-	return api.JSON(c, aLs)
+	return c.JSON(aLs)
 }
 
-func CreateAthlet(c *fiber.Ctx) error {
+func CreateAthlet(c *handler.Context) error {
 	aParams := new(NewAthletParams)
 	err := c.BodyParser(&aParams)
 	if err != nil {
-		retErr := api.BAD_REQUEST
-		retErr.Msg = err.Error()
-		return &retErr
+		return handler.BadRequest(err.Error())
 	}
 
 	vereinUuid, err := uuid.Parse(aParams.VereinUUID)
 	if err != nil {
-		retErr := api.BAD_REQUEST
-		retErr.Msg = err.Error()
-		return &retErr
+		return handler.BadRequest(err.Error())
 	}
+
 	var geschlecht sqlc.Geschlecht
 	aParams.Geschlecht = strings.ToLower(aParams.Geschlecht)
-	if aParams.Geschlecht == "m" {
+	switch aParams.Geschlecht {
+	case "m":
 		geschlecht = sqlc.GeschlechtM
-	} else if aParams.Geschlecht == "f" || aParams.Geschlecht == "w" {
+	case "f", "w":
 		geschlecht = sqlc.GeschlechtW
-	} else if aParams.Geschlecht == "x" {
+	case "x":
 		geschlecht = sqlc.GeschlechtX
 	}
-	a, err := crud.CreateAthlet(sqlc.CreateAthletParams{
+
+	a, err := crud.CreateAthlet(c.Request.Context(), sqlc.CreateAthletParams{
 		Uuid:            uuid.New(),
 		VereinUuid:      vereinUuid,
 		Name:            aParams.Name,
@@ -80,7 +77,7 @@ func CreateAthlet(c *fiber.Ctx) error {
 		return err
 	}
 
-	return api.JSON(c, a)
+	return c.JSON(a)
 }
 
 type UpdateAthletStartberechtigungParams struct {
@@ -88,42 +85,45 @@ type UpdateAthletStartberechtigungParams struct {
 	Startberechtigt bool   `json:"startberechtigt"`
 }
 
-func UpdateAthletStartberechtigung(c *fiber.Ctx) error {
+func UpdateAthletStartberechtigung(c *handler.Context) error {
 	p := new(UpdateAthletStartberechtigungParams)
 	err := c.BodyParser(p)
 	if err != nil {
 		return err
 	}
 
-	uuid, err := uuid.Parse(p.Uuid)
+	id, err := uuid.Parse(p.Uuid)
 	if err != nil {
 		return err
 	}
 
-	ath, err := crud.GetAthletMinimal(uuid)
+	ath, err := crud.GetAthletMinimal(c.Request.Context(), id)
 	if err != nil {
 		return err
 	}
 
-	err = ath.UpdateStartberechtigung(p.Startberechtigt)
+	err = ath.UpdateStartberechtigung(c.Request.Context(), p.Startberechtigt)
+	if err != nil {
+		return err
+	}
 
-	return api.JSON(c, "Athlet erfolgreich angepasst!")
+	return c.JSON("Athlet erfolgreich angepasst!")
 }
 
-func GetAthletWaage(c *fiber.Ctx) error {
-	ls, err := crud.GetForAllVereineMissingAthlet(0)
+func GetAthletWaage(c *handler.Context) error {
+	ls, err := crud.GetForAllVereineMissingAthlet(crud.Waage)
 	if err != nil {
 		return err
 	}
-	return api.JSON(c, ls)
+	return c.JSON(ls)
 }
 
-func GetAthletStartberechtigung(c *fiber.Ctx) error {
-	ls, err := crud.GetForAllVereineMissingAthlet(1)
+func GetAthletStartberechtigung(c *handler.Context) error {
+	ls, err := crud.GetForAllVereineMissingAthlet(crud.Startberechtigt)
 	if err != nil {
 		return err
 	}
-	return api.JSON(c, ls)
+	return c.JSON(ls)
 }
 
 type UpdateAthletWaageParams struct {
@@ -131,24 +131,27 @@ type UpdateAthletWaageParams struct {
 	Gewicht int    `json:"gewicht"`
 }
 
-func UpdateAthletWaage(c *fiber.Ctx) error {
+func UpdateAthletWaage(c *handler.Context) error {
 	p := new(UpdateAthletWaageParams)
 	err := c.BodyParser(p)
 	if err != nil {
 		return err
 	}
 
-	uuid, err := uuid.Parse(p.Uuid)
+	id, err := uuid.Parse(p.Uuid)
 	if err != nil {
 		return err
 	}
 
-	ath, err := crud.GetAthletMinimal(uuid)
+	ath, err := crud.GetAthletMinimal(c.Request.Context(), id)
 	if err != nil {
 		return err
 	}
 
-	err = ath.UpdateGewicht(p.Gewicht)
+	err = ath.UpdateGewicht(c.Request.Context(), p.Gewicht)
+	if err != nil {
+		return err
+	}
 
-	return api.JSON(c, "Athlet erfolgreich angepasst!")
+	return c.JSON("Athlet erfolgreich angepasst!")
 }

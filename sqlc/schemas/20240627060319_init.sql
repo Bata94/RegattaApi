@@ -2,12 +2,11 @@
 -- +goose StatementBegin
 SELECT 'up SQL query';
 
-CREATE EXTENSION ulid;
-
 CREATE TYPE geschlecht AS ENUM ('m', 'w', 'x');
 CREATE TYPE tag AS ENUM('sa', 'so');
 CREATE TYPE wettkampf AS ENUM('Langstrecke', 'Kurzstrecke', 'Slalom', 'Staffel');
 CREATE TYPE ROLLE AS ENUM('Ruderer', 'Stm.', 'Trainer');
+CREATE TYPE user_capability AS ENUM('allowed_admin', 'allowed_zeitnahme', 'allowed_startlisten', 'allowed_regattabuero', 'allowed_regattaleitung');
 
 CREATE TABLE verein (
   uuid uuid PRIMARY KEY,
@@ -116,28 +115,25 @@ CREATE TABLE obmann (
 );
 
 CREATE TABLE rechnung (
-  ulid ulid PRIMARY KEY DEFAULT gen_ulid(),
+  uuid uuid PRIMARY KEY DEFAULT uuidv7(),
   nummer text UNIQUE NOT NULL,
   date date DEFAULT NOW() NOT NULL,
   verein_uuid uuid NOT NULL,
-
   cost_sum int NOT NULL
 );
 
 CREATE TABLE zahlung (
-  ulid ulid PRIMARY KEY DEFAULT gen_ulid(),
+  uuid uuid PRIMARY KEY DEFAULT uuidv7(),
   nummer text UNIQUE NOT NULL,
   date date DEFAULT NOW() NOT NULL,
   verein_uuid uuid NOT NULL,
-
   amount int NOT NULL
 );
 
 CREATE TABLE startnummer_ausgabe (
-  ulid ulid PRIMARY KEY DEFAULT gen_ulid(),
+  uuid uuid PRIMARY KEY DEFAULT uuidv7(),
   verein_uuid uuid NOT NULL,
   date date DEFAULT NOW() NOT NULL,
-
   pfand int DEFAULT 20 NOT NULL,
   kosten int DEFAULT 0 NOT NULL,
   startnummer_ausgegeben text NOT NULL,
@@ -156,74 +152,37 @@ CREATE TABLE zeitnahme_ergebnis (
 );
 
 CREATE TABLE users_group (
-  ulid ulid PRIMARY KEY DEFAULT gen_ulid(),
+  uuid uuid PRIMARY KEY DEFAULT uuidv7(),
   name text NOT NULL,
-  allowed_admin boolean DEFAULT false NOT NULL,
-  allowed_zeitnahme boolean DEFAULT false NOT NULL,
-  allowed_startlisten boolean DEFAULT false NOT NULL,
-  allowed_regattaleitung boolean DEFAULT false NOT NULL
+  capabilities user_capability[] NOT NULL DEFAULT '{}'
 );
 
 CREATE TABLE users (
-  ulid ulid PRIMARY KEY DEFAULT gen_ulid(),
+  uuid uuid PRIMARY KEY DEFAULT uuidv7(),
   username text UNIQUE NOT NULL,
   hashed_password text NOT NULL,
   is_active boolean DEFAULT false NOT NULL,
-  group_ulid ulid NOT NULL,
-  CONSTRAINT fk_users_group FOREIGN KEY (group_ulid) REFERENCES users_group(ulid)
+  group_uuid uuid NOT NULL,
+  CONSTRAINT fk_users_group FOREIGN KEY (group_uuid) REFERENCES users_group(uuid)
 );
 
-INSERT INTO users_group (
-  ulid,
-  name,
-  allowed_admin,
-  allowed_zeitnahme,
-  allowed_startlisten,
-  allowed_regattaleitung
-) VALUES (
-  '01J1HJBTAXD1T2DYVJ6SASKGGV',
-  'full_admin',
-  true,
-  true,
-  true,
-  true
-);
-INSERT INTO users_group (
-  ulid,
-  name,
-  allowed_regattaleitung
-) VALUES (
-  '01J1HJBTAWCF0DVYQ0AFJ8GH9P',
-  'regattaleitung',
-  true
-);
-INSERT INTO users_group (
-  ulid,
-  name,
-  allowed_zeitnahme
-) VALUES (
-  '01J1HJBTAXMGNP5R6PR0WJ0GG1',
-  'zeitnahme',
-  true
-);
-INSERT INTO users_group (
-  ulid,
-  name,
-  allowed_startlisten
-) VALUES (
-  '01J1HJBTAXP10XTYV4SW3D65TV',
-  'startlisten',
-  true
-);
+INSERT INTO users_group (uuid, name, capabilities) VALUES
+  (uuidv7(), 'full_admin',    ARRAY['allowed_admin','allowed_zeitnahme','allowed_startlisten','allowed_regattabuero','allowed_regattaleitung']::user_capability[]),
+  (uuidv7(), 'regattabuero',  ARRAY['allowed_regattabuero']::user_capability[]),
+  (uuidv7(), 'regattaleitung',ARRAY['allowed_regattaleitung']::user_capability[]),
+  (uuidv7(), 'zeitnahme',     ARRAY['allowed_zeitnahme']::user_capability[]),
+  (uuidv7(), 'startlisten',   ARRAY['allowed_startlisten']::user_capability[]);
 
 INSERT INTO users (
   username,
   hashed_password,
-  group_ulid
+  is_active,
+  group_uuid
 ) VALUES (
   'admin',
   '$2a$14$HKUH7lzr8gf.rKE/.k2mEessP1cgFLvWrKQ18pg2Bi8QBbwjzkWBu',
-  '01J1HJBTAXD1T2DYVJ6SASKGGV'
+  true,
+  (SELECT uuid FROM users_group WHERE name = 'full_admin' LIMIT 1)
 );
 -- +goose StatementEnd
 
@@ -233,6 +192,9 @@ SELECT 'down SQL query';
 
 DROP TABLE users;
 DROP TABLE users_group;
+DROP TABLE rechnung;
+DROP TABLE zahlung;
+DROP TABLE startnummer_ausgabe;
 DROP TABLE zeitnahme_ergebnis;
 DROP TABLE obmann;
 DROP TABLE link_meldung_athlet;
@@ -248,6 +210,5 @@ DROP TYPE tag;
 DROP TYPE wettkampf;
 DROP TYPE geschlecht;
 DROP TYPE rolle;
-
-DROP EXTENSION ulid;
+DROP TYPE user_capability;
 -- +goose StatementEnd

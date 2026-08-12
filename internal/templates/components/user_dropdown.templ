@@ -1,0 +1,28 @@
+package ui_components
+
+templ userDropdown(firstLetter string) {
+	<details class="dropdown dropdown-end">
+		<summary class="avatar placeholder btn btn-circle btn-ghost">
+			<div class="bg-mrgblau text-neutral-content rounded-full w-8 h-8 flex items-center justify-center">
+				<span class="text-sm font-bold">{firstLetter}</span>
+			</div>
+		</summary>
+		<ul class="dropdown-content z-50 menu p-2 shadow-lg bg-base-200 rounded-box w-48">
+			<li>
+				<a
+					class="text-sm"
+					hx-get="/internal/profil"
+					hx-target="#main-content"
+					hx-push-url="true"
+					href="/internal/profil"
+				>Profil</a>
+			</li>
+			<li>
+				<a
+					class="text-sm"
+					href="/logout"
+				>Ausloggen</a>
+			</li>
+		</ul>
+	</details>
+}

@@ -4,10 +4,10 @@ tmp_dir = "tmp"
 
 [build]
   args_bin = []
-  bin = "./bin/main"
-  cmd = "make build"
+  bin = "./tmp/main"
+  cmd = "just build-air"
   delay = 100
-  exclude_dir = ["assets", "tmp", "vendor", "testdata", "docs", "sqlc", "node_modules"]
+  exclude_dir = ["assets", "tmp", "vendor", "testdata", "docs", "sqlc", "node_modules", "files", "internal/sqlc"]
   exclude_file = ["assets/css/global.css"]
   exclude_regex = ["_test.go", ".*_templ.go"]
   exclude_unchanged = false
@@ -36,7 +36,7 @@ tmp_dir = "tmp"
 
 [log]
   main_only = false
-  time = false
+  time = true
 
 [misc]
   clean_on_exit = false
@@ -44,3 +44,9 @@ tmp_dir = "tmp"
 [screen]
   clear_on_rebuild = false
   keep_scroll = true
+
+[proxy]
+  app_port = 8080
+  app_start_timeout = 5000
+  enabled = true
+  proxy_port = 8090

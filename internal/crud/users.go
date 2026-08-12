@@ -1,22 +1,54 @@
 package crud
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
-	"strconv"
 	"time"
 
+	"github.com/bata94/RegattaApi/internal/config"
 	"github.com/bata94/RegattaApi/internal/db"
-	"github.com/bata94/RegattaApi/internal/handlers/api"
+	apierr "github.com/bata94/RegattaApi/internal/errors"
 	"github.com/bata94/RegattaApi/internal/sqlc"
-	"github.com/oklog/ulid/v2"
+	"github.com/google/uuid"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
+const bcryptCost = 14
+
 type User struct {
 	sqlc.User
-	UserGroup *sqlc.UsersGroup
+	UserGroup *sqlc.UsersGroup `json:"user_group,omitempty"`
+}
+
+func UserFromSqlc(u sqlc.User) User {
+	return User{User: u}
+}
+
+func (u *User) GetUserGroup() (*sqlc.UsersGroup, error) {
+	if u.UserGroup != nil {
+		return u.UserGroup, nil
+	}
+	return nil, nil
+}
+
+type userJSON struct {
+	Uuid      uuid.UUID        `json:"uuid"`
+	Username  string           `json:"username"`
+	IsActive  bool             `json:"is_active"`
+	UserGroup *sqlc.UsersGroup `json:"user_group,omitempty"`
+}
+
+func (u User) MarshalJSON() ([]byte, error) {
+	j := userJSON{
+		Uuid:      u.Uuid,
+		Username:  u.Username,
+		IsActive:  u.IsActive,
+		UserGroup: u.UserGroup,
+	}
+	return json.Marshal(j)
 }
 
 type JWT struct {
@@ -25,21 +57,15 @@ type JWT struct {
 }
 
 type ReturnUserWithJWT struct {
-	Ulid      string           `json:"ulid"`
+	Uuid      uuid.UUID        `json:"uuid"`
 	Jwt       JWT              `json:"jwt"`
 	Username  string           `json:"username"`
 	UserGroup *sqlc.UsersGroup `json:"user_group"`
 }
 
 type ReturnUserMinimal struct {
-	Ulid     string `json:"ulid"`
-	Username string `json:"username"`
-}
-
-type ReturnUser struct {
-	Ulid      string           `json:"ulid"`
-	Username  string           `json:"username"`
-	UserGroup *sqlc.UsersGroup `json:"user_group"`
+	Uuid     uuid.UUID `json:"uuid"`
+	Username string    `json:"username"`
 }
 
 type LoginParams struct {
@@ -48,68 +74,58 @@ type LoginParams struct {
 }
 
 type CreateUserParams struct {
-	GroupUlid ulid.ULID `json:"group_ulid"`
+	GroupUuid uuid.UUID `json:"group_uuid"`
 	Username  string    `json:"username"`
 	Password  string    `json:"password"`
 }
 
-func checkPasswordHash(password, hash string) bool {
+type UpdateUserParams struct {
+	Username  string    `json:"username"`
+	IsActive  bool      `json:"is_active"`
+	GroupUuid uuid.UUID `json:"group_uuid"`
+}
+
+func CheckPasswordHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
 }
 
-func genJWT(u sqlc.User) (string, time.Time, error) {
+func genJWT(u sqlc.User, ug *sqlc.UsersGroup) (string, time.Time, error) {
+	secret := config.C.Auth.JWTSecret
+
 	token := jwt.New(jwt.SigningMethodHS256)
 	exp := time.Now().Add(time.Hour * 72)
 
 	claims := token.Claims.(jwt.MapClaims)
 	claims["username"] = u.Username
-	claims["user_id"] = u.Ulid
+	claims["user_id"] = u.Uuid.String()
 	claims["exp"] = exp.Unix()
 
-	// TODO: RM this in Prod
-	jwtStr, err := token.SignedString([]byte("DO_NOT_USE_IN_PROD"))
+	if ug != nil {
+		claims["user_group_name"] = ug.Name
+		caps := make([]string, len(ug.Capabilities))
+		for i, c := range ug.Capabilities {
+			caps[i] = string(c)
+		}
+		claims["capabilities"] = caps
+	}
+	claims["allowed_logged_in"] = true
+
+	jwtStr, err := token.SignedString([]byte(secret))
 	return jwtStr, exp, err
 }
 
 func hashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
 	return string(bytes), err
 }
 
-func validToken(t *jwt.Token, id string) bool {
-	n, err := strconv.Atoi(id)
-	if err != nil {
-		return false
-	}
-
-	claims := t.Claims.(jwt.MapClaims)
-	uid := int(claims["user_id"].(float64))
-
-	return uid == n
+func ParseUUID(s string) (uuid.UUID, error) {
+	return uuid.Parse(s)
 }
 
-func validUser(ulid ulid.ULID, p string) bool {
-	user, err := GetUser(ulid)
-	if err != nil {
-		return false
-	}
-	if !checkPasswordHash(p, user.HashedPassword) {
-		return false
-	}
-	return true
-}
-
-func (u *User) ToReturnUser() ReturnUser {
-	return ReturnUser{
-		Ulid:      u.Ulid,
-		Username:  u.Username,
-		UserGroup: u.UserGroup,
-	}
-}
-
-func GetAllUsers() ([]sqlc.User, error) {
-	ctx, cancel := getCtxWithTo()
+func GetAllUsers(ctx context.Context) ([]sqlc.User, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	uLs, err := DB.Queries.GetAllUser(ctx)
@@ -124,14 +140,14 @@ func GetAllUsers() ([]sqlc.User, error) {
 	return uLs, nil
 }
 
-func GetUser(ulid ulid.ULID) (*User, error) {
-	ctx, cancel := getCtxWithTo()
+func GetUser(ctx context.Context, id uuid.UUID) (*User, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	u, err := DB.Queries.GetUser(ctx, ulid.String())
+	u, err := DB.Queries.GetUser(ctx, id)
 	if err != nil {
 		if isNoRowError(err) {
-			return nil, &api.NOT_FOUND
+			return nil, apierr.ErrNotFound
 		}
 		return nil, err
 	}
@@ -142,25 +158,20 @@ func GetUser(ulid ulid.ULID) (*User, error) {
 	}, err
 }
 
-func GetUserByUsername(name string) (*User, error) {
-	ctx, cancel := getCtxWithTo()
+func GetUserByUsername(ctx context.Context, name string) (*User, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	ulidStr, err := DB.Queries.GetUserUlidByName(ctx, name)
+	id, err := DB.Queries.GetUserUuidByName(ctx, name)
 	if err != nil {
 		return nil, err
 	}
 
-	ulid, err := ulid.Parse(ulidStr)
-	if err != nil {
-		return nil, err
-	}
-
-	return GetUser(ulid)
+	return GetUser(ctx, id)
 }
 
-func CreateUser(uInp CreateUserParams) (User, error) {
-	ctx, cancel := getCtxWithTo()
+func CreateUser(ctx context.Context, uInp CreateUserParams) (User, error) {
+	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
 	hashedPW, err := hashPassword(uInp.Password)
@@ -169,7 +180,7 @@ func CreateUser(uInp CreateUserParams) (User, error) {
 	}
 
 	uParams := sqlc.CreateUserParams{
-		GroupUlid:      uInp.GroupUlid.String(),
+		GroupUuid:      uInp.GroupUuid,
 		Username:       uInp.Username,
 		HashedPassword: hashedPW,
 	}
@@ -182,36 +193,75 @@ func CreateUser(uInp CreateUserParams) (User, error) {
 	return User{User: u}, nil
 }
 
-func AuthLogin(l LoginParams) (*ReturnUserWithJWT, error) {
-	u, err := GetUserByUsername(l.Username)
+func UpdateUser(ctx context.Context, u uuid.UUID, uParams UpdateUserParams) error {
+	ctx, cancel := getCtx(ctx)
+	defer cancel()
+
+	err := DB.Queries.UpdateUser(ctx, sqlc.UpdateUserParams{
+		Uuid:      u,
+		Username:  uParams.Username,
+		IsActive:  uParams.IsActive,
+		GroupUuid: uParams.GroupUuid,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func UpdatePassword(ctx context.Context, u uuid.UUID, p string) error {
+	ctx, cancel := getCtx(ctx)
+	defer cancel()
+
+	hp, err := hashPassword(p)
+	if err != nil {
+		return err
+	}
+
+	err = DB.Queries.UpdatePassword(ctx, sqlc.UpdatePasswordParams{
+		Uuid:           u,
+		HashedPassword: hp,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func AuthLogin(ctx context.Context, l LoginParams) (*ReturnUserWithJWT, error) {
+	u, err := GetUserByUsername(ctx, l.Username)
 	if err != nil {
 		return nil, err
 	}
 
+	if !u.IsActive {
+		return nil, apierr.ErrAuthLoginUserNotActive
+	}
+
 	tokenStr := ""
-	tokenExp := time.Now()
-	if checkPasswordHash(l.Password, u.HashedPassword) {
-		tokenStr, tokenExp, err = genJWT(u.User)
+	var tokenExp time.Time
+	if CheckPasswordHash(l.Password, u.HashedPassword) {
+		tokenStr, tokenExp, err = genJWT(u.User, u.UserGroup)
 		if err != nil {
-			retErr := &api.TOKEN_GENERATION_ERROR
-			retErr.Details = err.Error()
-			return nil, retErr
+			return nil, apierr.ErrTokenGeneration.WithDetails(err.Error())
 		}
 	} else {
-		return nil, &api.AUTH_LOGIN_WRONG_PASSWORD
+		return nil, apierr.ErrAuthLoginWrongPassword
 	}
 
 	if tokenStr == "" {
-		return nil, errors.New("Unkown Error!")
+		return nil, errors.New("unknown error")
 	}
 
 	return &ReturnUserWithJWT{
-		Ulid: u.User.Ulid,
+		Uuid: u.Uuid,
 		Jwt: JWT{
 			Token:      tokenStr,
 			Expiration: tokenExp,
 		},
-		Username:  u.User.Username,
+		Username:  u.Username,
 		UserGroup: u.UserGroup,
 	}, nil
 }

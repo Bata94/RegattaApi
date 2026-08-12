@@ -21,4 +21,5 @@ INSERT INTO zeitnahme_ergebnis (
   $2,
   $3,
   $4
-) RETURNING *;
+)
+RETURNING *;

@@ -1,0 +1,63 @@
+package regattaleitung
+
+import (
+  "github.com/bata94/RegattaApi/internal/templates/components"
+	"github.com/bata94/RegattaApi/internal/utils"
+	"slices"
+	"fmt"
+)
+
+templ PdfMeldeergebnis(highlightLast bool) {
+  {{
+    pdfLS, errFiles := utils.GetFilenames("meldeergebnis")
+  }}
+  if errFiles != nil {
+    @ui_components.ErrorBody(500, errFiles.Error())
+    {{return}}
+  }
+
+  @ui_components.InternalPageDivCol() {
+    @ui_components.PageHeader("PDF Meldeergebnis")
+    @ui_components.PageHeaderSubtext("Meldeergebnisse sollten automatisch erstellt werden. Sollte trotzdem ein neues benötigt werden, kann hier ein neues erstellt werden. Das aktuellste wird an anderen Stellen der Website verlinkt. Zusätzlich können hier alle vorherig erstellten Meldeergebnisse heruntergeladen werden.")
+
+    <div
+      class="btn btn-primary w-fit mx-auto"
+      hx-post="/internal/regattaleitung/pdf_meldeergebnis"
+      hx-boost="true"
+      hx-target="main"
+    >
+      Neues PDF Meldeergebnis erstellen
+    </div>
+
+    <h2 class="!mx-0 !mt-4 !mb-8 !p-0">Erstellte Meldeergebnisse:</h2>
+    <div class="w-full h-full">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        if len(pdfLS) == 0 {
+          <h4>Noch keine Meldeergebnisse erstellt!</h4>
+
+        } else {
+          {{slices.Reverse(pdfLS)}}
+          for i, pdf := range pdfLS {
+            {{
+              btnClass := "btn btn-outline"
+              if i == 0 && highlightLast {
+                btnClass = "btn btn-success"
+              }
+              btnClass += " p-4 w-fit mx-auto"
+
+             }}
+
+            <a
+              class={btnClass}
+              href={fmt.Sprintf("/files/meldeergebnis/%s", pdf)}
+              target="_blank"
+            >
+              <i class="fa fa-file-pdf-o"></i>
+              {pdf}
+            </a>
+          }
+        }
+      </div>
+    </div>
+  }
+}

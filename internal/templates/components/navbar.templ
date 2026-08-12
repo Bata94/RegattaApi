@@ -1,0 +1,137 @@
+package ui_components
+
+type NavBarConfig struct {
+  Entries  []NavBarEntry
+  UserCaps []string
+  LoggedIn bool
+}
+
+type NavBarEntry struct {
+  Name         string
+  URL          string
+  RequiredCaps []string
+  SubEntries   []NavBarEntry
+}
+
+func NewNavBarConfig() NavBarConfig {
+  return NavBarConfig{
+    Entries:  []NavBarEntry{},
+    UserCaps: []string{},
+    LoggedIn: false,
+  }
+}
+
+func hasCapability(userCaps []string, requiredCaps []string) bool {
+  if len(requiredCaps) == 0 {
+    return true
+  }
+  for _, required := range requiredCaps {
+    for _, cap := range userCaps {
+      if cap == required {
+        return true
+      }
+    }
+  }
+  return false
+}
+
+templ navbarEntry(entry NavBarEntry, userCaps []string, loggedIn bool) {
+	if !hasCapability(userCaps, entry.RequiredCaps) {
+		{{return}}
+	}
+	if len(entry.SubEntries) > 0 {
+		if entry.Name == "Internes" && loggedIn {
+			<li class="z-100">
+				<a
+					class="btn btn-ghost"
+					href="/internal"
+					target="_blank"
+					rel="noopener noreferrer"
+				>
+					{entry.Name}
+				</a>
+			</li>
+		} else {
+			<li class="z-100">
+				<details>
+					<summary>{entry.Name}</summary>
+					<ul class="bg-base-100 rounded-t-none p-2">
+						for _, sub := range entry.SubEntries {
+							@navbarEntry(sub, userCaps, loggedIn)
+						}
+					</ul>
+				</details>
+			</li>
+		}
+	} else {
+		<li>
+			<button hx-get={entry.URL} hx-target="main" hx-push-url="true" href={entry.URL} onclick="this.closest('details')?.removeAttribute('open')">{entry.Name}</button>
+		</li>
+	}
+}
+
+templ navbarEntries(entries []NavBarEntry, userCaps []string, loggedIn bool) {
+  for _, entry := range entries {
+    @navbarEntry(entry, userCaps, loggedIn)
+  }
+}
+
+templ NavbarIcon() {
+  <div
+    class="flex items-center gap-2 btn btn-ghost !h-[44px] !min-h-0 px-2"
+    hx-boost="true"
+    hx-get="/"
+    hx-target="main"
+    hx-push-url="true"
+    href="/"
+  >
+    @Image("/assets/icons/mrg_logo.png", "MRG-Logo", WithWidth("58"), WithHeight("42"), WithoutLazyLoading())
+    <span class="text-2xl text-clip text-mrgblau">MRG Regatta</span>
+  </div>
+}
+
+templ loginIcon() {
+  <a class="btn btn-circle btn-ghost tooltip tooltip-left" href="/login" target="_blank" data-tip="Einloggen">
+    <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+  </a>
+}
+
+templ logoutIcon() {
+  <a class="btn btn-circle btn-ghost tooltip tooltip-left" href="/logout" data-tip="Ausloggen">
+    <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+  </a>
+}
+
+templ Navbar(c NavBarConfig) {
+  <div class="max-lg:collapse w-full rounded-md max-h-24">
+    <input id="navbar-1-toggle" class="peer hidden" type="checkbox" />
+    <label for="navbar-1-toggle" class="fixed inset-0 hidden max-lg:peer-checked:block"></label>
+    <div class="collapse-title navbar">
+      <div class="navbar-start">
+        <label for="navbar-1-toggle" class="btn btn-ghost lg:hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16" /></svg>
+        </label>
+        @NavbarIcon()
+      </div>
+      <div class="navbar-center hidden lg:flex">
+        <ul class="menu menu-horizontal px-1">
+          @navbarEntries(c.Entries, c.UserCaps, c.LoggedIn)
+        </ul>
+      </div>
+      <div class="navbar-end flex items-center gap-2">
+        if c.LoggedIn {
+          @logoutIcon()
+        } else {
+          @loginIcon()
+        }
+        @themeSwitcher()
+      </div>
+    </div>
+
+    <div class="collapse-content lg:hidden z-1">
+      <ul class="menu">
+        @navbarEntries(c.Entries, c.UserCaps, c.LoggedIn)
+      </ul>
+    </div>
+  </div>
+}

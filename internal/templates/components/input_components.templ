@@ -1,0 +1,244 @@
+package ui_components
+
+import "fmt"
+
+type InputColor int
+
+const (
+  Primary InputColor = iota
+  Secondary
+  Success
+  Error
+  Warning
+  Info
+  Mrgblau
+)
+
+templ SubmitButton(text string, color InputColor) {
+  {{
+    var btnColor string
+
+    switch color {
+    case Primary:
+      btnColor = "btn-primary"
+    case Secondary:
+      btnColor = "btn-secondary"
+    case Success:
+      btnColor = "btn-success"
+    case Error:
+      btnColor = "btn-error"
+    case Warning:
+      btnColor = "btn-warning"
+    case Info:
+      btnColor = "btn-info"
+    case Mrgblau:
+      btnColor = "btn-mrgblau"
+    default:
+      btnColor = "btn-ghost"
+    }
+  }}
+  <div class="form-control mt-6 !w-fit">
+    <button type="submit" class={fmt.Sprintf("btn %s", btnColor)}>
+      {text}
+      <span class="htmx-indicator loading loading-spinner loading-md"></span>
+    </button>
+  </div>
+}
+
+templ DropDown(name, label string, options, values []string, selectedValue string, required bool, errorMsg string, placeholder string) {
+  {{
+    if values == nil {
+      values = options
+    }
+    inputClass := "select select-bordered w-full"
+    if errorMsg != "" {
+      inputClass += " select-error"
+    }
+  }}
+  <div class="form-control mb-6 w-full">
+    <label class="label">
+      <span class="label-text">{label}</span>
+    </label>
+    <select
+      name={name}
+      class={inputClass}
+      if required {
+        required
+      }
+    >
+      if placeholder != "" {
+        <option value="" disabled selected>{placeholder}</option>
+      }
+      for i, o := range options {
+        <option value={values[i]} if values[i] == selectedValue {
+          selected
+        }>{o}</option>
+      }
+    </select>
+    if errorMsg != "" {
+      <span class="text-error text-sm mt-1">{errorMsg}</span>
+    }
+  </div>
+}
+
+templ LineInput(name, label, value, inpType string, required bool, errorMsg string) {
+  {{
+    inputClass := "input input-bordered w-full"
+    if errorMsg != "" {
+      inputClass += " input-error"
+    }
+  }}
+  <div class="form-control mb-6 w-full">
+    <label class="label">
+      <span class="label-text">{label}</span>
+    </label>
+    <input
+      if inpType == "float" {
+        type="number"
+        step="0.1"
+      } else {
+        type={inpType}
+      }
+      name={name}
+      class={inputClass}
+      value={value}
+      if required {
+        required
+      }
+    />
+    if errorMsg != "" {
+      <span class="text-error text-sm mt-1">{errorMsg}</span>
+    }
+  </div>
+}
+
+templ FileUpload(name, label string, required bool, errorMsg string) {
+  {{
+    inputClass := "file-input file-input-bordered w-full"
+    if errorMsg != "" {
+      inputClass += " file-input-error"
+    }
+  }}
+  <div class="form-control mb-6 w-full">
+    <label class="label">
+      <span class="label-text">{label}</span>
+    </label>
+    <input
+      type="file"
+      name={name}
+      class={inputClass}
+      if required {
+        required
+      }
+    />
+    if errorMsg != "" {
+      <span class="text-error text-sm mt-1">{errorMsg}</span>
+    }
+  </div>
+}
+
+templ RangeStepInput(name, label string, value, min, max, step int, required bool, errorMsg string) {
+  {{
+    stepCount := (max - min) / step + 1
+    inputClass := "range range-primary w-full"
+    if errorMsg != "" {
+      inputClass += " range-error"
+    }
+  }}
+  <div
+    class="w-full max-w-xs"
+  >
+    <input
+      class={inputClass}
+      type="range"
+      name={name}
+      value={value}
+      min={min}
+      max={max}
+      step={step}
+    />
+    <div class="flex justify-between px-2.5 mt-2 text-xs">
+      for i := 0; i < stepCount; i += 1 {
+        <span>|</span>
+      }
+    </div>
+    <div class="flex justify-between px-2.5 mt-2 text-xs text-center">
+      for i := 0; i < stepCount; i += 1 {
+        <span>{i * step}</span>
+      }
+    </div>
+    if errorMsg != "" {
+      <span class="text-error text-sm mt-1">{errorMsg}</span>
+    }
+  </div>
+}
+
+templ GenderSelect(name string, selectedValue string, errorMsg string) {
+  {{
+    btnClass := "btn join-item"
+    if errorMsg != "" {
+      btnClass += " btn-outline btn-error"
+    }
+  }}
+  <div class="form-control mb-6 w-full flex flex-row justify-between">
+    <label class="label">
+      <span class="label-text">Geschlecht</span>
+    </label>
+    <div class="join" role="radiogroup">
+      <input
+        type="radio"
+        name={name}
+        value="m"
+        class={btnClass}
+        aria-label="Männlich"
+        if selectedValue == "m" {
+          checked
+        }
+      />
+      <input
+        type="radio"
+        name={name}
+        value="w"
+        class={btnClass}
+        aria-label="Weiblich"
+        if selectedValue == "w" {
+          checked
+        }
+      />
+    </div>
+    if errorMsg != "" {
+      <span class="text-error text-sm mt-1">{errorMsg}</span>
+    }
+  </div>
+}
+
+templ Toggle(name, label string, checked bool, required bool, errorMsg string) {
+  {{
+    toggleClass := "toggle toggle-primary"
+    if errorMsg != "" {
+      toggleClass += " toggle-error"
+    }
+  }}
+  <div class="form-control w-full flex flex-col items-start">
+    <div class="flex flex-row justify-between w-full">
+      <label class="label">
+        <span class="label-text">{label}</span>
+      </label>
+      <input
+        type="checkbox"
+        name={name}
+        class={toggleClass}
+        value="on"
+        if checked {
+          checked
+        }
+        if required {
+          required
+        }
+      />
+    </div>
+    if errorMsg != "" {
+      <span class="text-error text-sm mt-1">{errorMsg}</span>
+    }
+  </div>
+}

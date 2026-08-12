@@ -1,13 +1,24 @@
 package utils
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/bata94/RegattaApi/internal/config"
 )
 
 func GetFilenames(dir string) ([]string, error) {
 	var files []string
-	path := filepath.Join("./files", dir)
+	path := filepath.Join(config.C.Paths.FilesDir, dir)
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		if err := os.MkdirAll(fmt.Sprint(path), os.ModePerm); err != nil {
+			return nil, err
+		}
+
+	}
+
 	err := filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
 		if !info.IsDir() {
 			files = append(files, info.Name())
@@ -18,4 +29,17 @@ func GetFilenames(dir string) ([]string, error) {
 		return files, err
 	}
 	return files, nil
+}
+
+func FileExists(filename string) bool {
+	_, err := os.Stat(filename)
+	if err == nil {
+		return true // File exists
+	}
+	if errors.Is(err, os.ErrNotExist) {
+		return false // File does not exist
+	}
+	// Post-check: file might exist but we have permission issues or other errors
+	fmt.Printf("Error, Error is not os.ErrNotExist. So maybe we have permission issues or other errors. Error: %v\n", err)
+	return false
 }

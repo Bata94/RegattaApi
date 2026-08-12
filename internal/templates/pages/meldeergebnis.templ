@@ -1,0 +1,194 @@
+package ui_pages
+
+import (
+  "github.com/bata94/RegattaApi/internal/templates/components"
+  "github.com/bata94/RegattaApi/internal/sqlc"
+  "github.com/bata94/RegattaApi/internal/crud"
+	"github.com/bata94/RegattaApi/internal/utils"
+	"fmt"
+)
+
+// TODO: Add dynamic PDF embedding/Linking
+// TODO: Make Skeleton Loading nicer
+
+templ rennenHeader(r crud.Rennen) {
+  {{
+    class := "text-xl"
+    if *r.NumMeldungen == 0 {
+      class = "text-xl line-through decoration-1"
+    }
+  }}
+  <h4 class={class}>
+    Rennen {r.Nummer} - {r.Bezeichnung} {r.ZusatzStr()}
+  </h4>
+}
+
+// TODO: On Bigger Screens, show Abteilungen next to each other
+
+templ rennenBody(r crud.Rennen) {
+  {{
+    var aktAbt int32 = 0
+    var abgemedeteMeldungen []crud.Meldung = []crud.Meldung{}
+  }}
+
+  <div id={r.Uuid.String()} class="px-2 py-0">
+    <h5 class="font-semibold">
+      Erster Start {r.StartzeitStr()} Uhr, Rennabstand {r.RennabstandStr()}
+      if r.RennabstandInt() > 1 {
+        Minuten
+      } else {
+        Minute
+      }
+    </h5>
+    <h6 class="text-sm font-light mb-4">
+      {*r.NumMeldungen}
+      if *r.NumMeldungen > 1 {
+        Meldungen
+      } else {
+        Meldung
+      }
+       in
+      {*r.NumAbteilungen}
+      if *r.NumAbteilungen > 1 {
+        Abteilungen
+      } else {
+        Abteilung
+      }
+    </h6>
+
+    for _, m := range r.Meldungen{
+      if m.Abgemeldet {
+        {{
+          abgemedeteMeldungen = append(abgemedeteMeldungen, m)
+          continue
+        }}
+      }
+      if m.Abteilung != aktAbt {
+        {{aktAbt = m.Abteilung}}
+        <h6 class="text-lg font-semibold">Abteilung {aktAbt}:</h6>
+      }
+
+      <div class="mx-2 mt-4">
+        <h5 class="px-1 font-semibold">
+          {m.StartNummer} - {m.Verein.Name}
+        </h5>
+        <p class="m-0 p-0 px-2">
+          {m.TeilnehmerString()}
+        </p>
+      </div>
+    }
+    if len(abgemedeteMeldungen) > 0 {
+      <h6 class="text-lg font-semibold">
+        Abmeldungen:
+      </h6>
+      <div class="mx-2 mt-4">
+        for _, m := range abgemedeteMeldungen {
+          <h5 class="px-1 font-semibold">
+            {m.StartNummer} - {m.Verein.Name}
+          </h5>
+          <p class="m-0 p-0 px-2">
+            {m.TeilnehmerString()}
+          </p>
+        }
+      </div>
+    }
+  </div>
+}
+
+templ MeldeergebnisCollapseBody(w sqlc.Wettkampf) {
+  {{
+    rennen, err := crud.GetAllRennenWithAthlet(ctx, crud.GetAllRennenParams{
+      GetMeldungen: true,
+      GetAthleten: true,
+      ShowEmpty: true,
+      ShowStarted: true,
+      ShowWettkampf: sqlc.NullWettkampf{Wettkampf: w, Valid: true},
+    })
+
+    pausen, errPausen := crud.GetPausenByWettkampf(ctx, []sqlc.Wettkampf{w})
+  }}
+  if err != nil {
+    @ui_components.ErrorBody(500, err.Error())
+    return
+  }
+  if errPausen != nil {
+    @ui_components.ErrorBody(500, errPausen.Error())
+    return
+  }
+
+  for _, r := range rennen {
+    <div id={r.Uuid.String()} class="px-2 py-0">
+      @rennenHeader(r)
+      if *r.NumMeldungen != 0 {
+        @rennenBody(r)
+      }
+    </div>
+
+    for _, p := range pausen {
+      if p.NachRennenUuid == r.Uuid {
+        <div class="divider divider-primary">
+          <h5 class="font-semibold text-mrgblau mx-auto">
+            Pause: {p.Laenge} Minuten
+          </h5>
+        </div>
+      }
+    }
+  }
+}
+
+templ meldeergebnisHeader(pdfUrl string) {
+  <p class="">
+    Das eingebundene Meldeergebnis ist live und hat dadurch die aktuellsten
+    Änderungen. Die
+    <a
+      href={pdfUrl}
+      target="_blank"
+    >
+      PDF Version findest du hier.
+    </a>
+    Diese enthält alle Änderungen zu dem angegebenen Zeitpunkt.
+  </p>
+}
+
+templ Meldeergebnis() {
+  {{
+    pdfLS, errFiles := utils.GetFilenames("meldeergebnis")
+    var pdfUrl string
+    if errFiles != nil {
+      pdfUrl = "#"
+    } else {
+      pdfUrl = fmt.Sprintf("/files/meldeergebnis/%s", pdfLS[len(pdfLS)-1])
+    }
+  }}
+  @ui_components.LandingPageDivCol() {
+    @ui_components.PageHeader(
+      "Meldeergebnis",
+    )
+    @ui_components.PageHeaderSubtextComp(meldeergebnisHeader(pdfUrl))
+
+    <div id="wettkampfNav" class="flex flex-col md:flex-row mx-auto w-fit gap-4 md:gap-8">
+      <a class="btn btn-primary m-2" href="#Langstrecke">Langstrecke</a>
+      <a class="btn btn-primary m-2" href="#Slalom">Slalom</a>
+      <a class="btn btn-primary m-2" href="#Kurzstrecke">Kurzstrecke</a>
+      <a class="btn btn-primary m-2" href="#Staffel">Staffel</a>
+    </div>
+
+    <h3 class="text-2xl text-mrgblau">Samstag</h3>
+    <div id="Langstrecke">
+      @ui_components.CollapseWithLoading("Langstrecke", "/comp/meldeergebnis/langstrecke")
+    </div>
+    <div id="Slalom">
+      @ui_components.CollapseWithLoading("Slalom", "/comp/meldeergebnis/slalom")
+    </div>
+
+    <div class="divider pt-6"></div>
+
+    <h3 class="text-2xl text-mrgblau">Sonntag</h3>
+    <div id="Kurzstrecke">
+      @ui_components.CollapseWithLoading("Kurzstrecke", "/comp/meldeergebnis/kurzstrecke")
+    </div>
+    <div id="Staffel">
+      @ui_components.CollapseWithLoading("Staffel", "/comp/meldeergebnis/staffel")
+    </div>
+  }
+}
