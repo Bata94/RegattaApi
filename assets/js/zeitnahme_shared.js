@@ -66,6 +66,14 @@ window.ZeitnahmeShared = (function () {
     if (app) app.innerHTML = '<div class="alert alert-error">' + msg + '</div>';
   }
 
+  function bootApp(onReady, appId) {
+    if (window.__wasm_initialized) {
+      onReady();
+    } else {
+      loadWasm(onReady, appId);
+    }
+  }
+
   function loadWasm(onReady, appId) {
     if (wasmLoading) return;
     wasmLoading = true;
@@ -96,6 +104,15 @@ window.ZeitnahmeShared = (function () {
     formatTime: formatTime,
     showToast: showToast,
     failApp: failApp,
+    bootApp: bootApp,
     loadWasm: loadWasm
   };
+})();
+
+(function drainZeitnahmeBoots() {
+  var queue = window.__zeitnahmeBootQueue || [];
+  window.__zeitnahmeBootQueue = [];
+  for (var i = 0; i < queue.length; i++) {
+    ZeitnahmeShared.bootApp(queue[i].fn, queue[i].appId);
+  }
 })();

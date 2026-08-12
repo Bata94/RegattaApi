@@ -150,10 +150,10 @@ script zeitnahmeZiel() {
 		renderCurrent();
 	}
 
-	if (window.__wasm_initialized) {
-		startApp();
+	if (window.ZeitnahmeShared) {
+		ZeitnahmeShared.bootApp(startApp, 'ziel-app');
 	} else {
-		ZeitnahmeShared.loadWasm(startApp, 'ziel-app');
+		(window.__zeitnahmeBootQueue = window.__zeitnahmeBootQueue || []).push({ fn: startApp, appId: 'ziel-app' });
 	}
 }
 

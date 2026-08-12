@@ -556,10 +556,10 @@ script zeitnahmeStart() {
 		renderCurrent();
 	}
 
-	if (window.__wasm_initialized) {
-		startApp();
+	if (window.ZeitnahmeShared) {
+		ZeitnahmeShared.bootApp(startApp, 'start-app');
 	} else {
-		ZeitnahmeShared.loadWasm(startApp, 'start-app');
+		(window.__zeitnahmeBootQueue = window.__zeitnahmeBootQueue || []).push({ fn: startApp, appId: 'start-app' });
 	}
 }
 
