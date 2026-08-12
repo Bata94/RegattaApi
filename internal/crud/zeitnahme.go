@@ -11,6 +11,8 @@ import (
 	DB "github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -147,14 +149,14 @@ func GetOpenZeitnahmeZiel(ctx context.Context) ([]Zeitnahme, error) {
 	return retLs, nil
 }
 
-func CreateZeitnahmeStart(ctx context.Context, rennNr *string, startNummern []string, timeClient time.Time, measuredLatency int) ([]Zeitnahme, error) {
+func CreateZeitnahmeStart(ctx context.Context, rennNr *string, startNummern []string, timeClient time.Time, measuredLatency int, clientID, seq string) ([]Zeitnahme, error) {
 	now := time.Now()
 	retLs := []Zeitnahme{}
 
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	var rennenNummer, startNummer pgtype.Text
+	var rennenNummer pgtype.Text
 	if rennNr != nil {
 		rennenNummer = pgtype.Text{String: *rennNr, Valid: true}
 	} else {
@@ -165,8 +167,11 @@ func CreateZeitnahmeStart(ctx context.Context, rennNr *string, startNummern []st
 		return retLs, errors.New("startNummern is nil")
 	}
 
+	clientIDText := pgtype.Text{String: clientID, Valid: true}
+	seqText := pgtype.Text{String: seq, Valid: true}
+
 	for _, startNr := range startNummern {
-		startNummer = pgtype.Text{String: startNr, Valid: true}
+		startNummer := pgtype.Text{String: startNr, Valid: true}
 
 		p := sqlc.CreateZeitnahmeStartParams{
 			RennenNummer: rennenNummer,
@@ -183,10 +188,23 @@ func CreateZeitnahmeStart(ctx context.Context, rennNr *string, startNummern []st
 				Valid: true,
 				Int32: int32(measuredLatency),
 			},
+			ClientID: clientIDText,
+			Seq:      seqText,
 		}
 
 		q, err := DB.Queries.CreateZeitnahmeStart(ctx, p)
 		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				existing, findErr := DB.Queries.FindZeitnahmeStartByClientSeq(ctx, sqlc.FindZeitnahmeStartByClientSeqParams{
+					ClientID: clientIDText,
+					Seq:      seqText,
+				})
+				if findErr != nil {
+					return retLs, fmt.Errorf("conflict lookup failed: %w", findErr)
+				}
+				retLs = append(retLs, ZeitnahmeFromSqlcStart(existing))
+				continue
+			}
 			return retLs, err
 		}
 		retLs = append(retLs, ZeitnahmeFromSqlcStart(q))
@@ -195,7 +213,7 @@ func CreateZeitnahmeStart(ctx context.Context, rennNr *string, startNummern []st
 	return retLs, nil
 }
 
-func CreateZeitnahmeZiel(ctx context.Context, rennNr, startNr *string, timeClient time.Time, measuredLatency int) (Zeitnahme, error) {
+func CreateZeitnahmeZiel(ctx context.Context, rennNr, startNr *string, timeClient time.Time, measuredLatency int, clientID, seq string) (Zeitnahme, error) {
 	now := time.Now()
 
 	ctx, cancel := getCtx(ctx)
@@ -214,6 +232,9 @@ func CreateZeitnahmeZiel(ctx context.Context, rennNr, startNr *string, timeClien
 		startNummer = pgtype.Text{Valid: false}
 	}
 
+	clientIDText := pgtype.Text{String: clientID, Valid: true}
+	seqText := pgtype.Text{String: seq, Valid: true}
+
 	p := sqlc.CreateZeitnahmeZielParams{
 		RennenNummer: rennenNummer,
 		StartNummer:  startNummer,
@@ -229,10 +250,22 @@ func CreateZeitnahmeZiel(ctx context.Context, rennNr, startNr *string, timeClien
 			Valid: true,
 			Int32: int32(measuredLatency),
 		},
+		ClientID: clientIDText,
+		Seq:      seqText,
 	}
 
 	q, err := DB.Queries.CreateZeitnahmeZiel(ctx, p)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			existing, findErr := DB.Queries.FindZeitnahmeZielByClientSeq(ctx, sqlc.FindZeitnahmeZielByClientSeqParams{
+				ClientID: clientIDText,
+				Seq:      seqText,
+			})
+			if findErr != nil {
+				return Zeitnahme{}, fmt.Errorf("conflict lookup failed: %w", findErr)
+			}
+			return ZeitnahmeFromSqlcZiel(existing), nil
+		}
 		return Zeitnahme{}, err
 	}
 
@@ -285,7 +318,12 @@ func CreateZeitnahmeErgebnis(ctx context.Context, s, z Zeitnahme, meld Meldung) 
 
 	q, err := DB.Queries.CreateZeitnahmeErgebnis(ctx, params)
 	if err != nil {
-		return err
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			slog.Debug("create zeitnahme ergebnis: already exists", "start_id", s.ID, "ziel_id", z.ID)
+		} else {
+			return err
+		}
 	}
 
 	err = DB.Queries.SetZeitnahmeStartVerarbeitet(ctx, s.ID)
@@ -297,7 +335,9 @@ func CreateZeitnahmeErgebnis(ctx context.Context, s, z Zeitnahme, meld Meldung) 
 		return err
 	}
 
-	slog.Debug(fmt.Sprintf("%v", q))
+	if err == nil {
+		slog.Debug("create zeitnahme ergebnis", "start_id", s.ID, "ziel_id", z.ID, "result", q)
+	}
 
 	return nil
 }

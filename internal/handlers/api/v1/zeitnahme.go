@@ -33,7 +33,7 @@ func PostZeitnahmeStart(c *handler.Context) error {
 		return err
 	}
 
-	q, err := crud.CreateZeitnahmeStart(c.Request.Context(), p.RennenNummer, p.StartNummern, p.TimeClient, *p.MeasuredLatency)
+	q, err := crud.CreateZeitnahmeStart(c.Request.Context(), p.RennenNummer, p.StartNummern, p.TimeClient, *p.MeasuredLatency, uuid.New().String(), uuid.New().String())
 	if err != nil {
 		return err
 	}

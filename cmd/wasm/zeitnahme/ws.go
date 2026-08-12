@@ -27,6 +27,7 @@ type WSClient struct {
 	reconnecting     bool
 	pingStarted      bool
 	pingIntervalSec  int
+	pingDone         chan struct{}
 	onChange         func()
 	mu               sync.RWMutex
 }
@@ -81,14 +82,18 @@ func (c *WSClient) IsReconnecting() bool {
 
 func (c *WSClient) ForceReconnect() {
 	c.mu.Lock()
+	if c.reconnecting {
+		c.mu.Unlock()
+		return
+	}
 	c.shouldReconnect = true
 	c.reconnecting = true
 	ws := c.ws
-	c.mu.Unlock()
-	c.notify()
 	if !ws.IsNull() && !ws.IsUndefined() {
 		ws.Call("close")
 	}
+	c.mu.Unlock()
+	c.notify()
 }
 
 func (c *WSClient) sendPing() {
@@ -122,10 +127,17 @@ func (c *WSClient) startPingLoop() {
 		return
 	}
 	c.pingStarted = true
+	if c.pingDone == nil {
+		c.pingDone = make(chan struct{})
+	}
 	c.mu.Unlock()
 	go func() {
 		for {
-			time.Sleep(time.Duration(c.pingIntervalSec) * time.Second)
+			select {
+			case <-c.pingDone:
+				return
+			case <-time.After(time.Duration(c.pingIntervalSec) * time.Second):
+			}
 			c.mu.RLock()
 			connected := c.connected
 			c.mu.RUnlock()
@@ -168,6 +180,10 @@ func (c *WSClient) Connect() {
 		c.mu.Lock()
 		c.connected = false
 		shouldReconnect := c.shouldReconnect
+		if !shouldReconnect && c.pingDone != nil {
+			close(c.pingDone)
+			c.pingDone = nil
+		}
 		if shouldReconnect {
 			c.reconnecting = true
 		}
@@ -193,6 +209,10 @@ func (c *WSClient) Connect() {
 
 func (c *WSClient) reconnectLoop() {
 	c.mu.Lock()
+	if !c.reconnecting {
+		c.mu.Unlock()
+		return
+	}
 	backoff := c.reconnectBackoff
 	if c.reconnectBackoff < 30*time.Second {
 		c.reconnectBackoff = c.reconnectBackoff * 2
@@ -200,6 +220,13 @@ func (c *WSClient) reconnectLoop() {
 	c.mu.Unlock()
 
 	time.Sleep(backoff)
+
+	c.mu.Lock()
+	if !c.reconnecting {
+		c.mu.Unlock()
+		return
+	}
+	c.mu.Unlock()
 
 	slog.Info("WS reconnecting...", "backoff", backoff)
 	c.Connect()
@@ -237,7 +264,7 @@ func (c *WSClient) handleMessage(raw string) {
 	case "finish_recorded":
 		var data struct {
 			ClientID string `json:"clientId"`
-			Seq      int    `json:"seq"`
+			Seq      string `json:"seq"`
 			ZielID   int32  `json:"zielId"`
 		}
 		if err := json.Unmarshal(msg.Data, &data); err != nil {
@@ -253,7 +280,7 @@ func (c *WSClient) handleMessage(raw string) {
 	case "start_recorded":
 		var data struct {
 			ClientID string      `json:"clientId"`
-			Seq      int         `json:"seq"`
+			Seq      string      `json:"seq"`
 			Starts   []OpenStart `json:"starts"`
 		}
 		if err := json.Unmarshal(msg.Data, &data); err != nil {
@@ -270,7 +297,7 @@ func (c *WSClient) handleMessage(raw string) {
 	case "finish_confirmed":
 		var data struct {
 			ClientID    string  `json:"clientId"`
-			Seq         int     `json:"seq"`
+			Seq         string  `json:"seq"`
 			StartNummer string  `json:"startNummer"`
 			Endzeit     float64 `json:"endzeit"`
 		}
@@ -298,7 +325,7 @@ func (c *WSClient) handleMessage(raw string) {
 	case "finish_unmatched":
 		var data struct {
 			ClientID    string `json:"clientId"`
-			Seq         int    `json:"seq"`
+			Seq         string `json:"seq"`
 			StartNummer string `json:"startNummer"`
 		}
 		if err := json.Unmarshal(msg.Data, &data); err != nil {
@@ -318,11 +345,11 @@ func (c *WSClient) sendMessage(data map[string]any) {
 	ws := c.ws
 	c.mu.RUnlock()
 	if ws.IsNull() || ws.IsUndefined() {
-		slog.Warn("WS not connected, queued locally")
+		slog.Error("WS not connected, message dropped", "type", data["type"])
 		return
 	}
 	if ws.Get("readyState").Int() != 1 {
-		slog.Warn("WS not open, queued locally", "readyState", ws.Get("readyState").Int())
+		slog.Error("WS not open, message dropped", "type", data["type"], "readyState", ws.Get("readyState").Int())
 		return
 	}
 	raw, err := json.Marshal(data)

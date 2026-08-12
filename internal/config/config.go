@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"time"
 )
 
 var C Config
@@ -15,9 +16,28 @@ type Config struct {
 	Rate           RateConfig
 	Email          EmailConfig
 	Paths          PathsConfig
+	Zeitnahme      ZeitnahmeConfig
 	GotenbergURL   string
 	AppInternalURL string
 	AppPublicURL   string
+}
+
+type ZeitnahmeConfig struct {
+	CurrentTag string
+}
+
+func (z ZeitnahmeConfig) GetCurrentTag() string {
+	if z.CurrentTag != "" {
+		return z.CurrentTag
+	}
+	switch time.Now().Weekday() {
+	case time.Friday, time.Saturday:
+		return "sa"
+	case time.Sunday, time.Monday:
+		return "so"
+	default:
+		return "sa"
+	}
 }
 
 type ServerConfig struct {
@@ -98,6 +118,9 @@ func Load() {
 			UploadDir: getEnv("UPLOAD_DIR", "./tmp/uploads/"),
 			FilesDir:  getEnv("FILES_DIR", "./files/"),
 			PublicDir: getEnv("PUBLIC_DIR", "./public/"),
+		},
+		Zeitnahme: ZeitnahmeConfig{
+			CurrentTag: os.Getenv("ZEITNAHME_CURRENT_TAG"),
 		},
 		GotenbergURL:   getEnv("GOTENBERG_URL", "http://gotenberg:3000"),
 		AppInternalURL: getEnv("APP_INTERNAL_URL", "http://api-dev:8080"),

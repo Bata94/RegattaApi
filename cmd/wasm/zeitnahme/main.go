@@ -47,7 +47,7 @@ func main() {
 			return nil
 		}
 		clientID := args[0].String()
-		seq := args[1].Int()
+		seq := args[1].String()
 		startNr := args[2].String()
 
 		store.AssignStartNummer(clientID, seq, startNr)
@@ -63,7 +63,7 @@ func main() {
 			return nil
 		}
 		clientID := args[0].String()
-		seq := args[1].Int()
+		seq := args[1].String()
 		store.RemovePending(clientID, seq)
 		return nil
 	}))
@@ -106,7 +106,7 @@ func main() {
 			return nil
 		}
 		clientID := args[0].String()
-		seq := args[1].Int()
+		seq := args[1].String()
 		store.RemovePendingStart(clientID, seq)
 		return nil
 	}))

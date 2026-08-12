@@ -17,14 +17,19 @@ INSERT INTO zeitnahme_start (
   start_nummer,
   time_client,
   time_server,
-  measured_latency
+  measured_latency,
+  client_id,
+  seq
 ) VALUES (
   $1,
   $2,
   $3,
   $4,
-  $5
-) RETURNING id, rennen_nummer, start_nummer, time_client, time_server, measured_latency, verarbeitet
+  $5,
+  $6,
+  $7
+)
+RETURNING id, rennen_nummer, start_nummer, time_client, time_server, measured_latency, verarbeitet, client_id, seq
 `
 
 type CreateZeitnahmeStartParams struct {
@@ -33,6 +38,8 @@ type CreateZeitnahmeStartParams struct {
 	TimeClient      pgtype.Timestamp `json:"time_client"`
 	TimeServer      pgtype.Timestamp `json:"time_server"`
 	MeasuredLatency pgtype.Int4      `json:"measured_latency"`
+	ClientID        pgtype.Text      `json:"client_id"`
+	Seq             pgtype.Text      `json:"seq"`
 }
 
 func (q *Queries) CreateZeitnahmeStart(ctx context.Context, arg CreateZeitnahmeStartParams) (ZeitnahmeStart, error) {
@@ -42,6 +49,8 @@ func (q *Queries) CreateZeitnahmeStart(ctx context.Context, arg CreateZeitnahmeS
 		arg.TimeClient,
 		arg.TimeServer,
 		arg.MeasuredLatency,
+		arg.ClientID,
+		arg.Seq,
 	)
 	var i ZeitnahmeStart
 	err := row.Scan(
@@ -52,6 +61,8 @@ func (q *Queries) CreateZeitnahmeStart(ctx context.Context, arg CreateZeitnahmeS
 		&i.TimeServer,
 		&i.MeasuredLatency,
 		&i.Verarbeitet,
+		&i.ClientID,
+		&i.Seq,
 	)
 	return i, err
 }
@@ -66,8 +77,36 @@ func (q *Queries) DeleteZeitnahmeStart(ctx context.Context, id int32) error {
 	return err
 }
 
+const findZeitnahmeStartByClientSeq = `-- name: FindZeitnahmeStartByClientSeq :one
+SELECT id, rennen_nummer, start_nummer, time_client, time_server, measured_latency, verarbeitet, client_id, seq FROM zeitnahme_start
+WHERE client_id = $1 AND seq = $2
+LIMIT 1
+`
+
+type FindZeitnahmeStartByClientSeqParams struct {
+	ClientID pgtype.Text `json:"client_id"`
+	Seq      pgtype.Text `json:"seq"`
+}
+
+func (q *Queries) FindZeitnahmeStartByClientSeq(ctx context.Context, arg FindZeitnahmeStartByClientSeqParams) (ZeitnahmeStart, error) {
+	row := q.db.QueryRow(ctx, findZeitnahmeStartByClientSeq, arg.ClientID, arg.Seq)
+	var i ZeitnahmeStart
+	err := row.Scan(
+		&i.ID,
+		&i.RennenNummer,
+		&i.StartNummer,
+		&i.TimeClient,
+		&i.TimeServer,
+		&i.MeasuredLatency,
+		&i.Verarbeitet,
+		&i.ClientID,
+		&i.Seq,
+	)
+	return i, err
+}
+
 const getAllZeitnahmeStart = `-- name: GetAllZeitnahmeStart :many
-SELECT id, rennen_nummer, start_nummer, time_client, time_server, measured_latency, verarbeitet FROM zeitnahme_start
+SELECT id, rennen_nummer, start_nummer, time_client, time_server, measured_latency, verarbeitet, client_id, seq FROM zeitnahme_start
 ORDER BY id ASC
 `
 
@@ -88,6 +127,8 @@ func (q *Queries) GetAllZeitnahmeStart(ctx context.Context) ([]ZeitnahmeStart, e
 			&i.TimeServer,
 			&i.MeasuredLatency,
 			&i.Verarbeitet,
+			&i.ClientID,
+			&i.Seq,
 		); err != nil {
 			return nil, err
 		}
@@ -100,7 +141,7 @@ func (q *Queries) GetAllZeitnahmeStart(ctx context.Context) ([]ZeitnahmeStart, e
 }
 
 const getOpenStarts = `-- name: GetOpenStarts :many
-SELECT id, rennen_nummer, start_nummer, time_client, time_server, measured_latency, verarbeitet FROM zeitnahme_start
+SELECT id, rennen_nummer, start_nummer, time_client, time_server, measured_latency, verarbeitet, client_id, seq FROM zeitnahme_start
 WHERE verarbeitet = false
 ORDER BY id ASC
 `
@@ -122,6 +163,8 @@ func (q *Queries) GetOpenStarts(ctx context.Context) ([]ZeitnahmeStart, error) {
 			&i.TimeServer,
 			&i.MeasuredLatency,
 			&i.Verarbeitet,
+			&i.ClientID,
+			&i.Seq,
 		); err != nil {
 			return nil, err
 		}
@@ -134,7 +177,7 @@ func (q *Queries) GetOpenStarts(ctx context.Context) ([]ZeitnahmeStart, error) {
 }
 
 const getZeitnahmeStart = `-- name: GetZeitnahmeStart :one
-SELECT id, rennen_nummer, start_nummer, time_client, time_server, measured_latency, verarbeitet FROM zeitnahme_start
+SELECT id, rennen_nummer, start_nummer, time_client, time_server, measured_latency, verarbeitet, client_id, seq FROM zeitnahme_start
 WHERE id = $1 LIMIT 1
 `
 
@@ -149,6 +192,8 @@ func (q *Queries) GetZeitnahmeStart(ctx context.Context, id int32) (ZeitnahmeSta
 		&i.TimeServer,
 		&i.MeasuredLatency,
 		&i.Verarbeitet,
+		&i.ClientID,
+		&i.Seq,
 	)
 	return i, err
 }

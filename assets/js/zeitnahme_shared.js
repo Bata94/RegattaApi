@@ -8,7 +8,13 @@ window.ZeitnahmeShared = (function () {
 
   function playAirHorn() {
     airHorn.currentTime = 0;
-    airHorn.play().catch(function () {});
+    airHorn.play().catch(function () {
+      var flash = document.createElement('div');
+      flash.style.cssText = 'position:fixed;inset:0;background:#ff3b30;opacity:0.4;z-index:9999;pointer-events:none;transition:opacity 0.1s';
+      document.body.appendChild(flash);
+      setTimeout(function () { flash.style.opacity = '0'; }, 100);
+      setTimeout(function () { flash.remove(); }, 300);
+    });
   }
 
   function getWSBadgeHTML() {

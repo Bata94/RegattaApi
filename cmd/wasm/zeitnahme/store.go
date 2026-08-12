@@ -29,7 +29,7 @@ type PendingFinish struct {
 	TimeClient      time.Time `json:"timeClient"`
 	MeasuredLatency int       `json:"measuredLatency"`
 	ClientID        string    `json:"clientId"`
-	Seq             int       `json:"seq"`
+	Seq             string    `json:"seq"`
 }
 
 type PendingStart struct {
@@ -39,7 +39,7 @@ type PendingStart struct {
 	TimeClient      time.Time `json:"timeClient"`
 	MeasuredLatency int       `json:"measuredLatency"`
 	ClientID        string    `json:"clientId"`
-	Seq             int       `json:"seq"`
+	Seq             string    `json:"seq"`
 }
 
 type Store struct {
@@ -193,7 +193,7 @@ func (s *Store) getPending() []PendingFinish {
 	return pending
 }
 
-func (s *Store) GetPending(clientID string, seq int) *PendingFinish {
+func (s *Store) GetPending(clientID string, seq string) *PendingFinish {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	for _, pf := range s.getPending() {
@@ -209,7 +209,7 @@ func (s *Store) setPending(pending []PendingFinish) {
 	setLS("pendingFinishes", string(data))
 }
 
-func (s *Store) SetPendingZielID(clientID string, seq int, zielID int32) {
+func (s *Store) SetPendingZielID(clientID string, seq string, zielID int32) {
 	s.mu.Lock()
 	pending := s.getPending()
 	for i := range pending {
@@ -224,7 +224,7 @@ func (s *Store) SetPendingZielID(clientID string, seq int, zielID int32) {
 	s.notify()
 }
 
-func (s *Store) AssignStartNummer(clientID string, seq int, startNr string) {
+func (s *Store) AssignStartNummer(clientID string, seq string, startNr string) {
 	s.mu.Lock()
 	pending := s.getPending()
 	for i := range pending {
@@ -239,7 +239,7 @@ func (s *Store) AssignStartNummer(clientID string, seq int, startNr string) {
 	s.notify()
 }
 
-func (s *Store) MarkUnmatched(clientID string, seq int) {
+func (s *Store) MarkUnmatched(clientID string, seq string) {
 	s.mu.Lock()
 	pending := s.getPending()
 	for i := range pending {
@@ -266,7 +266,7 @@ func (s *Store) GetUnsynced() []PendingFinish {
 	return filtered
 }
 
-func (s *Store) RemovePending(clientID string, seq int) {
+func (s *Store) RemovePending(clientID string, seq string) {
 	s.mu.Lock()
 	pending := s.getPending()
 	filtered := make([]PendingFinish, 0, len(pending))
@@ -317,10 +317,10 @@ func (s *Store) AddPendingStart(rennenNummer string, startNummern []string, time
 func (s *Store) GetPendingStarts() []PendingStart {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.getPendingStarts()
+	return s.getPendingStartsLS()
 }
 
-func (s *Store) getPendingStarts() []PendingStart {
+func (s *Store) getPendingStartsLS() []PendingStart {
 	raw := getLS("pendingStarts")
 	if raw == "" {
 		return []PendingStart{}
@@ -336,10 +336,10 @@ func (s *Store) getPendingStarts() []PendingStart {
 	return pending
 }
 
-func (s *Store) GetPendingStart(clientID string, seq int) *PendingStart {
+func (s *Store) GetPendingStart(clientID string, seq string) *PendingStart {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	for _, ps := range s.getPendingStarts() {
+	for _, ps := range s.getPendingStartsLS() {
 		if ps.ClientID == clientID && ps.Seq == seq {
 			return &ps
 		}
@@ -352,9 +352,9 @@ func (s *Store) setPendingStarts(pending []PendingStart) {
 	setLS("pendingStarts", string(data))
 }
 
-func (s *Store) SetPendingStartSynced(clientID string, seq int, startIDs []int32) {
+func (s *Store) SetPendingStartSynced(clientID string, seq string, startIDs []int32) {
 	s.mu.Lock()
-	pending := s.getPendingStarts()
+	pending := s.getPendingStartsLS()
 	for i := range pending {
 		if pending[i].ClientID == clientID && pending[i].Seq == seq {
 			pending[i].StartIDs = startIDs
@@ -369,7 +369,7 @@ func (s *Store) SetPendingStartSynced(clientID string, seq int, startIDs []int32
 func (s *Store) GetUnsyncedStarts() []PendingStart {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	all := s.getPendingStarts()
+	all := s.getPendingStartsLS()
 	filtered := make([]PendingStart, 0, len(all))
 	for _, ps := range all {
 		if ps.StartIDs == nil {
@@ -379,9 +379,9 @@ func (s *Store) GetUnsyncedStarts() []PendingStart {
 	return filtered
 }
 
-func (s *Store) RemovePendingStart(clientID string, seq int) {
+func (s *Store) RemovePendingStart(clientID string, seq string) {
 	s.mu.Lock()
-	pending := s.getPendingStarts()
+	pending := s.getPendingStartsLS()
 	filtered := make([]PendingStart, 0, len(pending))
 	for _, ps := range pending {
 		if ps.ClientID == clientID && ps.Seq == seq {
@@ -403,18 +403,8 @@ func (s *Store) getOrCreateClientID() string {
 	return id
 }
 
-func (s *Store) getNextSeq() int {
-	raw := getLS("seq")
-	seq := 0
-	if raw != "" {
-		if err := json.Unmarshal([]byte(raw), &seq); err != nil {
-			slog.Error("unmarshal seq", "err", err)
-		}
-	}
-	seq++
-	data, _ := json.Marshal(seq)
-	setLS("seq", string(data))
-	return seq
+func (s *Store) getNextSeq() string {
+	return newUUID()
 }
 
 func newUUID() string {

@@ -22,7 +22,8 @@ INSERT INTO zeitnahme_ergebnis (
   $2,
   $3,
   $4
-) RETURNING id, endzeit, zeitnahme_start_id, zeitnahme_ziel_id, meldung_uuid
+)
+RETURNING id, endzeit, zeitnahme_start_id, zeitnahme_ziel_id, meldung_uuid
 `
 
 type CreateZeitnahmeErgebnisParams struct {

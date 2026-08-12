@@ -22,6 +22,7 @@ script zeitnahmeZiel() {
 		if (entries.length === 0) {
 			rows = '<tr><td colspan="3" class="text-center opacity-60 py-8">Noch keine Zielzeiten erfasst</td></tr>';
 		} else {
+			entries.reverse();
 			for (var i = 0; i < entries.length; i++) {
 				var e = entries[i];
 				var key = e.clientId + ':' + e.seq;
@@ -39,7 +40,7 @@ script zeitnahmeZiel() {
 						'<button class="btn btn-sm btn-ghost" data-remove="' + key + '" title="L\u00f6schen">\u00d7</button>' +
 						'</div>';
 				} else {
-					var inputCls = unmatched ? ' input-error' : '';
+					var inputCls = '';
 					var value = unmatched ? e.startNummer : '';
 					cell = '<div class="flex gap-2 items-center">' +
 						'<input type="text" class="input input-bordered input-sm font-mono' + inputCls + '" placeholder="Startnr" value="' + value + '" data-nr-input="' + key + '" autocomplete="off" />' +
@@ -51,7 +52,7 @@ script zeitnahmeZiel() {
 					cell += '<div class="mt-1"><span class="badge badge-warning badge-sm">wird synchronisiert...</span></div>';
 				}
 
-				rows += '<tr class="' + (unmatched ? 'bg-error/10' : '') + '">' +
+				rows += '<tr>' +
 					'<td class="font-mono text-lg font-bold opacity-50">' + nr + '</td>' +
 					'<td class="font-mono text-xl font-bold">' + time + '</td>' +
 					'<td>' + cell + '</td>' +
@@ -118,7 +119,7 @@ script zeitnahmeZiel() {
 		}
 		var parts = key.split(':');
 		var clientId = parts[0];
-		var seq = parseInt(parts[1], 10);
+		var seq = parts[1];
 		var inp = document.querySelector('[data-nr-input="' + key + '"]');
 		var nr = inp ? inp.value.trim() : '';
 		if (!nr) {
@@ -134,7 +135,7 @@ script zeitnahmeZiel() {
 
 	function removeEntry(key) {
 		var parts = key.split(':');
-		window.__wasm_removePending(parts[0], parseInt(parts[1], 10));
+		window.__wasm_removePending(parts[0], parts[1]);
 	}
 
 	function startApp() {

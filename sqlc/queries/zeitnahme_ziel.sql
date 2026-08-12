@@ -17,14 +17,24 @@ INSERT INTO zeitnahme_ziel (
   start_nummer,
   time_client,
   time_server,
-  measured_latency
+  measured_latency,
+  client_id,
+  seq
 ) VALUES (
   $1,
   $2,
   $3,
   $4,
-  $5
-) RETURNING *;
+  $5,
+  $6,
+  $7
+)
+RETURNING *;
+
+-- name: FindZeitnahmeZielByClientSeq :one
+SELECT * FROM zeitnahme_ziel
+WHERE client_id = $1 AND seq = $2
+LIMIT 1;
 
 -- name: UpdateZeitnahmeZiel :one
 UPDATE

@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 
+	"github.com/bata94/RegattaApi/internal/config"
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handlers"
 )
@@ -31,7 +32,7 @@ type submitFinishPayload struct {
 	TimeClient      time.Time `json:"timeClient"`
 	MeasuredLatency int       `json:"measuredLatency"`
 	ClientID        string    `json:"clientId"`
-	Seq             int       `json:"seq"`
+	Seq             string    `json:"seq"`
 }
 
 type submitStartPayload struct {
@@ -40,20 +41,14 @@ type submitStartPayload struct {
 	TimeClient      time.Time `json:"timeClient"`
 	MeasuredLatency int       `json:"measuredLatency"`
 	ClientID        string    `json:"clientId"`
-	Seq             int       `json:"seq"`
+	Seq             string    `json:"seq"`
 }
 
 type assignFinishPayload struct {
 	ClientID    string `json:"clientId"`
-	Seq         int    `json:"seq"`
+	Seq         string `json:"seq"`
 	ZielID      int32  `json:"zielId"`
 	StartNummer string `json:"startNummer"`
-}
-
-type syncBatchPayload struct {
-	ClientID   string                `json:"clientId"`
-	LastSeq    int                   `json:"lastSeq"`
-	Operations []submitFinishPayload `json:"operations"`
 }
 
 func HandleZeitnahmeWS(w http.ResponseWriter, r *http.Request) {
@@ -139,8 +134,6 @@ func readPump(client *handlers.Client) {
 			handleAssignFinish(client, msg.Data)
 		case "record_start":
 			handleRecordStart(client, msg.Data)
-		case "sync_batch":
-			handleSyncBatch(client, msg.Data)
 		case "ping":
 			handlePing(client, msg.Data)
 		default:
@@ -182,7 +175,7 @@ func handleRecordFinish(client *handlers.Client, raw json.RawMessage) {
 	}
 
 	ctx := context.TODO()
-	zn, err := crud.CreateZeitnahmeZiel(ctx, nil, nil, p.TimeClient, p.MeasuredLatency)
+	zn, err := crud.CreateZeitnahmeZiel(ctx, nil, nil, p.TimeClient, p.MeasuredLatency, p.ClientID, p.Seq)
 	if err != nil {
 		slog.Error("CreateZeitnahmeZiel failed", "err", err)
 		return
@@ -226,7 +219,7 @@ func handleRecordStart(client *handlers.Client, raw json.RawMessage) {
 	}
 
 	ctx := context.TODO()
-	starts, err := crud.CreateZeitnahmeStart(ctx, rennNr, p.StartNummern, p.TimeClient, p.MeasuredLatency)
+	starts, err := crud.CreateZeitnahmeStart(ctx, rennNr, p.StartNummern, p.TimeClient, p.MeasuredLatency, p.ClientID, p.Seq)
 	if err != nil {
 		slog.Error("CreateZeitnahmeStart failed", "err", err)
 		return
@@ -271,6 +264,7 @@ func handleAssignFinish(client *handlers.Client, raw json.RawMessage) {
 	}
 
 	hub := client.Hub
+	// TODO: filter by rennen_nummer to avoid loading all open starts (issue #22)
 	openStarts, err := crud.GetOpenZeitnahmeStart(ctx)
 	if err != nil {
 		slog.Error("GetOpenZeitnahmeStart for matching failed", "err", err)
@@ -294,7 +288,7 @@ func handleAssignFinish(client *handlers.Client, raw json.RawMessage) {
 				continue
 			}
 
-			meld, meldErr := crud.GetMeldungByStartNrUndTag(ctx, startNummerInt, crud.TagSa)
+			meld, meldErr := crud.GetMeldungByStartNrUndTag(ctx, startNummerInt, crud.Tag(config.C.Zeitnahme.GetCurrentTag()))
 			if meldErr != nil {
 				slog.Debug("GetMeldungByStartNrUndTag failed", "err", meldErr)
 				continue
@@ -339,28 +333,4 @@ func handleAssignFinish(client *handlers.Client, raw json.RawMessage) {
 			"id":          p.ZielID,
 		},
 	})
-}
-
-func handleSyncBatch(client *handlers.Client, raw json.RawMessage) {
-	var p syncBatchPayload
-	if err := json.Unmarshal(raw, &p); err != nil {
-		slog.Error("WS sync_batch unmarshal error", "err", err)
-		return
-	}
-
-	for _, op := range p.Operations {
-		client.Hub.BroadcastJSON(map[string]any{
-			"type":     "sync_op",
-			"clientId": p.ClientID,
-			"op":       op,
-		})
-
-		handleRecordFinish(client, func() json.RawMessage {
-			data, err := json.Marshal(op)
-			if err != nil {
-				slog.Error("sync marshal op failed", "err", err)
-			}
-			return data
-		}())
-	}
 }

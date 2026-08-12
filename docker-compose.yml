@@ -30,8 +30,8 @@ services:
     platform: linux/amd64
     image: postgres:18.4
     # For Dev Migrations only!
-    # ports:
-    #   - 5432:5432
+    ports:
+      - 5432:5432
     volumes:
       - postgres-data:/var/lib/postgresql
       - postgres-config:/etc/postgresql/postgresql.conf

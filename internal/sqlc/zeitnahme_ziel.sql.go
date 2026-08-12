@@ -17,14 +17,19 @@ INSERT INTO zeitnahme_ziel (
   start_nummer,
   time_client,
   time_server,
-  measured_latency
+  measured_latency,
+  client_id,
+  seq
 ) VALUES (
   $1,
   $2,
   $3,
   $4,
-  $5
-) RETURNING id, rennen_nummer, start_nummer, time_client, time_server, measured_latency, verarbeitet
+  $5,
+  $6,
+  $7
+)
+RETURNING id, rennen_nummer, start_nummer, time_client, time_server, measured_latency, verarbeitet, client_id, seq
 `
 
 type CreateZeitnahmeZielParams struct {
@@ -33,6 +38,8 @@ type CreateZeitnahmeZielParams struct {
 	TimeClient      pgtype.Timestamp `json:"time_client"`
 	TimeServer      pgtype.Timestamp `json:"time_server"`
 	MeasuredLatency pgtype.Int4      `json:"measured_latency"`
+	ClientID        pgtype.Text      `json:"client_id"`
+	Seq             pgtype.Text      `json:"seq"`
 }
 
 func (q *Queries) CreateZeitnahmeZiel(ctx context.Context, arg CreateZeitnahmeZielParams) (ZeitnahmeZiel, error) {
@@ -42,6 +49,8 @@ func (q *Queries) CreateZeitnahmeZiel(ctx context.Context, arg CreateZeitnahmeZi
 		arg.TimeClient,
 		arg.TimeServer,
 		arg.MeasuredLatency,
+		arg.ClientID,
+		arg.Seq,
 	)
 	var i ZeitnahmeZiel
 	err := row.Scan(
@@ -52,6 +61,8 @@ func (q *Queries) CreateZeitnahmeZiel(ctx context.Context, arg CreateZeitnahmeZi
 		&i.TimeServer,
 		&i.MeasuredLatency,
 		&i.Verarbeitet,
+		&i.ClientID,
+		&i.Seq,
 	)
 	return i, err
 }
@@ -59,7 +70,7 @@ func (q *Queries) CreateZeitnahmeZiel(ctx context.Context, arg CreateZeitnahmeZi
 const deleteZeitnahmeZiel = `-- name: DeleteZeitnahmeZiel :one
 DELETE FROM zeitnahme_ziel
 WHERE id = $1
-RETURNING id, rennen_nummer, start_nummer, time_client, time_server, measured_latency, verarbeitet
+RETURNING id, rennen_nummer, start_nummer, time_client, time_server, measured_latency, verarbeitet, client_id, seq
 `
 
 func (q *Queries) DeleteZeitnahmeZiel(ctx context.Context, id int32) (ZeitnahmeZiel, error) {
@@ -73,12 +84,42 @@ func (q *Queries) DeleteZeitnahmeZiel(ctx context.Context, id int32) (ZeitnahmeZ
 		&i.TimeServer,
 		&i.MeasuredLatency,
 		&i.Verarbeitet,
+		&i.ClientID,
+		&i.Seq,
+	)
+	return i, err
+}
+
+const findZeitnahmeZielByClientSeq = `-- name: FindZeitnahmeZielByClientSeq :one
+SELECT id, rennen_nummer, start_nummer, time_client, time_server, measured_latency, verarbeitet, client_id, seq FROM zeitnahme_ziel
+WHERE client_id = $1 AND seq = $2
+LIMIT 1
+`
+
+type FindZeitnahmeZielByClientSeqParams struct {
+	ClientID pgtype.Text `json:"client_id"`
+	Seq      pgtype.Text `json:"seq"`
+}
+
+func (q *Queries) FindZeitnahmeZielByClientSeq(ctx context.Context, arg FindZeitnahmeZielByClientSeqParams) (ZeitnahmeZiel, error) {
+	row := q.db.QueryRow(ctx, findZeitnahmeZielByClientSeq, arg.ClientID, arg.Seq)
+	var i ZeitnahmeZiel
+	err := row.Scan(
+		&i.ID,
+		&i.RennenNummer,
+		&i.StartNummer,
+		&i.TimeClient,
+		&i.TimeServer,
+		&i.MeasuredLatency,
+		&i.Verarbeitet,
+		&i.ClientID,
+		&i.Seq,
 	)
 	return i, err
 }
 
 const getAllOpenZeitnahmeZiel = `-- name: GetAllOpenZeitnahmeZiel :many
-SELECT id, rennen_nummer, start_nummer, time_client, time_server, measured_latency, verarbeitet FROM zeitnahme_ziel
+SELECT id, rennen_nummer, start_nummer, time_client, time_server, measured_latency, verarbeitet, client_id, seq FROM zeitnahme_ziel
 WHERE verarbeitet = false
 ORDER BY id DESC
 `
@@ -100,6 +141,8 @@ func (q *Queries) GetAllOpenZeitnahmeZiel(ctx context.Context) ([]ZeitnahmeZiel,
 			&i.TimeServer,
 			&i.MeasuredLatency,
 			&i.Verarbeitet,
+			&i.ClientID,
+			&i.Seq,
 		); err != nil {
 			return nil, err
 		}
@@ -112,7 +155,7 @@ func (q *Queries) GetAllOpenZeitnahmeZiel(ctx context.Context) ([]ZeitnahmeZiel,
 }
 
 const getAllZeitnahmeZiel = `-- name: GetAllZeitnahmeZiel :many
-SELECT id, rennen_nummer, start_nummer, time_client, time_server, measured_latency, verarbeitet FROM zeitnahme_ziel
+SELECT id, rennen_nummer, start_nummer, time_client, time_server, measured_latency, verarbeitet, client_id, seq FROM zeitnahme_ziel
 ORDER BY id ASC
 `
 
@@ -133,6 +176,8 @@ func (q *Queries) GetAllZeitnahmeZiel(ctx context.Context) ([]ZeitnahmeZiel, err
 			&i.TimeServer,
 			&i.MeasuredLatency,
 			&i.Verarbeitet,
+			&i.ClientID,
+			&i.Seq,
 		); err != nil {
 			return nil, err
 		}
@@ -145,7 +190,7 @@ func (q *Queries) GetAllZeitnahmeZiel(ctx context.Context) ([]ZeitnahmeZiel, err
 }
 
 const getZeitnahmeZiel = `-- name: GetZeitnahmeZiel :one
-SELECT id, rennen_nummer, start_nummer, time_client, time_server, measured_latency, verarbeitet FROM zeitnahme_ziel
+SELECT id, rennen_nummer, start_nummer, time_client, time_server, measured_latency, verarbeitet, client_id, seq FROM zeitnahme_ziel
 WHERE id = $1 LIMIT 1
 `
 
@@ -160,6 +205,8 @@ func (q *Queries) GetZeitnahmeZiel(ctx context.Context, id int32) (ZeitnahmeZiel
 		&i.TimeServer,
 		&i.MeasuredLatency,
 		&i.Verarbeitet,
+		&i.ClientID,
+		&i.Seq,
 	)
 	return i, err
 }
@@ -184,7 +231,7 @@ SET
 WHERE 
   id = $1
 RETURNING 
-  id, rennen_nummer, start_nummer, time_client, time_server, measured_latency, verarbeitet
+  id, rennen_nummer, start_nummer, time_client, time_server, measured_latency, verarbeitet, client_id, seq
 `
 
 type UpdateZeitnahmeZielParams struct {
@@ -204,6 +251,8 @@ func (q *Queries) UpdateZeitnahmeZiel(ctx context.Context, arg UpdateZeitnahmeZi
 		&i.TimeServer,
 		&i.MeasuredLatency,
 		&i.Verarbeitet,
+		&i.ClientID,
+		&i.Seq,
 	)
 	return i, err
 }

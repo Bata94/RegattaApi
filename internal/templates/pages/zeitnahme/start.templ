@@ -99,13 +99,30 @@ script zeitnahmeStart() {
 			return '<div class="text-center opacity-60 py-8">Keine Rennen mit Meldungen vorhanden</div>';
 		}
 		var order = ['Langstrecke', 'Slalom', 'Kurzstrecke', 'Staffel'];
+		var wettkampfOrder = ['Langstrecke', 'Slalom', 'Kurzstrecke', 'Staffel'];
+		var tabs = [];
+		var panels = {};
+		for (var i = 0; i < races.length; i++) {
+			var wk = races[i].wettkampf || '';
+			if (panels[wk] === undefined) {
+				panels[wk] = '';
+				tabs.push(wk);
+			}
+		}
+		tabs.sort(function(a, b) {
+			var ai = wettkampfOrder.indexOf(a);
+			var bi = wettkampfOrder.indexOf(b);
+			if (ai === -1 && bi === -1) return a.localeCompare(b);
+			if (ai === -1) return 1;
+			if (bi === -1) return -1;
+			return ai - bi;
+		});
 		var html = '<div class="tabs tabs-box w-full">';
-		for (var j = 0; j < order.length; j++) {
+		for (var j = 0; j < tabs.length; j++) {
+			var wk = tabs[j];
 			var panel = '';
-			var found = false;
 			for (var i = 0; i < races.length; i++) {
-				if ((races[i].wettkampf || '') !== order[j]) continue;
-				found = true;
+				if ((races[i].wettkampf || '') !== wk) continue;
 				var r = races[i];
 				var numMeld = r.num_meldungen ? r.num_meldungen : (r.meldungen ? r.meldungen.length : 0);
 				panel += '<button class="btn btn-block justify-start" data-select-race="' + i + '">' +
@@ -113,10 +130,10 @@ script zeitnahmeStart() {
 					'<span class="badge badge-ghost ml-auto">' + numMeld + '</span>' +
 					'</button>';
 			}
-			html += '<input type="radio" name="start_race_tabs" class="tab" aria-label="' + order[j] + '"' + (j === 0 ? ' checked="checked"' : '') + ' />';
+			html += '<input type="radio" name="start_race_tabs" class="tab" aria-label="' + wk + '"' + (j === 0 ? ' checked="checked"' : '') + ' />';
 			html += '<div class="tab-content bg-base-100 border-base-300 !px-2 !py-0 !m-0">';
 			html += '<div class="max-h-[50vh] overflow-y-auto flex flex-col gap-1 py-1">';
-			html += found ? panel : '<div class="text-center opacity-60 py-8">Keine Rennen mehr</div>';
+			html += panel || '<div class="text-center opacity-60 py-8">Keine Rennen</div>';
 			html += '</div></div>';
 		}
 		html += '</div>';
@@ -540,7 +557,13 @@ script zeitnahmeStart() {
 
 	function removePendingStart(key) {
 		var parts = key.split(':');
-		window.__wasm_removePendingStart(parts[0], parseInt(parts[1], 10));
+		window.__wasm_removePendingStart(parts[0], parts[1]);
+		if (currentRace && currentRace._started) {
+			var meldungen = (currentRace && currentRace.meldungen) || [];
+			for (var k = 0; k < meldungen.length; k++) {
+				delete currentRace._started[meldungen[k].uuid];
+			}
+		}
 	}
 
 	function startApp() {

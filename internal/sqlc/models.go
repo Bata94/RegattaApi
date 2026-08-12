@@ -364,6 +364,8 @@ type ZeitnahmeStart struct {
 	TimeServer      pgtype.Timestamp `json:"time_server"`
 	MeasuredLatency pgtype.Int4      `json:"measured_latency"`
 	Verarbeitet     bool             `json:"verarbeitet"`
+	ClientID        pgtype.Text      `json:"client_id"`
+	Seq             pgtype.Text      `json:"seq"`
 }
 
 type ZeitnahmeZiel struct {
@@ -374,4 +376,6 @@ type ZeitnahmeZiel struct {
 	TimeServer      pgtype.Timestamp `json:"time_server"`
 	MeasuredLatency pgtype.Int4      `json:"measured_latency"`
 	Verarbeitet     bool             `json:"verarbeitet"`
+	ClientID        pgtype.Text      `json:"client_id"`
+	Seq             pgtype.Text      `json:"seq"`
 }
