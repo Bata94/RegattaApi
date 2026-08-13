@@ -6,12 +6,14 @@ Regatta management web application — athlete registration, race planning, time
 
 | Layer | Technology |
 |---|---|
-| Language | Go 1.25 |
+| Language | Go 1.26 |
 | Database | PostgreSQL via pgx v5 |
 | DB Layer | sqlc (codegen from SQL queries) |
 | UI | Templ (Go-native templates) + HTMX |
 | CSS | TailwindCSS 4 + daisyUI 5 |
-| Auth | JWT (golang-jwt) |
+| Auth | JWT (golang-jwt) + bcrypt |
+| WebSocket | gorilla/websocket (live timekeeping) |
+| WASM | Go js/wasm (zeitnahme timekeeping client) |
 | Infrastructure | Docker multi-stage, Caddy reverse proxy |
 | PDF | Gotenberg |
 | Dev Environment | Air (live reload), Nix flakes, goose (migrations) |
@@ -24,7 +26,7 @@ RegattaApi/
 ├── internal/
 │   ├── config/              # Env-based app configuration
 │   ├── db/                  # pgx pool, DB connection init
-│   ├── sqlc/                # Generated: models, queries (do not edit)
+│   ├── sqlc/                # Generated: models, queries from sqlc (do not edit)
 │   ├── crud/                # Domain types wrapping sqlc, lazy-loading getters, business queries
 │   ├── errors/              # AppError struct, sentinel errors
 │   ├── handler/             # Request context, middleware/error types
@@ -35,13 +37,19 @@ RegattaApi/
 │   ├── templates/           # Templ components: layout/, components/, pages/, pdf/
 │   └── utils/               # Email, files, PDF, metrics, string helpers
 ├── assets/                  # Frontend: JS, CSS source, icons, fonts, images
-├── public/                  # Static output (compiled CSS only — all generated)
+├── public/                  # Static output (compiled CSS, WASM binaries, uploaded files)
 ├── sqlc/                    # Source SQL: queries/ and schemas/ (goose migrations)
+├── cmd/wasm/zeitnahme/      # Go WASM timekeeping client (builds to public/wasm/)
 ├── files/                   # User-uploaded files (DRV imports, PDFs)
-├── docs/                    # Generated Swagger docs
+├── docs/                    # Swagger docs (stub)
+├── caddy/                   # Caddy data/certs volumes
+├── bin/                     # Built binary (gitignored)
+├── tmp/                     # Air build output (gitignored)
+├── node_modules/            # npm dependencies (Tailwind, daisyUI)
 ├── Justfile                 # Task runner
 ├── sqlc.yaml                # sqlc config
 ├── .air.toml                # Air live-reload config
+├── flake.nix                # Nix dev shell
 ├── docker-compose.yml       # Dev/prod service composition
 └── Dockerfile               # Multi-stage build
 ```
@@ -62,7 +70,7 @@ File changes in `internal/` and `main.go` auto-reload via Air inside the contain
 |---|---|
 | `just check` | `fmt → lint → test → build` — run after significant changes |
 | `just dev` | Start dev environment (api-dev + caddy) |
-| `just build` | `templ generate` → `tailwindcss` → `go build` |
+| `just build` | `templ generate` → `tailwindcss` → `wasm-build` → `go build` |
 | `just full-build` | Full Docker-oriented build + sqlc-gen |
 | `just sqlc-gen` | Regenerate sqlc Go code from SQL |
 | `just db-up` | Run pending goose migrations |
@@ -70,7 +78,7 @@ File changes in `internal/` and `main.go` auto-reload via Air inside the contain
 | `just db-status` | Show migration state |
 | `just templ` | Regenerate Go from .templ files |
 | `just tailwind-gen` | Rebuild CSS from Tailwind source |
-| `just docker-logs` | `docker compose logs -ftn 100 api-dev` (check for errors) |
+| `just wasm-build` | Build Go WASM timekeeping client |
 | `just lint` | `golangci-lint run` |
 | `just test` | `go test ./... -v` |
 
@@ -82,3 +90,9 @@ File changes in `internal/` and `main.go` auto-reload via Air inside the contain
 - **AppError system** — all errors flow through `handleAppError` which routes to toasts, JSON, or page errors depending on context.
 - **Compression middleware caveat** — gzip footer commits HTTP 200 before error handlers can react; fix errors upstream.
 - **pgx v5 NULL handling** — scanning SQL NULL into non-nullable Go types panics. Use split queries or nullable sqlc types for JOINs.
+
+## Known Issues & Roadmap
+
+See [TODO.md](./TODO.md) for technical debt, security findings, and outstanding work items.
+
+Check errors during development: `docker compose logs -ftn 100 api-dev`

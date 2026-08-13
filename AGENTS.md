@@ -49,8 +49,9 @@ When JS is needed, prefer in this order:
 - `internal/templates/` — templ components/layouts/pages
 - `assets/js/` — external JS (hot-reloaded by air)
 - `assets/css/` — tailwind source (`input.css` → `public/css_global.css`)
-- `public/` — served as static files (generated CSS, uploaded assets)
-- `sqlc/` — generated DB query code (run `just sqlc-gen` to regenerate)
+- `public/` — served as static files (generated CSS, uploaded assets, WASM binaries)
+- `internal/sqlc/` — generated DB query code from sqlc (do not edit; run `just sqlc-gen` to regenerate)
+- `sqlc/` — source SQL files: `queries/*.sql` and `schemas/*.sql` (goose migrations)
 
 ## Important Gotchas
 
@@ -59,6 +60,7 @@ When JS is needed, prefer in this order:
 - `public/` contains only generated files (compiled CSS from Tailwind) — `just build` / `just tailwind-gen` produce them; no manual sync needed
 - Inline `<script>` in templ files won't hot-reload — prefer `/assets/js/` files
 - Toast `HX-Retarget: #toast-container` + default swap breaks toast visibility — must use `HX-Swap: beforeend`
+- **Capability checks are UI-only** — see [TODO.md](./TODO.md). Enforce server-side in handler code or via a `RequireCap(cap string)` middleware.
 
 ## Tooling
 
@@ -68,6 +70,7 @@ When JS is needed, prefer in this order:
 - `air` — live reload (runs inside `api-dev` via `just watch`)
 - `goose` — migrations via `just` commands
 - `just tailwind-gen` — rebuild CSS (also run by air on CSS changes)
+- `just wasm-build` — build Go WASM timekeeping client (`cmd/wasm/zeitnahme/` → `public/wasm/zeitnahme.wasm`)
 
 ## CRUD Layer Architecture
 

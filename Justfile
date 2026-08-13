@@ -20,25 +20,53 @@ sqlc-gen:
 
 # Run like 'NEW_MIG=<MigrationName> make goose-new'
 db-new:
-	GOOSE_DRIVER=${GOOSE_DRIVER} GOOSE_DBSTRING=${GOOSE_DBSTRING} GOOSE_MIGRATION_DIR=${GOOSE_MIGRATION_DIR} goose create ${NEW_MIG} sql
+	docker run --rm --network regattaapi_default -v .:/opt/app -w /opt/app \
+		-e GOOSE_DBSTRING="postgres://${DB_USER}:${DB_PASSWORD}@db:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE}" \
+		-e GOOSE_MIGRATION_DIR="./sqlc/schemas/" \
+		-e GOOSE_DRIVER=postgres \
+		regattaapi-api-dev goose create ${NEW_MIG} sql
 
 db-up:
-	GOOSE_DRIVER=${GOOSE_DRIVER} GOOSE_DBSTRING=${GOOSE_DBSTRING} GOOSE_MIGRATION_DIR=${GOOSE_MIGRATION_DIR} goose up
+	docker run --rm --network regattaapi_default -v .:/opt/app -w /opt/app \
+		-e GOOSE_DBSTRING="postgres://${DB_USER}:${DB_PASSWORD}@db:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE}" \
+		-e GOOSE_MIGRATION_DIR="./sqlc/schemas/" \
+		-e GOOSE_DRIVER=postgres \
+		regattaapi-api-dev goose up
 
 db-up-by-one:
-	GOOSE_DRIVER=${GOOSE_DRIVER} GOOSE_DBSTRING=${GOOSE_DBSTRING} GOOSE_MIGRATION_DIR=${GOOSE_MIGRATION_DIR} goose up-by-one
+	docker run --rm --network regattaapi_default -v .:/opt/app -w /opt/app \
+		-e GOOSE_DBSTRING="postgres://${DB_USER}:${DB_PASSWORD}@db:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE}" \
+		-e GOOSE_MIGRATION_DIR="./sqlc/schemas/" \
+		-e GOOSE_DRIVER=postgres \
+		regattaapi-api-dev goose up-by-one
 
 db-down:
-	GOOSE_DRIVER=${GOOSE_DRIVER} GOOSE_DBSTRING=${GOOSE_DBSTRING} GOOSE_MIGRATION_DIR=${GOOSE_MIGRATION_DIR} goose down
+	docker run --rm --network regattaapi_default -v .:/opt/app -w /opt/app \
+		-e GOOSE_DBSTRING="postgres://${DB_USER}:${DB_PASSWORD}@db:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE}" \
+		-e GOOSE_MIGRATION_DIR="./sqlc/schemas/" \
+		-e GOOSE_DRIVER=postgres \
+		regattaapi-api-dev goose down
 
 db-reset:
-	GOOSE_DRIVER=${GOOSE_DRIVER} GOOSE_DBSTRING=${GOOSE_DBSTRING} GOOSE_MIGRATION_DIR=${GOOSE_MIGRATION_DIR} goose reset
+	docker run --rm --network regattaapi_default -v .:/opt/app -w /opt/app \
+		-e GOOSE_DBSTRING="postgres://${DB_USER}:${DB_PASSWORD}@db:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE}" \
+		-e GOOSE_MIGRATION_DIR="./sqlc/schemas/" \
+		-e GOOSE_DRIVER=postgres \
+		regattaapi-api-dev goose reset
 
 db-redo:
-	GOOSE_DRIVER=${GOOSE_DRIVER} GOOSE_DBSTRING=${GOOSE_DBSTRING} GOOSE_MIGRATION_DIR=${GOOSE_MIGRATION_DIR} goose redo
+	docker run --rm --network regattaapi_default -v .:/opt/app -w /opt/app \
+		-e GOOSE_DBSTRING="postgres://${DB_USER}:${DB_PASSWORD}@db:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE}" \
+		-e GOOSE_MIGRATION_DIR="./sqlc/schemas/" \
+		-e GOOSE_DRIVER=postgres \
+		regattaapi-api-dev goose redo
 
 db-status:
-	GOOSE_DRIVER=${GOOSE_DRIVER} GOOSE_DBSTRING=${GOOSE_DBSTRING} GOOSE_MIGRATION_DIR=${GOOSE_MIGRATION_DIR} goose status
+	docker run --rm --network regattaapi_default -v .:/opt/app -w /opt/app \
+		-e GOOSE_DBSTRING="postgres://${DB_USER}:${DB_PASSWORD}@db:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE}" \
+		-e GOOSE_MIGRATION_DIR="./sqlc/schemas/" \
+		-e GOOSE_DRIVER=postgres \
+		regattaapi-api-dev goose status
 
 # Generate Templ
 templ:
