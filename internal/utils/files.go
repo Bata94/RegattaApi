@@ -3,6 +3,7 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -40,6 +41,6 @@ func FileExists(filename string) bool {
 		return false // File does not exist
 	}
 	// Post-check: file might exist but we have permission issues or other errors
-	fmt.Printf("Error, Error is not os.ErrNotExist. So maybe we have permission issues or other errors. Error: %v\n", err)
+	slog.Warn("stat file failed (not os.ErrNotExist)", "filename", filename, "err", err)
 	return false
 }

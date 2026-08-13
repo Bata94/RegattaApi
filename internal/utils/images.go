@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"image"
 	_ "image/jpeg"
 	_ "image/png"
@@ -50,7 +49,7 @@ func ConvertAndResizeImage(src, dst string, p ConvertResizeParams) error {
 	}
 
 	if p.Width != 0 || p.Height != 0 {
-		fmt.Println("Resizing - Width:", p.Width, "Height:", p.Height)
+		slog.Debug("Resizing image", "width", p.Width, "height", p.Height)
 		// If one value is 0, resize.Resize maintains aspect ratio
 		img = resize.Resize(p.Width, p.Height, img, resize.Lanczos3)
 	}
@@ -65,9 +64,9 @@ func ConvertAndResizeImage(src, dst string, p ConvertResizeParams) error {
 		}
 	}()
 
-	fmt.Println("Converting -  Quality:", p.Quality, "Lossless:", p.Lossless)
+	slog.Debug("Converting image", "quality", p.Quality, "lossless", p.Lossless)
 	if p.Quality <= 0.0 || p.Quality > 100.0 {
-		fmt.Println("Converting -  Quality is not a float32 value or out of range... Setting default value")
+		slog.Warn("image quality out of range, setting default value", "quality", p.Quality)
 		p.Quality = NewConvertResizeParams().Quality
 	}
 	err = webp.Encode(outputFile, img, &webp.Options{

@@ -2,6 +2,7 @@ package ui_components
 
 import (
 	"fmt"
+	"log/slog"
 	"net/url"
 	"strings"
 	"strconv"
@@ -173,7 +174,7 @@ templ RawImageComponent(src, alt string, c ImageOptions) {
     srcFileName := srcFileNameWithExt[:strings.LastIndex(srcFileNameWithExt, ".")]
 
     webpSrc := fmt.Sprintf("/public/img_%s_w%d_h%d_q%d_l%t.webp", srcFileName, width, height, int(c.Quality), c.Lossless)
-    fmt.Println(webpSrc)
+    slog.Debug("generated webp src", "src", webpSrc)
     var errConv error
 
     if !utils.FileExists(webpSrc[1:]) {
@@ -186,11 +187,11 @@ templ RawImageComponent(src, alt string, c ImageOptions) {
 
       errConv = utils.ConvertAndResizeImage(src[1:], webpSrc[1:], imgParams)
     } else {
-      fmt.Println("File exists, skipping conversion")
+      slog.Debug("File exists, skipping conversion", "src", webpSrc)
     }
   }}
   if errConv != nil {
-    {{fmt.Println(errConv)}}
+    {{ slog.Error("image conversion failed", "err", errConv) }}
   }
 
   <img

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -29,7 +30,7 @@ func DrvMeldungUpload(c *handler.Context) error {
 		return handler.BadRequest(err.Error())
 	}
 
-	fmt.Println("Uploaded:", filename)
+	slog.Info("Uploaded", "filename", filename)
 	uploadsDir := config.C.Paths.UploadDir
 
 	err = os.MkdirAll(uploadsDir, os.ModePerm)
@@ -161,28 +162,28 @@ type DrvPerson struct {
 type DrvClubBoats struct{}
 
 func ImportDrvJson(ctx context.Context, filePath string) error {
-	fmt.Println("Importing Drv JSON File:", filePath)
+	slog.Info("Importing Drv JSON File", "file", filePath)
 
 	b, err := os.ReadFile(filePath)
 	if err != nil {
-		fmt.Println("Read File Error:", err)
+		slog.Error("Read File Error", "err", err)
 		return err
 	}
 
 	drvMeldung := DrvMeldungJson{}
 	err = json.Unmarshal(b, &drvMeldung)
 	if err != nil {
-		fmt.Println("Unmarshal Error:", err)
+		slog.Error("Unmarshal Error", "err", err)
 		return err
 	}
 
 	o, err := json.MarshalIndent(drvMeldung, "", "  ")
 	if err != nil {
-		fmt.Println("Marshal Error:", err)
+		slog.Error("Marshal Error", "err", err)
 		return err
 	}
 	if err := os.WriteFile(fmt.Sprintf("%sImported_DrvMeldung_%s.json", config.C.Paths.UploadDir, time.Now().Format("15-04-05")), o, writeFilePerms); err != nil {
-		fmt.Println("Error writing debug JSON:", err)
+		slog.Error("Error writing debug JSON", "err", err)
 	}
 
 	return DB.WithTx(ctx, func(txCtx context.Context) error {
@@ -195,7 +196,7 @@ func importDrvJsonCore(ctx context.Context, drvMeldung DrvMeldungJson) error {
 		verein, err := crud.GetVereinMinimal(ctx, v.Id)
 		if err != nil {
 			if err != apierr.ErrNotFound {
-				fmt.Println("Crud get Error:", err)
+				slog.Error("Crud get Error", "err", err)
 				return err
 			}
 			if verein.Uuid != uuid.Nil {
@@ -214,7 +215,7 @@ func importDrvJsonCore(ctx context.Context, drvMeldung DrvMeldungJson) error {
 		}
 		_, err = crud.CreateVerein(ctx, newVerein)
 		if err != nil {
-			fmt.Println("Crud create Error:", err)
+			slog.Error("Crud create Error", "err", err)
 			return err
 		}
 
@@ -246,16 +247,16 @@ func importDrvJsonCore(ctx context.Context, drvMeldung DrvMeldungJson) error {
 		rennen, err := crud.GetRennenMinimal(ctx, r.Id)
 		if err != nil {
 			if err != apierr.ErrNotFound {
-				fmt.Println("Crud get Error:", err)
+				slog.Error("Crud get Error", "err", err)
 				return err
 			}
 			if rennen.Uuid != uuid.Nil {
-				fmt.Printf("Rennen already exists: %s - %s\n", rennen.Nummer, rennen.BezeichnungLang)
+				slog.Debug("Rennen already exists", "nummer", rennen.Nummer, "bezeichnung", rennen.BezeichnungLang)
 				continue
 			}
 		}
 		if rennen.Uuid != uuid.Nil {
-			fmt.Printf("Rennen already exists: %s - %s\n", rennen.Nummer, rennen.BezeichnungLang)
+			slog.Debug("Rennen already exists", "nummer", rennen.Nummer, "bezeichnung", rennen.BezeichnungLang)
 			continue
 		}
 
@@ -275,7 +276,7 @@ func importDrvJsonCore(ctx context.Context, drvMeldung DrvMeldungJson) error {
 		sortOrder := int32(r.Days[0].SortOrder)
 
 		if r.Days[0].Date == "2024-09-29" {
-			fmt.Println("SortOrder Sonntag!")
+			slog.Debug("SortOrder Sonntag!")
 			sortOrder += 500
 		}
 
@@ -300,7 +301,7 @@ func importDrvJsonCore(ctx context.Context, drvMeldung DrvMeldungJson) error {
 
 		_, err = crud.CreateRennen(ctx, newRennen)
 		if err != nil {
-			fmt.Println("Crud create Error:", err)
+			slog.Error("Crud create Error", "err", err)
 			return err
 		}
 	}
@@ -314,13 +315,13 @@ func importDrvJsonCore(ctx context.Context, drvMeldung DrvMeldungJson) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("Len All Rennen:", len(allRennen))
+	slog.Debug("Len All Rennen", "count", len(allRennen))
 
 	for _, a := range drvMeldung.ClubMembers {
 		athlet, err := crud.GetAthletMinimal(ctx, a.Id)
 		if err != nil {
 			if err != apierr.ErrNotFound {
-				fmt.Println("Crud get Error:", err)
+				slog.Error("Crud get Error", "err", err)
 				return err
 			}
 			if athlet.Uuid != uuid.Nil {
@@ -344,54 +345,54 @@ func importDrvJsonCore(ctx context.Context, drvMeldung DrvMeldungJson) error {
 
 		_, err = crud.CreateAthlet(ctx, newAthlet)
 		if err != nil {
-			fmt.Println("Crud create Error:", err)
+			slog.Error("Crud create Error", "err", err)
 			return err
 		}
 	}
 
-	fmt.Println("Import Entries Loop...")
+	slog.Debug("Import Entries Loop...")
 	for _, m := range drvMeldung.Entries {
 		meldung, err := crud.GetMeldungMinimal(ctx, m.Id)
 		if err != nil {
 			if err != apierr.ErrNotFound {
-				fmt.Println("Crud get Error:", err)
+				slog.Error("Crud get Error", "err", err)
 				return err
 			}
 			if meldung.Uuid != uuid.Nil {
 				if meldung.DrvRevisionUuid.ClockSequence() == m.RevisionId.ClockSequence() {
-					fmt.Println("Meldung exists in DB, skipping...")
+					slog.Debug("Meldung exists in DB, skipping...")
 					continue
 				}
 
-				fmt.Println("MeldUuid:", meldung.Uuid)
-				fmt.Println("Meld in DB Rev:", meldung.DrvRevisionUuid.ClockSequence())
-				fmt.Println("Meld in JSON Rev:", m.RevisionId.ClockSequence())
+				slog.Debug("MeldUuid", "uuid", meldung.Uuid)
+				slog.Debug("Meld in DB Rev", "rev", meldung.DrvRevisionUuid.ClockSequence())
+				slog.Debug("Meld in JSON Rev", "rev", m.RevisionId.ClockSequence())
 
 				if meldung.DrvRevisionUuid.ClockSequence() > m.RevisionId.ClockSequence() {
-					fmt.Printf("Meldung in DB is newer than in JSON! MeldungID: %s\n", m.Id)
+					slog.Debug("Meldung in DB is newer than in JSON", "meldungID", m.Id)
 					continue
 				}
 
-				fmt.Printf("Min. eine Meldung in JSON is newer than in DB! MeldungID: %s\n", m.Id)
+				slog.Debug("Min. eine Meldung in JSON is newer than in DB", "meldungID", m.Id)
 				continue
 			}
 		}
 		if meldung.Uuid != uuid.Nil {
 			if meldung.DrvRevisionUuid.ClockSequence() == m.RevisionId.ClockSequence() {
-				fmt.Println("Meldung exists in DB, skipping...")
+				slog.Debug("Meldung exists in DB, skipping...")
 				continue
 			}
 
-			fmt.Println("MeldUuid:", meldung.Uuid)
-			fmt.Println("Meld in DB Rev:", meldung.DrvRevisionUuid.ClockSequence())
-			fmt.Println("Meld in JSON Rev:", m.RevisionId.ClockSequence())
+			slog.Debug("MeldUuid", "uuid", meldung.Uuid)
+			slog.Debug("Meld in DB Rev", "rev", meldung.DrvRevisionUuid.ClockSequence())
+			slog.Debug("Meld in JSON Rev", "rev", m.RevisionId.ClockSequence())
 
 			if meldung.DrvRevisionUuid.ClockSequence() > m.RevisionId.ClockSequence() {
-				fmt.Printf("Meldung in DB is newer than in JSON! MeldungID: %s\n", m.Id)
+				slog.Debug("Meldung in DB is newer than in JSON", "meldungID", m.Id)
 				continue
 			}
 
-			fmt.Printf("Min. eine Meldung in JSON is newer than in DB! MeldungID: %s\n", m.Id)
+			slog.Debug("Min. eine Meldung in JSON is newer than in DB", "meldungID", m.Id)
 			continue
 		}
 
@@ -405,7 +406,7 @@ func importDrvJsonCore(ctx context.Context, drvMeldung DrvMeldungJson) error {
 		athleten := []crud.CreateMeldungAthletParams{}
 
 		if m.AltEventID != uuid.Nil {
-			fmt.Println("Alternativ Meldung gefunden! Status:", m.Status)
+			slog.Debug("Alternativ Meldung gefunden", "status", m.Status)
 			typ += fmt.Sprintf(" - Alternative zu RennenUUID: %s", m.AltEventID.String())
 			abgemeldet = true
 			kosten = int32(0)
@@ -415,7 +416,7 @@ func importDrvJsonCore(ctx context.Context, drvMeldung DrvMeldungJson) error {
 			role := strings.ToLower(a.Role)
 			aUuid := a.ClubMemberId
 			if aUuid == uuid.Nil {
-				fmt.Println("uuid is nil", aUuid)
+				slog.Debug("uuid is nil", "uuid", aUuid)
 				for _, nnA := range allNNAthleten {
 					if nnA.VereinUuid == m.ClubId {
 						aUuid = nnA.Uuid
@@ -423,7 +424,7 @@ func importDrvJsonCore(ctx context.Context, drvMeldung DrvMeldungJson) error {
 					}
 				}
 				if aUuid == uuid.Nil {
-					fmt.Println("uuid is still nil", aUuid)
+					slog.Warn("uuid is still nil", "uuid", aUuid)
 					return handler.InternalError("Failed to find athlete UUID")
 				}
 			}
@@ -436,7 +437,7 @@ func importDrvJsonCore(ctx context.Context, drvMeldung DrvMeldungJson) error {
 			} else if role == "rower" {
 				rolle = sqlc.RolleRuderer
 			} else {
-				fmt.Println("Unknown Role:", a.Role)
+				slog.Warn("Unknown Role", "role", a.Role)
 				continue
 			}
 			athleten = append(athleten, crud.CreateMeldungAthletParams{
@@ -446,7 +447,7 @@ func importDrvJsonCore(ctx context.Context, drvMeldung DrvMeldungJson) error {
 			})
 		}
 
-		fmt.Println("Members done... Creating Meldung")
+		slog.Debug("Members done... Creating Meldung")
 		newMeldung := crud.CreateMeldungParams{
 			CreateMeldungParams: sqlc.CreateMeldungParams{
 				Uuid:            m.Id,
@@ -466,7 +467,7 @@ func importDrvJsonCore(ctx context.Context, drvMeldung DrvMeldungJson) error {
 
 		_, err = crud.CreateMeldung(ctx, newMeldung)
 		if err != nil {
-			fmt.Println("Crud create Error", err)
+			slog.Error("Crud create Error", "err", err)
 			return err
 		}
 	}
@@ -486,7 +487,7 @@ func getKostenForMeld(rennen []crud.Rennen, m DrvEntries) (int32, error) {
 	}
 
 	if kosten == 0 {
-		fmt.Println(m.EventId)
+		slog.Error("rennen UUID von meldung nicht gefunden", "eventId", m.EventId)
 		return 0, errors.New("rennenUUID von meldung nicht gefunden")
 	}
 

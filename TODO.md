@@ -35,16 +35,22 @@
 
 ### Logging inconsistencies (fmt.Println → slog)
 
-- [ ] **Replace `fmt.Println` with `slog` in `internal/service/leitung.go`**
+- [x] **Replace `fmt.Println` with `slog` in `internal/service/leitung.go`**
   - Lines 45–46, 57, 78 use raw `fmt.Println`.
   - **Fix**: Replace with `slog.Info`/`slog.Warn`/`slog.Error`.
 
-- [ ] **Replace `fmt.Println` with `slog` in `internal/handlers/api/v1/drv_import.go`**
+- [x] **Replace `fmt.Println` with `slog` in `internal/handlers/api/v1/drv_import.go`**
   - Multiple `fmt.Println` calls throughout the file.
   - **Fix**: Replace with `slog` calls.
 
-- [ ] **Replace `fmt.Println` with `slog` in `internal/utils/images.go`**
+- [x] **Replace `fmt.Println` with `slog` in `internal/utils/images.go`**
   - Any remaining `fmt.Println` calls should use `slog`.
+
+- [x] **Replace `fmt.Printf` with `slog` in `internal/utils/files.go`**
+  - Stat error at line 43 used `fmt.Printf`; now `slog.Warn`.
+
+- [x] **Replace `fmt.Println` with `slog` in `internal/templates/components/image.templ`**
+  - Debug/error prints now use `slog.Debug`/`slog.Error`.
 
 ### DRV import fragility
 

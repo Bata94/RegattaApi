@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/bata94/RegattaApi/internal/crud"
@@ -42,8 +43,7 @@ func SetZeitplan(ctx context.Context, param SetZeitplanParams) error {
 		return err
 	}
 
-	fmt.Println("curStartTimeSa:", curStartTimeSa)
-	fmt.Println("curStartTimeSo:", curStartTimeSo)
+	slog.Debug("Zeitplan start time", "sa", curStartTimeSa, "so", curStartTimeSo)
 
 	for _, r := range rLs {
 		rennAbstand := 10
@@ -54,7 +54,7 @@ func SetZeitplan(ctx context.Context, param SetZeitplanParams) error {
 		switch r.Tag {
 		case crud.TagSa:
 			saTimeStr := curStartTimeSa.Format("15:04")
-			fmt.Printf("Setting RennenNr: %s to time %s\n", r.Nummer, saTimeStr)
+			slog.Debug("Setting rennen start time", "nummer", r.Nummer, "time", saTimeStr)
 			err := crud.UpdateStartZeit(ctx, sqlc.UpdateStartZeitParams{
 				Uuid:      r.Uuid,
 				Startzeit: pgtype.Text{String: saTimeStr, Valid: true},
@@ -75,7 +75,7 @@ func SetZeitplan(ctx context.Context, param SetZeitplanParams) error {
 			}
 		case crud.TagSo:
 			soTimeStr := curStartTimeSo.Format("15:04")
-			fmt.Printf("Setting RennenNr: %s to time %s\n", r.Nummer, soTimeStr)
+			slog.Debug("Setting rennen start time", "nummer", r.Nummer, "time", soTimeStr)
 			err := crud.UpdateStartZeit(ctx, sqlc.UpdateStartZeitParams{
 				Uuid:      r.Uuid,
 				Startzeit: pgtype.Text{String: soTimeStr, Valid: true},
