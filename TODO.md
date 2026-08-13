@@ -18,13 +18,16 @@
 
 ## Data Integrity
 
-- [ ] **Wrap `CreateMeldung` in a transaction**
-  - `internal/crud/medlung.go:277` — inserts multiple rows (meldung, link_meldung_athlet, rechnung) without a transaction. If one step fails, partial data is committed.
-  - **Fix**: Wrap in `pgx.Tx` using `DB.Queries.WithTx(ctx, tx)`.
+- [x] **Wrap `CreateMeldung` in a transaction**
+  - `internal/crud/medlung.go` — inserts meldung + link_meldung_athlet rows atomically via `DB.WithTx` (reentrant).
 
-- [ ] **Wrap DRV import in a transaction**
-  - `internal/handlers/api/v1/drv_import.go:187` — same issue. Large multi-step import should be atomic.
-  - **Fix**: Wrap in `pgx.Tx`.
+- [x] **Wrap DRV import in a transaction**
+  - `internal/handlers/api/v1/drv_import.go` — whole import now runs in a single `DB.WithTx` (atomic).
+
+- [ ] **Make remaining crud queries tx-aware**
+  - `DB.QueriesFromCtx(ctx)` silently falls back to the global pool when no tx is in context. Only the DRV import path and `CreateMeldung` are migrated; ~60 direct `DB.Queries.` call sites remain in `internal/crud/` (`pausen.go`, `users.go`, `users_group.go`, `verein.go`, `zeitnahme.go`, `obmann.go`, `buero.go`, and remaining spots in `athlet.go`/`rennen.go`/`medlung.go`).
+  - Any of those called inside a future `DB.WithTx` block would run on a separate pooled connection outside the transaction, committing silently if the tx rolls back.
+  - **Fix**: convert remaining `DB.Queries.` → `DB.QueriesFromCtx(ctx).` (mechanical) or add a lint/CI guard forbidding `DB.Queries.` in `internal/crud`.
 
 ---
 

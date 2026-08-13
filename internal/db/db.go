@@ -2,6 +2,7 @@ package DB
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -75,6 +76,54 @@ func ShutdownConnection() error {
 	}
 	slog.Info("Shutting down database connection...")
 	pool.Close()
+	return nil
+}
+
+type queriesCtxKey struct{}
+
+// WithQueries returns a context carrying tx-bound queries. crud functions
+// pick these up via QueriesFromCtx so they run within an open transaction.
+func WithQueries(ctx context.Context, q *sqlc.Queries) context.Context {
+	return context.WithValue(ctx, queriesCtxKey{}, q)
+}
+
+// QueriesFromCtx returns the queries bound to ctx, defaulting to the global
+// pool-bound Queries when no transaction is active.
+func QueriesFromCtx(ctx context.Context) *sqlc.Queries {
+	if q, ok := ctx.Value(queriesCtxKey{}).(*sqlc.Queries); ok && q != nil {
+		return q
+	}
+	return Queries
+}
+
+// WithTx runs fn within a single transaction. It is reentrant: if ctx already
+// carries tx-bound queries, fn runs on that existing transaction instead of
+// starting a nested one.
+func WithTx(ctx context.Context, fn func(txCtx context.Context) error) error {
+	if _, ok := ctx.Value(queriesCtxKey{}).(*sqlc.Queries); ok {
+		return fn(ctx)
+	}
+
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer func() {
+		rbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if rbErr := tx.Rollback(rbCtx); rbErr != nil && !errors.Is(rbErr, pgx.ErrTxClosed) {
+			slog.Warn("transaction rollback failed", "err", rbErr)
+		}
+	}()
+
+	q := Queries.WithTx(tx)
+	txCtx := WithQueries(ctx, q)
+	if err := fn(txCtx); err != nil {
+		return err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
+	}
 	return nil
 }
 

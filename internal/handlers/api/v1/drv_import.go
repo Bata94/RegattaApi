@@ -13,6 +13,7 @@ import (
 	"github.com/bata94/RegattaApi/internal/config"
 
 	"github.com/bata94/RegattaApi/internal/crud"
+	DB "github.com/bata94/RegattaApi/internal/db"
 	apierr "github.com/bata94/RegattaApi/internal/errors"
 	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/bata94/RegattaApi/internal/sqlc"
@@ -184,8 +185,12 @@ func ImportDrvJson(ctx context.Context, filePath string) error {
 		fmt.Println("Error writing debug JSON:", err)
 	}
 
-	// TODO: Use a Transaction here!
+	return DB.WithTx(ctx, func(txCtx context.Context) error {
+		return importDrvJsonCore(txCtx, drvMeldung)
+	})
+}
 
+func importDrvJsonCore(ctx context.Context, drvMeldung DrvMeldungJson) error {
 	for _, v := range drvMeldung.Clubs {
 		verein, err := crud.GetVereinMinimal(ctx, v.Id)
 		if err != nil {

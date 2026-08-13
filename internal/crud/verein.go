@@ -195,7 +195,7 @@ func GetVereinMinimal(ctx context.Context, uuid uuid.UUID) (Verein, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	v, err := DB.Queries.GetVereinMinimal(ctx, uuid)
+	v, err := DB.QueriesFromCtx(ctx).GetVereinMinimal(ctx, uuid)
 	if err != nil {
 		if isNoRowError(err) {
 			return Verein{}, apierr.ErrNotFound
@@ -250,7 +250,7 @@ func CreateVerein(ctx context.Context, vParams sqlc.CreateVereinParams) (Verein,
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	v, err := DB.Queries.CreateVerein(ctx, vParams)
+	v, err := DB.QueriesFromCtx(ctx).CreateVerein(ctx, vParams)
 	if err != nil {
 		return Verein{}, err
 	}
