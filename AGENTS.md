@@ -27,6 +27,27 @@ just db-status       # show migration state
 
 Migrations use goose with postgres. Driver/dbstring come from `.env`.
 
+## Secrets Management (SOPS + age)
+
+Two files, one plaintext and one encrypted:
+
+- **`.env`** — local plaintext, **gitignored**. Loaded by `just` (`dotenv-load`) and `docker compose`.
+- **`encrypt.env`** — committed, SOPS/age-encrypted copy. The single source of truth in the repo.
+- **`.sops.yaml`** — `creation_rules` with `path_regex: \.env$` → age key `age1rlhtmq3vvhkwg8qd9g2zuz50wzxg8am9vzd56ksf3wkj8eulpctq5d0d5a`. The suffix regex matches both `.env` and `encrypt.env`.
+- **flake.nix** — provides `encrypt-env` / `decrypt-env` shell commands (`writeShellApplication` wrappers around `sops`), plus `sops` and `age` in the dev shell.
+
+```bash
+just secrets-encrypt   # sops encrypt .env > encrypt.env
+just secrets-decrypt   # sops decrypt encrypt.env > .env
+```
+
+Rules:
+
+- **Never commit `.env`** — it is gitignored; only `encrypt.env` is tracked.
+- After editing `.env`, run `just secrets-encrypt` and commit the updated `encrypt.env`.
+- On a fresh clone, run `just secrets-decrypt` (needs the age private key at `~/.config/sops/age/keys.txt`).
+- The `encrypt-env`/`decrypt-env` commands come from the flake; run `direnv reload` (or `nix develop`) after flake changes so they are on `PATH`.
+
 ## HTMX-First Architecture
 
 - **Prefer HTMX over JS.** The goal is minimal JS.

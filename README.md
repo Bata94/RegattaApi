@@ -49,7 +49,9 @@ RegattaApi/
 ├── Justfile                 # Task runner
 ├── sqlc.yaml                # sqlc config
 ├── .air.toml                # Air live-reload config
-├── flake.nix                # Nix dev shell
+├── flake.nix                # Nix dev shell (provides encrypt-env / decrypt-env)
+├── .sops.yaml               # SOPS/age encryption rules
+├── encrypt.env              # Committed, SOPS/age-encrypted copy of .env
 ├── docker-compose.yml       # Dev/prod service composition
 └── Dockerfile               # Multi-stage build
 ```
@@ -76,11 +78,35 @@ File changes in `internal/` and `main.go` auto-reload via Air inside the contain
 | `just db-up` | Run pending goose migrations |
 | `just db-new NEW_MIG=<name>` | Create a new migration |
 | `just db-status` | Show migration state |
+| `just secrets-encrypt` | Encrypt `.env` → `encrypt.env` |
+| `just secrets-decrypt` | Decrypt `encrypt.env` → `.env` |
 | `just templ` | Regenerate Go from .templ files |
 | `just tailwind-gen` | Rebuild CSS from Tailwind source |
 | `just wasm-build` | Build Go WASM timekeeping client |
 | `just lint` | `golangci-lint run` |
 | `just test` | `go test ./... -v` |
+
+## Secrets Management (SOPS + age)
+
+Environment config lives in a **local, gitignored plaintext `.env`**. Only an encrypted copy — `encrypt.env` — is committed.
+
+- **`.env`** — plaintext, gitignored. `just` loads it via `dotenv-load`, and `docker compose` reads it for dev/prod.
+- **`encrypt.env`** — committed, encrypted by [SOPS](https://github.com/getsops/sops) using an [age](https://github.com/FiloSottile/age) key.
+- **`.sops.yaml`** — creation rule mapping `*.env` to the age public key `age1rlhtmq3vvhkwg8qd9g2zuz50wzxg8am9vzd56ksf3wkj8eulpctq5d0d5a`.
+- **flake.nix** — exposes `encrypt-env` and `decrypt-env` shell commands (wrappers around `sops`).
+
+```bash
+just secrets-encrypt   # .env → encrypt.env (run after editing .env)
+just secrets-decrypt   # encrypt.env → .env (run on a fresh clone)
+```
+
+Workflow:
+
+1. **On a fresh clone:** run `just secrets-decrypt` to produce a local plaintext `.env` (requires the age private key).
+2. **After changing secrets:** edit `.env`, then run `just secrets-encrypt` and commit the updated `encrypt.env`.
+3. **Never commit `.env`.** The `.gitignore` ignores it; `encrypt.env` is the single source of truth in the repo.
+
+The age private key is expected at `~/.config/sops/age/keys.txt` (the SOPS default). Add a collaborator by appending their public key to the `.sops.yaml` creation rule and re-encrypting with `just secrets-encrypt`.
 
 ## Key Architecture Decisions
 

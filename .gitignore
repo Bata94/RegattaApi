@@ -38,13 +38,11 @@ assets/css/output.css
 .DS_Store
 
 # .env file
-**/*.env
-./.env
-*.env
-*.env*
+# .env is local plaintext (gitignored); encrypt.env is the committed SOPS/age-encrypted copy.
 .env
 .env.dev
 .env.prod
+.env.local
 .direnv/
 caddy/
 

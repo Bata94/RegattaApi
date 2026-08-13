@@ -7,6 +7,9 @@ DOCKER_REGISTRY := "ghcr.io/bata94/"
 default:
   @just --list
 
+list:
+  @just --list
+
 build-docker:
 	docker build --target prod --tag $(BINARY_NAME) .
 
@@ -148,6 +151,15 @@ prod:
 down:
   @echo "Stopping all services..."
   docker compose down
+
+# Secrets (SOPS + age)
+# .env is local plaintext (gitignored); encrypt.env is the committed encrypted copy.
+# Edit .env, then `just secrets-encrypt`; on a fresh clone run `just secrets-decrypt`.
+secrets-encrypt:
+	encrypt-env
+
+secrets-decrypt:
+	decrypt-env
 
 lint-docker:
   @echo "Linting Dockerfile..."
