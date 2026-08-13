@@ -338,7 +338,7 @@ func GetAllRennen(ctx context.Context, p GetAllRennenParams) ([]Rennen, error) {
 		wettkampfFilterLs = []sqlc.Wettkampf{p.ShowWettkampf.Wettkampf}
 	}
 
-	q, err = DB.Queries.GetAllRennenWithMeld(ctx, wettkampfFilterLs)
+	q, err = DB.QueriesFromCtx(ctx).GetAllRennenWithMeld(ctx, wettkampfFilterLs)
 	if err != nil {
 		slog.Error("Query error", "err", err)
 		return nil, err
@@ -371,7 +371,7 @@ func GetAllRennen(ctx context.Context, p GetAllRennenParams) ([]Rennen, error) {
 }
 
 func startedRennenNummern(ctx context.Context) (map[string]struct{}, error) {
-	rows, err := DB.Queries.GetAllZeitnahmeStart(ctx)
+	rows, err := DB.QueriesFromCtx(ctx).GetAllZeitnahmeStart(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -532,7 +532,7 @@ func GetRennenMinimal(ctx context.Context, uuid uuid.UUID) (Rennen, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	r, err := DB.Queries.GetRennenMinimal(ctx, uuid)
+	r, err := DB.QueriesFromCtx(ctx).GetRennenMinimal(ctx, uuid)
 	if err != nil {
 		if isNoRowError(err) {
 			return Rennen{}, apierr.ErrNotFound
@@ -620,7 +620,7 @@ func CreateRennen(ctx context.Context, rParams sqlc.CreateRennenParams) (Rennen,
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	r, err := DB.Queries.CreateRennen(ctx, rParams)
+	r, err := DB.QueriesFromCtx(ctx).CreateRennen(ctx, rParams)
 	if err != nil {
 		return Rennen{}, err
 	}

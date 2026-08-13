@@ -171,7 +171,7 @@ func GetMeldungMinimal(ctx context.Context, uuid uuid.UUID) (Meldung, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	m, err := DB.Queries.GetMeldungMinimal(ctx, uuid)
+	m, err := DB.QueriesFromCtx(ctx).GetMeldungMinimal(ctx, uuid)
 	if err != nil {
 		if isNoRowError(err) {
 			return Meldung{}, apierr.ErrNotFound
@@ -271,17 +271,31 @@ func CheckMeldungStartnummern(ctx context.Context) (bool, error) {
 }
 
 func CreateMeldung(ctx context.Context, mParams CreateMeldungParams) (Meldung, error) {
+	var m Meldung
+	err := DB.WithTx(ctx, func(txCtx context.Context) error {
+		var err error
+		m, err = createMeldung(txCtx, mParams)
+		return err
+	})
+	if err != nil {
+		return Meldung{}, err
+	}
+	return m, nil
+}
+
+func createMeldung(ctx context.Context, mParams CreateMeldungParams) (Meldung, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	// TODO: Implement as Transaction!
-	m, err := DB.Queries.CreateMeldung(ctx, mParams.CreateMeldungParams)
+	q := DB.QueriesFromCtx(ctx)
+
+	m, err := q.CreateMeldung(ctx, mParams.CreateMeldungParams)
 	if err != nil {
 		return Meldung{}, err
 	}
 
 	for _, a := range mParams.Athleten {
-		_, err = DB.Queries.CreateLinkMeldungAthlet(ctx, sqlc.CreateLinkMeldungAthletParams{
+		_, err = q.CreateLinkMeldungAthlet(ctx, sqlc.CreateLinkMeldungAthletParams{
 			MeldungUuid: m.Uuid,
 			AthletUuid:  a.Uuid,
 			Position:    a.Position,
