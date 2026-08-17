@@ -112,6 +112,56 @@ templ LineInput(name, label, value, inpType string, required bool, errorMsg stri
   </div>
 }
 
+templ TextArea(name, label, value string, required bool, errorMsg string) {
+  {{
+    inputClass := "textarea textarea-bordered w-full"
+    if errorMsg != "" {
+      inputClass += " textarea-error"
+    }
+  }}
+  <div class="form-control mb-6 w-full">
+    <label class="label">
+      <span class="label-text">{label}</span>
+    </label>
+    <textarea
+      name={name}
+      class={inputClass}
+      if required {
+        required
+      }
+    >{value}</textarea>
+    if errorMsg != "" {
+      <span class="text-error text-sm mt-1">{errorMsg}</span>
+    }
+  </div>
+}
+
+templ MultipleFileUpload(name, label string, required bool, errorMsg string) {
+  {{
+    inputClass := "file-input file-input-bordered w-full"
+    if errorMsg != "" {
+      inputClass += " file-input-error"
+    }
+  }}
+  <div class="form-control mb-6 w-full">
+    <label class="label">
+      <span class="label-text">{label}</span>
+    </label>
+    <input
+      type="file"
+      name={name}
+      multiple
+      class={inputClass}
+      if required {
+        required
+      }
+    />
+    if errorMsg != "" {
+      <span class="text-error text-sm mt-1">{errorMsg}</span>
+    }
+  </div>
+}
+
 templ FileUpload(name, label string, required bool, errorMsg string) {
   {{
     inputClass := "file-input file-input-bordered w-full"

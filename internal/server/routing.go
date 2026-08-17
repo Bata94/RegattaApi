@@ -137,6 +137,7 @@ func GetRouter() http.Handler {
 	r.Handle("POST", "/internal/regattaleitung/pdf_meldeergebnis", wrapHandler(components.PdfMeldeergebnisPost, true))
 	internalLayoutHandler("/internal/regattaleitung/vereine", pages.InternalRegattaleitungVereinsverwaltung)
 	internalLayoutHandler("/internal/regattaleitung/email", pages.InternalRegattaleitungEmail)
+	r.Handle("POST", "/internal/regattaleitung/email", wrapHandler(components.EmailSendPost, true))
 
 	internalLayoutHandler("/internal/admin", pages.InternalAdmin)
 
@@ -146,6 +147,9 @@ func GetRouter() http.Handler {
 	internalLayoutHandler("/internal/admin/usergroups", pages.InternalAdminUserGroups)
 	r.Handle("GET", "/internal/admin/usergroups/{uuid}", wrapHandler(components.UserGroupEditNew, true))
 	r.Handle("POST", "/internal/admin/usergroups/{uuid}", wrapHandler(components.UserGroupEditNewPost, true))
+	internalLayoutHandler("/internal/admin/email_queue", pages.InternalAdminEmailQueue)
+	r.Handle("POST", "/internal/admin/email_queue/{uuid}/retry", wrapHandler(components.EmailQueueRetry, true))
+	r.Handle("DELETE", "/internal/admin/email_queue/{uuid}", wrapHandler(components.EmailQueueDelete, true))
 
 	// Pure HTMX UI Components
 	r.Handle("GET", "/comp/image", wrapUIHandler(components.ImageComponent))

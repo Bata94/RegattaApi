@@ -20,6 +20,7 @@ type Config struct {
 	GotenbergURL   string
 	AppInternalURL string
 	AppPublicURL   string
+	Env            string
 }
 
 type ZeitnahmeConfig struct {
@@ -125,6 +126,7 @@ func Load() {
 		GotenbergURL:   getEnv("GOTENBERG_URL", "http://gotenberg:3000"),
 		AppInternalURL: getEnv("APP_INTERNAL_URL", "http://api-dev:8080"),
 		AppPublicURL:   getEnv("APP_PUBLIC_URL", "http://localhost:8080"),
+		Env:            getEnv("APP_ENV", "prod"),
 	}
 }
 

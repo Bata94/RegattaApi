@@ -55,12 +55,18 @@ func InitEmail() {
 type SendMailParams struct {
 	To      []string
 	CC      []string
+	Bcc     []string
 	Subject string
 	Body    string
 	Files   []string
 }
 
 func SendMail(params SendMailParams) error {
+	if config.C.Env == "dev" {
+		slog.Info("Skipping email send in dev mode", "subject", params.Subject, "to", params.To)
+		return nil
+	}
+
 	m := mail.NewMsg()
 
 	if err := m.From(emailOptions.Sender); err != nil {
@@ -73,19 +79,24 @@ func SendMail(params SendMailParams) error {
 		return err
 	}
 
-	senderInCC := false
-	for _, cc := range params.CC {
-		if cc == emailOptions.Sender {
-			senderInCC = true
+	if err := m.Cc(params.CC...); err != nil {
+		slog.Error(fmt.Sprintf("failed to set CC address: %s", err))
+		return err
+	}
+
+	senderInBcc := false
+	for _, bcc := range params.Bcc {
+		if bcc == emailOptions.Sender {
+			senderInBcc = true
 			break
 		}
 	}
-	if !senderInCC {
-		params.CC = append(params.CC, emailOptions.Sender)
+	if !senderInBcc {
+		params.Bcc = append(params.Bcc, emailOptions.Sender)
 	}
 
-	if err := m.Cc(params.CC...); err != nil {
-		slog.Error(fmt.Sprintf("failed to set CC address: %s", err))
+	if err := m.Bcc(params.Bcc...); err != nil {
+		slog.Error(fmt.Sprintf("failed to set BCC address: %s", err))
 		return err
 	}
 

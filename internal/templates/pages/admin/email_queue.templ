@@ -1,0 +1,135 @@
+package admin
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/bata94/RegattaApi/internal/crud"
+	"github.com/bata94/RegattaApi/internal/templates/components"
+	"github.com/jackc/pgx/v5/pgtype"
+)
+
+func emailStatusLabel(status string) string {
+	switch status {
+	case "pending":
+		return "Wartend"
+	case "sending":
+		return "Senden"
+	case "sent":
+		return "Gesendet"
+	case "failed":
+		return "Fehlgeschlagen"
+	case "dead":
+		return "Aufgegeben"
+	default:
+		return status
+	}
+}
+
+func emailStatusClass(status string) string {
+	switch status {
+	case "pending":
+		return "badge badge-warning badge-sm"
+	case "sending":
+		return "badge badge-info badge-sm"
+	case "sent":
+		return "badge badge-success badge-sm"
+	case "failed":
+		return "badge badge-error badge-sm"
+	default:
+		return "badge badge-ghost badge-sm"
+	}
+}
+
+func fmtTs(t pgtype.Timestamptz) string {
+	if !t.Valid {
+		return "-"
+	}
+	return t.Time.Format("02.01.2006 15:04")
+}
+
+func fmtStr(t pgtype.Text) string {
+	if !t.Valid {
+		return ""
+	}
+	return t.String
+}
+
+templ EmailQueue() {
+	{{
+		entries, err := crud.GetAllEmailQueue(ctx)
+	}}
+	if err != nil {
+		@ui_components.ErrorBody(500, err.Error())
+		{{return}}
+	}
+
+	@ui_components.InternalPageDivCol() {
+		@ui_components.PageHeader("E-Mail Queue")
+
+		if len(entries) == 0 {
+			<div class="alert alert-info">
+				<span>Keine E-Mails in der Queue.</span>
+			</div>
+		} else {
+			<div class="overflow-x-auto">
+				<table class="table table-auto zebra-table">
+					<thead>
+						<tr>
+							<th>Status</th>
+							<th>Betreff</th>
+							<th>An</th>
+							<th>Versuche</th>
+							<th>Nächster Versuch</th>
+							<th>Fehler</th>
+							<th>Erstellt</th>
+							<th>Gesendet</th>
+							<th>Aktionen</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, e := range entries {
+							<tr>
+								<td><span class={emailStatusClass(e.Status)}>{emailStatusLabel(e.Status)}</span></td>
+								<td>{e.Subject}</td>
+								<td>{strings.Join(e.ToAddresses, ", ")}</td>
+								<td>{fmt.Sprintf("%d/%d", e.Attempts, e.MaxAttempts)}</td>
+								<td>
+									if e.Status == "failed" || e.Status == "dead" {
+										{fmtTs(e.NextAttemptAt)}
+									} else {
+										-
+									}
+								</td>
+								<td>{fmtStr(e.LastError)}</td>
+								<td>{fmtTs(e.CreatedAt)}</td>
+								<td>{fmtTs(e.SentAt)}</td>
+								<td class="whitespace-nowrap">
+									if e.Status == "failed" || e.Status == "dead" {
+										<button
+											class="btn btn-sm btn-outline"
+											hx-post={fmt.Sprintf("/internal/admin/email_queue/%s/retry", e.Uuid.String())}
+											hx-target="main"
+											hx-swap="innerHTML"
+										>
+											Erneut senden
+										</button>
+									}
+									<button
+										class="btn btn-sm btn-outline btn-error"
+										hx-delete={fmt.Sprintf("/internal/admin/email_queue/%s", e.Uuid.String())}
+										hx-target="main"
+										hx-swap="innerHTML"
+										hx-confirm="E-Mail wirklich löschen?"
+									>
+										Löschen
+									</button>
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+	}
+}

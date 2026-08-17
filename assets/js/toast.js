@@ -12,7 +12,9 @@ function dismissToast(el) {
 }
 
 function scanToasts(root) {
-	var container = (root || document).getElementById('toast-container');
+	var container = (root && root.id === 'toast-container') ? root
+		: (root && root.getElementById) ? root.getElementById('toast-container')
+		: document.getElementById('toast-container');
 	if (!container) return;
 	for (var i = 0; i < container.children.length; i++) {
 		var el = container.children[i];

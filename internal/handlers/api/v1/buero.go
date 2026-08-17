@@ -5,6 +5,7 @@ import (
 
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handler"
+	"github.com/bata94/RegattaApi/internal/mailer"
 	"github.com/bata94/RegattaApi/internal/utils"
 )
 
@@ -63,7 +64,7 @@ func KasseCreateRechnungPDF(c *handler.Context) error {
 		}
 	}
 
-	err = utils.SendMail(utils.SendMailParams{
+	err = mailer.Enqueue(c.Request.Context(), mailer.Params{
 		To:      toMail,
 		CC:      []string{},
 		Subject: "MRG Regatta 24 - Rechnung " + reNr,

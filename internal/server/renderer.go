@@ -200,6 +200,7 @@ func buildSidebarCategories(currentPath string, caps []string) []ui_components.S
 			Entries: []ui_components.SidebarEntry{
 				{Name: "Nutzer Verwaltung", URL: "/internal/admin/users", RequiredCaps: []string{"allowed_admin"}},
 				{Name: "Nutzergruppen", URL: "/internal/admin/usergroups", RequiredCaps: []string{"allowed_admin"}},
+				{Name: "E-Mail Queue", URL: "/internal/admin/email_queue", RequiredCaps: []string{"allowed_admin"}},
 			},
 		},
 	}

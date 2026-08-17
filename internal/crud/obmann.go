@@ -26,3 +26,19 @@ func GetAllObmannForVerein(ctx context.Context, vereinUuid uuid.UUID) ([]Obmann,
 	}
 	return retLs, nil
 }
+
+func GetAllObmann(ctx context.Context) ([]Obmann, error) {
+	ctx, cancel := getCtx(ctx)
+	defer cancel()
+
+	retLs := []Obmann{}
+	q, err := DB.Queries.GetAllObmann(ctx)
+	if err != nil {
+		return retLs, err
+	}
+
+	for _, o := range q {
+		retLs = append(retLs, Obmann{&o})
+	}
+	return retLs, nil
+}

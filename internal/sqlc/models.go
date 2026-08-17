@@ -240,6 +240,24 @@ type Athlet struct {
 	VereinUuid      uuid.UUID   `json:"verein_uuid"`
 }
 
+type EmailQueue struct {
+	Uuid          uuid.UUID          `json:"uuid"`
+	ToAddresses   []string           `json:"to_addresses"`
+	CcAddresses   []string           `json:"cc_addresses"`
+	BccAddresses  []string           `json:"bcc_addresses"`
+	Subject       string             `json:"subject"`
+	Body          string             `json:"body"`
+	Attachments   []string           `json:"attachments"`
+	Status        string             `json:"status"`
+	Attempts      int32              `json:"attempts"`
+	MaxAttempts   int32              `json:"max_attempts"`
+	NextAttemptAt pgtype.Timestamptz `json:"next_attempt_at"`
+	LastError     pgtype.Text        `json:"last_error"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	SentAt        pgtype.Timestamptz `json:"sent_at"`
+}
+
 type LinkMeldungAthlet struct {
 	ID          int32     `json:"id"`
 	Rolle       Rolle     `json:"rolle"`

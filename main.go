@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/bata94/RegattaApi/internal/config"
 	DB "github.com/bata94/RegattaApi/internal/db"
+	"github.com/bata94/RegattaApi/internal/mailer"
 	"github.com/bata94/RegattaApi/internal/server"
 	"github.com/bata94/RegattaApi/internal/utils"
 
@@ -35,6 +37,8 @@ func main() {
 	if err := os.MkdirAll(config.C.Paths.PublicDir, os.ModePerm); err != nil {
 		log.Printf("Error creating public dir: %v", err)
 	}
+
+	go mailer.RunWorker(context.Background())
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

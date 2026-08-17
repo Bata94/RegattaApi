@@ -189,7 +189,7 @@ func InternalRegattaleitungVereinsverwaltung(c *handler.Context) (templ.Componen
 }
 
 func InternalRegattaleitungEmail(c *handler.Context) (templ.Component, error) {
-	return regattaleitung.EmailIndex(), nil
+	return regattaleitung.EmailCompose("", "", "", nil, false, nil, nil), nil
 }
 
 func InternalAdmin(c *handler.Context) (templ.Component, error) {
@@ -202,6 +202,10 @@ func InternalAdminUsers(c *handler.Context) (templ.Component, error) {
 
 func InternalAdminUserGroups(c *handler.Context) (templ.Component, error) {
 	return admin.UserGroups(), nil
+}
+
+func InternalAdminEmailQueue(c *handler.Context) (templ.Component, error) {
+	return admin.EmailQueue(), nil
 }
 
 func InternalIndex(c *handler.Context) (templ.Component, error) {
