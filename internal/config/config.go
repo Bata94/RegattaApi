@@ -21,6 +21,11 @@ type Config struct {
 	AppInternalURL string
 	AppPublicURL   string
 	Env            string
+	Log            LogConfig
+}
+
+type LogConfig struct {
+	Level string
 }
 
 type ZeitnahmeConfig struct {
@@ -127,6 +132,9 @@ func Load() {
 		AppInternalURL: getEnv("APP_INTERNAL_URL", "http://api-dev:8080"),
 		AppPublicURL:   getEnv("APP_PUBLIC_URL", "http://localhost:8080"),
 		Env:            getEnv("APP_ENV", "prod"),
+		Log: LogConfig{
+			Level: os.Getenv("LOG_LEVEL"),
+		},
 	}
 }
 

@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -18,6 +18,7 @@ import (
 
 func main() {
 	config.Load()
+	setupLogger()
 
 	DB.InitConnection(DB.DBServerOptions{
 		Host:     config.C.DB.Host,
@@ -29,13 +30,13 @@ func main() {
 	})
 	defer func() {
 		if err := DB.ShutdownConnection(); err != nil {
-			log.Printf("Error shutting down DB connection: %v", err)
+			slog.Error("Error shutting down DB connection", "err", err)
 		}
 	}()
 
 	utils.InitEmail()
 	if err := os.MkdirAll(config.C.Paths.PublicDir, os.ModePerm); err != nil {
-		log.Printf("Error creating public dir: %v", err)
+		slog.Error("Error creating public dir", "err", err)
 	}
 
 	go mailer.RunWorker(context.Background())
@@ -44,10 +45,10 @@ func main() {
 	signal.Notify(c, os.Interrupt)
 	go func() {
 		for sig := range c {
-			log.Println("Received signal:", sig)
+			slog.Info("Received signal", "sig", sig)
 			if sig == os.Interrupt {
 				if err := DB.ShutdownConnection(); err != nil {
-					log.Printf("Error shutting down DB connection: %v", err)
+					slog.Error("Error shutting down DB connection", "err", err)
 				}
 				os.Exit(0)
 			}
@@ -55,6 +56,29 @@ func main() {
 	}()
 
 	addr := config.C.Server.Host + ":" + config.C.Server.Port
-	log.Printf("Starting server on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, server.GetRouter()))
+	slog.Info("Starting server", "addr", addr)
+	if err := http.ListenAndServe(addr, server.GetRouter()); err != nil {
+		slog.Error("Server failed", "err", err)
+		os.Exit(1)
+	}
+}
+
+func setupLogger() {
+	level := slog.LevelWarn
+	if config.C.Env == "dev" {
+		level = slog.LevelDebug
+	}
+
+	if config.C.Log.Level != "" {
+		var parsed slog.Level
+		if err := parsed.UnmarshalText([]byte(config.C.Log.Level)); err != nil {
+			slog.Warn("Invalid LOG_LEVEL, falling back to default", "value", config.C.Log.Level, "err", err)
+		} else {
+			level = parsed
+		}
+	}
+
+	handler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level})
+	slog.SetDefault(slog.New(handler))
+	slog.Info("Logger initialized", "level", level, "env", config.C.Env)
 }
