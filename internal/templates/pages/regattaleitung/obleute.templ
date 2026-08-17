@@ -1,0 +1,149 @@
+package regattaleitung
+
+import (
+	"github.com/bata94/RegattaApi/internal/crud"
+	"github.com/bata94/RegattaApi/internal/templates/components"
+	"github.com/google/uuid"
+)
+
+templ Obleute() {
+	{{
+		obleute, err := crud.GetAllObmann(ctx)
+		vereine, err := crud.GetAllVerein(ctx)
+		vereinName := map[string]string{}
+		rows := []ui_components.TableRowParams{}
+	}}
+	if err != nil {
+		@ui_components.ErrorBody(500, err.Error())
+		{{return}}
+	}
+
+	{{
+		for _, v := range vereine {
+			vereinName[v.Uuid.String()] = v.Name
+		}
+
+		for _, o := range obleute {
+			email := ""
+			if o.Email.Valid {
+				email = o.Email.String
+			}
+			phone := ""
+			if o.Phone.Valid {
+				phone = o.Phone.String
+			}
+			name := ""
+			if o.Name.Valid {
+				name = o.Name.String
+			}
+			rows = append(rows, ui_components.TableRowParams{
+				ID: o.Uuid.String(),
+				Content: []string{
+					name,
+					email,
+					phone,
+					vereinName[o.VereinUuid.String()],
+				},
+				OnClickDialogSrc: "/internal/regattaleitung/obleute/" + o.Uuid.String(),
+			})
+		}
+	}}
+
+	@ui_components.InternalPageDivCol() {
+		<div class="flex flex-row justify-between items-center">
+			@ui_components.PageHeader("Obleute verwalten")
+			<button
+				class="btn btn-primary ml-auto"
+				hx-target="#table_dialog_content"
+				hx-swap="innerHTML"
+				hx-get="/internal/regattaleitung/obleute/new"
+				hx-trigger="click"
+				hx-boost="true"
+				onclick="table_dialog.showModal()"
+			>
+				Neuer Obmann
+			</button>
+		</div>
+
+		@ui_components.Table(ui_components.TableParams{
+			Zebra: true,
+			Columns: []ui_components.TableColumnParams{
+				{Title: "Name", WidthClass: ""},
+				{Title: "E-Mail", WidthClass: ""},
+				{Title: "Telefon", WidthClass: ""},
+				{Title: "Verein", WidthClass: ""},
+			},
+			Rows: rows,
+		})
+	}
+}
+
+templ ObmannEdit(o crud.Obmann, msg string, fieldErrors map[string]string) {
+	{{
+		var title, uuidStr string
+		isNew := o.Uuid == uuid.Nil
+		if isNew {
+			title = "Neuer Obmann"
+			uuidStr = "new"
+		} else {
+			title = "Obmann bearbeiten"
+			uuidStr = o.Uuid.String()
+		}
+
+		vereine, err := crud.GetAllVerein(ctx)
+		vereinOptions := make([]string, 0, len(vereine))
+		vereinValues := make([]string, 0, len(vereine))
+	}}
+	if err != nil {
+		@ui_components.ErrorBody(500, err.Error())
+		{{return}}
+	}
+
+	{{
+		for _, v := range vereine {
+			vereinOptions = append(vereinOptions, v.Name)
+			vereinValues = append(vereinValues, v.Uuid.String())
+		}
+	}}
+
+	<div id="obmann_edit_dialog" class="w-full flex flex-col">
+		@ui_components.PageHeader(title)
+
+		<form
+			class="w-full mt-4"
+			hx-post={"/internal/regattaleitung/obleute/" + uuidStr}
+			hx-target="#obmann_edit_dialog"
+			hx-on::response="if (event.detail.xhr.getResponseHeader('HX-Redirect')) { table_dialog.close(); htmx.ajax('GET', '/internal/regattaleitung/obleute', {target: 'main', swap: 'innerHTML'}); }"
+		>
+			if msg != "" {
+				<div class="alert alert-error mb-4">
+					<span>{msg}</span>
+				</div>
+			}
+
+			<div class="flex flex-col gap-4">
+				@ui_components.LineInput("name", "Name", o.Name.String, "text", true, fieldErrors["name"])
+				@ui_components.LineInput("email", "E-Mail", o.Email.String, "email", true, fieldErrors["email"])
+				@ui_components.LineInput("phone", "Telefon", o.Phone.String, "text", false, fieldErrors["phone"])
+				@ui_components.DropDown("verein_uuid", "Verein", vereinOptions, vereinValues, o.VereinUuid.String(), true, fieldErrors["verein_uuid"], "Verein")
+			</div>
+
+			<div class="flex flex-row items-center gap-4 mt-4">
+				@ui_components.SubmitButton("Speichern", ui_components.Success)
+				if !isNew {
+					<button
+						type="button"
+						class="btn btn-error mt-6"
+						hx-delete={"/internal/regattaleitung/obleute/" + uuidStr}
+						hx-target="main"
+						hx-swap="innerHTML"
+						hx-confirm="Obmann wirklich löschen?"
+						hx-on::after-request="if (event.detail.successful) table_dialog.close()"
+					>
+						Löschen
+					</button>
+				}
+			</div>
+		</form>
+	</div>
+}

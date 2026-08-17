@@ -21,3 +21,17 @@ INSERT INTO obmann (
 ) VALUES (
   $1, $2, $3, $4, $5
 ) RETURNING *;
+
+-- name: UpdateObmann :one
+UPDATE obmann
+SET
+  name = $2,
+  email = $3,
+  phone = $4,
+  verein_uuid = $5
+WHERE uuid = $1
+RETURNING *;
+
+-- name: DeleteObmann :exec
+DELETE FROM obmann
+WHERE uuid = $1;

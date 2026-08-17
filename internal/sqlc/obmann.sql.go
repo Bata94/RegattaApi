@@ -51,6 +51,16 @@ func (q *Queries) CreateObmann(ctx context.Context, arg CreateObmannParams) (Obm
 	return i, err
 }
 
+const deleteObmann = `-- name: DeleteObmann :exec
+DELETE FROM obmann
+WHERE uuid = $1
+`
+
+func (q *Queries) DeleteObmann(ctx context.Context, argUuid uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteObmann, argUuid)
+	return err
+}
+
 const getAllObmann = `-- name: GetAllObmann :many
 SELECT uuid, name, email, phone, verein_uuid FROM obmann
 ORDER BY name ASC
@@ -121,6 +131,44 @@ WHERE uuid = $1 LIMIT 1
 
 func (q *Queries) GetObmannMinimal(ctx context.Context, argUuid uuid.UUID) (Obmann, error) {
 	row := q.db.QueryRow(ctx, getObmannMinimal, argUuid)
+	var i Obmann
+	err := row.Scan(
+		&i.Uuid,
+		&i.Name,
+		&i.Email,
+		&i.Phone,
+		&i.VereinUuid,
+	)
+	return i, err
+}
+
+const updateObmann = `-- name: UpdateObmann :one
+UPDATE obmann
+SET
+  name = $2,
+  email = $3,
+  phone = $4,
+  verein_uuid = $5
+WHERE uuid = $1
+RETURNING uuid, name, email, phone, verein_uuid
+`
+
+type UpdateObmannParams struct {
+	Uuid       uuid.UUID   `json:"uuid"`
+	Name       pgtype.Text `json:"name"`
+	Email      pgtype.Text `json:"email"`
+	Phone      pgtype.Text `json:"phone"`
+	VereinUuid uuid.UUID   `json:"verein_uuid"`
+}
+
+func (q *Queries) UpdateObmann(ctx context.Context, arg UpdateObmannParams) (Obmann, error) {
+	row := q.db.QueryRow(ctx, updateObmann,
+		arg.Uuid,
+		arg.Name,
+		arg.Email,
+		arg.Phone,
+		arg.VereinUuid,
+	)
 	var i Obmann
 	err := row.Scan(
 		&i.Uuid,

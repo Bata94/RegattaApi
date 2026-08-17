@@ -189,6 +189,7 @@ func buildSidebarCategories(currentPath string, caps []string) []ui_components.S
 				{Name: "Startnummern ändern", URL: "/internal/regattaleitung/startnummern/aenderung", RequiredCaps: []string{"allowed_regattaleitung"}},
 				{Name: "PDF Meldeergebnis", URL: "/internal/regattaleitung/pdf_meldeergebnis", RequiredCaps: []string{"allowed_regattaleitung"}},
 				{Name: "Vereine verwalten", URL: "/internal/regattaleitung/vereine", RequiredCaps: []string{"allowed_regattaleitung"}},
+				{Name: "Obleute verwalten", URL: "/internal/regattaleitung/obleute", RequiredCaps: []string{"allowed_regattaleitung"}},
 				{Name: "E-Mail senden", URL: "/internal/regattaleitung/email", RequiredCaps: []string{"allowed_regattaleitung"}},
 			},
 		},

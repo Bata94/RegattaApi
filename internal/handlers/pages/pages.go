@@ -188,6 +188,10 @@ func InternalRegattaleitungVereinsverwaltung(c *handler.Context) (templ.Componen
 	return regattaleitung.Vereinsverwaltung(), nil
 }
 
+func InternalRegattaleitungObleute(c *handler.Context) (templ.Component, error) {
+	return regattaleitung.Obleute(), nil
+}
+
 func InternalRegattaleitungEmail(c *handler.Context) (templ.Component, error) {
 	return regattaleitung.EmailCompose("", "", "", nil, false, nil, nil), nil
 }

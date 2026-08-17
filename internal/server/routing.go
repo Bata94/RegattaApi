@@ -139,6 +139,10 @@ func GetRouter() http.Handler {
 	r.Handle("GET", "/internal/regattaleitung/vereine/{uuid}", wrapHandler(components.VereinEditNew, true))
 	r.Handle("POST", "/internal/regattaleitung/vereine/{uuid}", wrapHandler(components.VereinEditNewPost, true))
 	r.Handle("DELETE", "/internal/regattaleitung/vereine/{uuid}", wrapHandler(components.VereinDelete, true))
+	internalLayoutHandler("/internal/regattaleitung/obleute", pages.InternalRegattaleitungObleute)
+	r.Handle("GET", "/internal/regattaleitung/obleute/{uuid}", wrapHandler(components.ObmannEditNew, true))
+	r.Handle("POST", "/internal/regattaleitung/obleute/{uuid}", wrapHandler(components.ObmannEditNewPost, true))
+	r.Handle("DELETE", "/internal/regattaleitung/obleute/{uuid}", wrapHandler(components.ObmannDelete, true))
 	internalLayoutHandler("/internal/regattaleitung/email", pages.InternalRegattaleitungEmail)
 	r.Handle("POST", "/internal/regattaleitung/email", wrapHandler(components.EmailSendPost, true))
 
