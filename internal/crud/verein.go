@@ -257,3 +257,34 @@ func CreateVerein(ctx context.Context, vParams sqlc.CreateVereinParams) (Verein,
 
 	return Verein{Verein: v}, nil
 }
+
+func UpdateVerein(ctx context.Context, uuid uuid.UUID, vParams sqlc.UpdateVereinParams) (Verein, error) {
+	ctx, cancel := getCtx(ctx)
+	defer cancel()
+
+	v, err := DB.QueriesFromCtx(ctx).UpdateVerein(ctx, sqlc.UpdateVereinParams{
+		Uuid:     uuid,
+		Name:     vParams.Name,
+		Kurzform: vParams.Kurzform,
+		Kuerzel:  vParams.Kuerzel,
+	})
+	if err != nil {
+		return Verein{}, err
+	}
+
+	return Verein{Verein: v}, nil
+}
+
+func DeleteVerein(ctx context.Context, uuid uuid.UUID) error {
+	ctx, cancel := getCtx(ctx)
+	defer cancel()
+
+	return DB.QueriesFromCtx(ctx).DeleteVerein(ctx, uuid)
+}
+
+func CountAthletenForVerein(ctx context.Context, uuid uuid.UUID) (int64, error) {
+	ctx, cancel := getCtx(ctx)
+	defer cancel()
+
+	return DB.QueriesFromCtx(ctx).CountAthletenForVerein(ctx, uuid)
+}

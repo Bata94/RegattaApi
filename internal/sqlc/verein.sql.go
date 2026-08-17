@@ -12,6 +12,18 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countAthletenForVerein = `-- name: CountAthletenForVerein :one
+SELECT COUNT(*) FROM athlet
+WHERE verein_uuid = $1
+`
+
+func (q *Queries) CountAthletenForVerein(ctx context.Context, vereinUuid uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countAthletenForVerein, vereinUuid)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createVerein = `-- name: CreateVerein :one
 INSERT INTO verein (
   uuid,
@@ -48,6 +60,16 @@ func (q *Queries) CreateVerein(ctx context.Context, arg CreateVereinParams) (Ver
 		&i.Kuerzel,
 	)
 	return i, err
+}
+
+const deleteVerein = `-- name: DeleteVerein :exec
+DELETE FROM verein
+WHERE uuid = $1
+`
+
+func (q *Queries) DeleteVerein(ctx context.Context, argUuid uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteVerein, argUuid)
+	return err
 }
 
 const getAllVerein = `-- name: GetAllVerein :many
@@ -196,4 +218,38 @@ func (q *Queries) GetVereinRechnungsnummern(ctx context.Context, argUuid uuid.UU
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateVerein = `-- name: UpdateVerein :one
+UPDATE verein
+SET
+  name = $2,
+  kurzform = $3,
+  kuerzel = $4
+WHERE uuid = $1
+RETURNING uuid, name, kurzform, kuerzel
+`
+
+type UpdateVereinParams struct {
+	Uuid     uuid.UUID `json:"uuid"`
+	Name     string    `json:"name"`
+	Kurzform string    `json:"kurzform"`
+	Kuerzel  string    `json:"kuerzel"`
+}
+
+func (q *Queries) UpdateVerein(ctx context.Context, arg UpdateVereinParams) (Verein, error) {
+	row := q.db.QueryRow(ctx, updateVerein,
+		arg.Uuid,
+		arg.Name,
+		arg.Kurzform,
+		arg.Kuerzel,
+	)
+	var i Verein
+	err := row.Scan(
+		&i.Uuid,
+		&i.Name,
+		&i.Kurzform,
+		&i.Kuerzel,
+	)
+	return i, err
 }

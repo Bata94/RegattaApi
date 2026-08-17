@@ -50,3 +50,20 @@ INSERT INTO verein (
   $3,
   $4
 ) RETURNING *;
+
+-- name: UpdateVerein :one
+UPDATE verein
+SET
+  name = $2,
+  kurzform = $3,
+  kuerzel = $4
+WHERE uuid = $1
+RETURNING *;
+
+-- name: DeleteVerein :exec
+DELETE FROM verein
+WHERE uuid = $1;
+
+-- name: CountAthletenForVerein :one
+SELECT COUNT(*) FROM athlet
+WHERE verein_uuid = $1;

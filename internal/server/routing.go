@@ -136,6 +136,9 @@ func GetRouter() http.Handler {
 	internalLayoutHandler("/internal/regattaleitung/pdf_meldeergebnis", pages.InternalRegattaleitungPdfMeldeergebnis)
 	r.Handle("POST", "/internal/regattaleitung/pdf_meldeergebnis", wrapHandler(components.PdfMeldeergebnisPost, true))
 	internalLayoutHandler("/internal/regattaleitung/vereine", pages.InternalRegattaleitungVereinsverwaltung)
+	r.Handle("GET", "/internal/regattaleitung/vereine/{uuid}", wrapHandler(components.VereinEditNew, true))
+	r.Handle("POST", "/internal/regattaleitung/vereine/{uuid}", wrapHandler(components.VereinEditNewPost, true))
+	r.Handle("DELETE", "/internal/regattaleitung/vereine/{uuid}", wrapHandler(components.VereinDelete, true))
 	internalLayoutHandler("/internal/regattaleitung/email", pages.InternalRegattaleitungEmail)
 	r.Handle("POST", "/internal/regattaleitung/email", wrapHandler(components.EmailSendPost, true))
 
