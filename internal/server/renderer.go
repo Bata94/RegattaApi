@@ -137,6 +137,8 @@ func buildSidebarCategories(currentPath string, caps []string) []ui_components.S
 			Entries: []ui_components.SidebarEntry{
 				{Name: "Startgericht", URL: "/internal/zeitnahme/start", RequiredCaps: []string{"allowed_zeitnahme"}},
 				{Name: "Zielgericht", URL: "/internal/zeitnahme/ziel", RequiredCaps: []string{"allowed_zeitnahme"}},
+				{Name: "Vorsortierung", URL: "/internal/zeitnahme/vorsortierung", RequiredCaps: []string{"allowed_zeitnahme"}},
+				{Name: "Wenderichter", URL: "/internal/zeitnahme/wenderichter", RequiredCaps: []string{"allowed_zeitnahme"}},
 			},
 		},
 		{
@@ -164,11 +166,11 @@ func buildSidebarCategories(currentPath string, caps []string) []ui_components.S
 				{Name: "Waage", URL: "/internal/regattabuero/vereinswahl?next=waage&title=Vereinswahl%20für%20Waage", RequiredCaps: []string{"allowed_regattabuero"}},
 				{Name: "Startberechtigung", URL: "/internal/regattabuero/vereinswahl?next=startberechtigung&title=Vereinswahl%20für%20Startberechtigung", RequiredCaps: []string{"allowed_regattabuero"}},
 				{Name: "Sportler anlegen", URL: "/internal/regattabuero/vereinswahl?next=new_athlet&title=Vereinswahl%20für%20neuen%20Sportler", RequiredCaps: []string{"allowed_regattabuero"}},
-				{Name: "Kasse", URL: "#", RequiredCaps: []string{"allowed_regattabuero"}},
-				{Name: "Startnummern Ausgabe/Rückgabe", URL: "#", RequiredCaps: []string{"allowed_regattabuero"}},
+				{Name: "Kasse", URL: "/internal/regattabuero/kasse", RequiredCaps: []string{"allowed_regattabuero"}},
+				{Name: "Startnummern Ausgabe/Rückgabe", URL: "/internal/regattabuero/startnummernausgabe", RequiredCaps: []string{"allowed_regattabuero"}},
 				{Name: "Startnummern ändern", URL: "/internal/regattabuero/startnummern/aenderung", RequiredCaps: []string{"allowed_regattabuero"}},
 				{Name: "Setzungsänderung", URL: "/internal/regattabuero/setzungsverwaltung/aenderung", RequiredCaps: []string{"allowed_regattabuero"}},
-				{Name: "Änderungen von Obleuten", URL: "#", RequiredCaps: []string{"allowed_regattabuero"}},
+				{Name: "Änderungen von Obleuten", URL: "/internal/regattabuero/aenderungen_obleute", RequiredCaps: []string{"allowed_regattabuero"}},
 			},
 		},
 		{

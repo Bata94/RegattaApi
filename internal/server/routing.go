@@ -73,6 +73,8 @@ func GetRouter() http.Handler {
 	internalLayoutHandler("/internal/zeitnahme", pages.InternalZeitnahme)
 	internalLayoutHandler("/internal/zeitnahme/start", pages.InternalZeitnahmeStart)
 	internalLayoutHandler("/internal/zeitnahme/ziel", pages.InternalZeitnahmeZiel)
+	internalLayoutHandler("/internal/zeitnahme/vorsortierung", pages.InternalZeitnahmeVorsortierung)
+	internalLayoutHandler("/internal/zeitnahme/wenderichter", pages.InternalZeitnahmeWenderichter)
 
 	internalLayoutHandler("/internal/startlisten", pages.InternalStartlisten)
 
@@ -96,6 +98,9 @@ func GetRouter() http.Handler {
 	r.Handle("POST", "/internal/regattabuero/{v_uuid}/startberechtigung/{a_uuid}", wrapHandler(components.StartberechtigungPost, true))
 	internalLayoutHandler("/internal/regattabuero/{v_uuid}/new_athlet", pages.InternalRegattabueroNewAthlet)
 	r.Handle("POST", "/internal/regattabuero/{v_uuid}/new_athlet", wrapHandler(components.NewAthletPost, true))
+	internalLayoutHandler("/internal/regattabuero/kasse", pages.InternalRegattabueroKasse)
+	internalLayoutHandler("/internal/regattabuero/startnummernausgabe", pages.InternalRegattabueroStartnummernAusgabe)
+	internalLayoutHandler("/internal/regattabuero/aenderungen_obleute", pages.InternalRegattabueroAenderungenObleute)
 	internalLayoutHandler("/internal/regattabuero/setzungsverwaltung/aenderung", pages.InternalRegattaleitungSetzungAenderung)
 	r.Handle("POST", "/internal/regattabuero/setzungsverwaltung/aenderung/rennen/{param}", wrapHandler(components.SetzungsVerwaltungAenderungRennenPost, true))
 	internalLayoutHandler("/internal/regattabuero/setzungsverwaltung/aenderung/rennen/{param}", pages.InternalRegattaleitungSetzungAenderungRennen)

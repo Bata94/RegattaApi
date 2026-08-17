@@ -60,6 +60,14 @@ func InternalZeitnahmeZiel(c *handler.Context) (templ.Component, error) {
 	return zeitnahme.Ziel(), nil
 }
 
+func InternalZeitnahmeVorsortierung(c *handler.Context) (templ.Component, error) {
+	return zeitnahme.Vorsortierung(), nil
+}
+
+func InternalZeitnahmeWenderichter(c *handler.Context) (templ.Component, error) {
+	return zeitnahme.Wenderichter(), nil
+}
+
 func InternalZeitnahmeStart(c *handler.Context) (templ.Component, error) {
 	rennen, err := crud.GetAllRennenWithAthlet(c.Request.Context(), crud.GetAllRennenParams{
 		GetMeldungen: true,
@@ -579,6 +587,18 @@ func InternalRegattabueroNewAthlet(c *handler.Context) (templ.Component, error) 
 		return nil, handler.InternalError("Error while loading verein")
 	}
 	return regattabuero.NewAthlet(verein, "", nil), nil
+}
+
+func InternalRegattabueroKasse(c *handler.Context) (templ.Component, error) {
+	return regattabuero.Kasse(), nil
+}
+
+func InternalRegattabueroStartnummernAusgabe(c *handler.Context) (templ.Component, error) {
+	return regattabuero.StartnummernAusgabe(), nil
+}
+
+func InternalRegattabueroAenderungenObleute(c *handler.Context) (templ.Component, error) {
+	return regattabuero.AenderungenObleute(), nil
 }
 
 func InternalRegattaleitungSetzungAenderungRennen(c *handler.Context) (templ.Component, error) {
