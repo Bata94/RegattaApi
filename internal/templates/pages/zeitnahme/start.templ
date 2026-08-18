@@ -587,8 +587,6 @@ script zeitnahmeStart() {
 }
 
 templ Start(rennen []crud.Rennen) {
-	<script src="/assets/js/wasm_exec.js"></script>
-	<script src="/assets/js/zeitnahme_shared.js"></script>
 	@templ.JSONScript("start-races-data", rennen)
 	@ui_components.InternalPageDivCol() {
 		<div id="start-app" class="min-h-[60vh] flex items-center justify-center">

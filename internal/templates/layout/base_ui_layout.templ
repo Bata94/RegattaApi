@@ -2,7 +2,7 @@ package ui_layouts
 
 import "github.com/bata94/RegattaApi/internal/templates/components"
 
-templ MinimalLayout(body templ.Component) {
+templ MinimalLayout(body templ.Component, scripts ...string) {
 <!doctype html>
 <html>
 <head>
@@ -21,10 +21,11 @@ templ MinimalLayout(body templ.Component) {
   <script src="/assets/js/htmx.min.js"></script>
   <script src="/assets/js/htmx-ext-response-target.js"></script>
   <script src="/assets/js/theming.js"></script>
-  <script src="/assets/js/toast.js"></script>
-  <script src="/assets/js/sidebar.js"></script>
-  <script src="/assets/js/attachments.js"></script>
-  <script src="/assets/js/startnummern.js"></script>
+  if len(scripts) > 0 {
+    for _, s := range scripts {
+      @scriptComp(s)
+    }
+  }
 </head>
 <body
   class="max-w-screen prose antialiased"
@@ -33,6 +34,10 @@ templ MinimalLayout(body templ.Component) {
   @body
 </body>
 </html>
+}
+
+templ scriptComp(url string) {
+  <script src={url}></script>
 }
 
 templ baseLayoutBody(body templ.Component, navbarConfig ui_components.NavBarConfig) {
