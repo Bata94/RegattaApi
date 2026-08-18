@@ -47,10 +47,72 @@ templ StartnummernVerteilen() {
   }
 }
 
-templ StartnummernBereich() {
+templ StartnummernBereich(b crud.StartnummernBereich, fieldErrors map[string]string) {
+  {{
+    fehlendeStr := ""
+    for i, n := range b.FehlendeNummern {
+      if i > 0 {
+        fehlendeStr += ","
+      }
+      fehlendeStr += strconv.Itoa(int(n))
+    }
+  }}
+
   @ui_components.InternalPageDivCol() {
     @ui_components.PageHeader("Startnummernbereich anpassen")
-    @ui_components.PageHeaderSubtext("Work in progress ...")
+    @ui_components.PageHeaderSubtext("")
+
+    <div id="startnummern-bereich" class="card bg-base-100 min-w-96 shadow-sm w-fit mx-auto">
+      <form
+        hx-post="/internal/regattaleitung/startnummern/bereich"
+        hx-target="#startnummern-bereich"
+        hx-swap="outerHTML"
+      >
+        <div class="card-body">
+          <h2 class="card-title w-fit mx-auto mt-2">
+            Startnummernbereich konfigurieren
+          </h2>
+          <div class="divider"></div>
+
+          <div class="form-control">
+            @ui_components.LineInput("min_nummer", "Kleinste Startnummer", strconv.Itoa(int(b.MinNummer)), "number", true, fieldErrors["min_nummer"])
+            @ui_components.LineInput("max_nummer", "Größte Startnummer", strconv.Itoa(int(b.MaxNummer)), "number", true, fieldErrors["max_nummer"])
+          </div>
+
+          <div class="form-control mb-6">
+            <label class="label">
+              <span class="label-text">Fehlende Startnummern</span>
+            </label>
+            <div id="fehlende-nummern-list" class="flex flex-wrap gap-2 min-h-8">
+              for _, n := range b.FehlendeNummern {
+                <div class="sn-chip badge badge-lg gap-1" data-number={strconv.Itoa(int(n))}>
+                  <span>{strconv.Itoa(int(n))}</span>
+                  <button type="button" class="sn-chip-remove btn btn-xs btn-ghost btn-circle">✕</button>
+                </div>
+              }
+            </div>
+            <div class="flex flex-row gap-2 mt-2">
+              <input
+                id="fehlende-nummer-input"
+                type="number"
+                min="1"
+                class="input input-bordered w-32"
+                placeholder="Nr."
+              />
+              <button type="button" id="add-fehlende-nummer" class="btn btn-sm">Hinzufügen</button>
+            </div>
+            <input type="hidden" name="fehlende_nummern" id="fehlende-nummern-input" value={fehlendeStr}/>
+            if fieldErrors["fehlende_nummern"] != "" {
+              <span class="text-error text-sm mt-1">{fieldErrors["fehlende_nummern"]}</span>
+            }
+          </div>
+
+          <div class="w-fit mx-auto">
+            @ui_components.SubmitButton("Speichern", ui_components.Success)
+          </div>
+        </div>
+      </form>
+    </div>
   }
 }
 

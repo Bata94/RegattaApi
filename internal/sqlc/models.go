@@ -337,6 +337,13 @@ type StartnummerAusgabe struct {
 	StartnummerZurueckgegeben pgtype.Text `json:"startnummer_zurueckgegeben"`
 }
 
+type StartnummernBereich struct {
+	ID              int32   `json:"id"`
+	MinNummer       int32   `json:"min_nummer"`
+	MaxNummer       int32   `json:"max_nummer"`
+	FehlendeNummern []int32 `json:"fehlende_nummern"`
+}
+
 type User struct {
 	Uuid           uuid.UUID `json:"uuid"`
 	Username       string    `json:"username"`

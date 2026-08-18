@@ -129,6 +129,7 @@ func GetRouter() http.Handler {
 	r.Handle("POST", "/internal/regattaleitung/startnummern/verteilen", wrapHandler(components.StartnummernVerteilenPost, true))
 	r.Handle("DELETE", "/internal/regattaleitung/startnummern/verteilen", wrapHandler(components.StartnummernVerteilenDelete, true))
 	internalLayoutHandler("/internal/regattaleitung/startnummern/bereich", pages.InternalRegattaleitungStartnummernBereich)
+	r.Handle("POST", "/internal/regattaleitung/startnummern/bereich", wrapHandler(components.StartnummernBereichPost, true))
 	internalLayoutHandler("/internal/regattaleitung/startnummern/aenderung", pages.InternalRegattaleitungStartnummernAendernRennenWahl)
 	internalLayoutHandler("/internal/regattaleitung/startnummern/aenderung/{r_uuid}", pages.InternalRegattaleitungStartnummernAendernMeldungsWahl)
 	internalLayoutHandler("/internal/regattaleitung/startnummern/aenderung/{r_uuid}/{m_uuid}", pages.InternalRegattaleitungStartnummernAendern)

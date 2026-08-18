@@ -215,7 +215,7 @@ Blank pages rendered with a `PageHeader` + "Work in progress ..." subtext. Imple
 - [ ] **Regattabüro → Startnummern Ausgabe/Rückgabe** — `/internal/regattabuero/startnummernausgabe` (`internal/templates/pages/regattabuero/startnummernausgabe.templ`)
 - [ ] **Regattabüro → Änderungen von Obleuten** — `/internal/regattabuero/aenderungen_obleute` (`internal/templates/pages/regattabuero/aenderungen_obleute.templ`)
 - [X] **Regattaleitung → E-Mail senden** — `/internal/regattaleitung/email` (`internal/templates/pages/regattaleitung/email.templ`)
-- [ ] **Regattaleitung → Startnummernbereiche** — `/internal/regattaleitung/startnummern/bereich` (`internal/templates/pages/regattaleitung/startnummern.templ`, `StartnummernBereich`)
+- [X] **Regattaleitung → Startnummernbereiche** — `/internal/regattaleitung/startnummern/bereich` (`internal/templates/pages/regattaleitung/startnummern.templ`, `StartnummernBereich`)
 - [x] **Regattaleitung → Vereine verwalten** — `/internal/regattaleitung/vereine` (`internal/templates/pages/regattaleitung/vereinverwaltung.templ`)
 
 ---

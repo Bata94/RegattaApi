@@ -511,10 +511,17 @@ func StartnummernAendernPost(c *handler.Context) error {
 		fieldErrors["startnummer"] = "Ungültige Startnummer"
 	}
 
-	// TODO: Make this configurable
-	const MAX_STARTNUMMER = 350
-	if startNummerInt <= 0 || startNummerInt > MAX_STARTNUMMER {
-		fieldErrors["startnummer"] = fmt.Sprintf("Startnummer muss zwischen 1 und %v liegen", MAX_STARTNUMMER)
+	bereich, err := crud.GetStartnummernBereich(c.Request.Context())
+	if err != nil {
+		return handler.InternalError("Error while loading startnummernbereich")
+	}
+
+	startNummerInt32 := int32(startNummerInt)
+	if !bereich.InBereich(startNummerInt32) {
+		fieldErrors["startnummer"] = fmt.Sprintf("Startnummer muss zwischen %d und %d liegen", bereich.MinNummer, bereich.MaxNummer)
+	}
+	if startNummerInt32 > 0 && bereich.IsFehlend(startNummerInt32) {
+		fieldErrors["startnummer"] = "Startnummer ist als fehlend markiert"
 	}
 
 	checkStartnummer, err := crud.GetMeldungByStartNrUndTag(c.Request.Context(), startNummerInt, m.Rennen.Tag)
@@ -547,6 +554,84 @@ func StartnummernAendernPost(c *handler.Context) error {
 
 	templ.Handler(regattaleitung.StartnummernAendern(m, fieldErrors)).ServeHTTP(c.Writer, c.Request)
 	return nil
+}
+
+func StartnummernBereichPost(c *handler.Context) error {
+	fieldErrors := make(map[string]string)
+
+	minStr := c.FormValue("min_nummer")
+	maxStr := c.FormValue("max_nummer")
+
+	minNummer, err := strconv.Atoi(minStr)
+	if err != nil || minNummer < 1 {
+		fieldErrors["min_nummer"] = "Kleinste Startnummer muss mindestens 1 sein"
+	}
+	maxNummer, err := strconv.Atoi(maxStr)
+	if err != nil || maxNummer < 1 {
+		fieldErrors["max_nummer"] = "Größte Startnummer muss mindestens 1 sein"
+	}
+
+	fehlendeStr := c.FormValue("fehlende_nummern")
+	fehlende, err := parseFehlendeNummern(fehlendeStr)
+	if err != nil {
+		fieldErrors["fehlende_nummern"] = "Ungültige fehlende Startnummern"
+	}
+
+	if minNummer >= 1 && maxNummer >= 1 && maxNummer < minNummer {
+		fieldErrors["max_nummer"] = "Größte Startnummer muss größer oder gleich der kleinsten sein"
+	}
+
+	if minNummer >= 1 && maxNummer >= minNummer {
+		for _, n := range fehlende {
+			if n < int32(minNummer) || n > int32(maxNummer) {
+				fieldErrors["fehlende_nummern"] = "Fehlende Startnummern müssen im Bereich liegen"
+				break
+			}
+		}
+	}
+
+	b := crud.StartnummernBereichFromSqlc(sqlc.StartnummernBereich{
+		MinNummer:       int32(minNummer),
+		MaxNummer:       int32(maxNummer),
+		FehlendeNummern: fehlende,
+	})
+
+	if len(fieldErrors) > 0 {
+		return handler.BadRequest("Ungültiger Startnummernbereich").WithForm(regattaleitung.StartnummernBereich(b, fieldErrors))
+	}
+
+	if _, err := crud.SetStartnummernBereich(c.Request.Context(), int32(minNummer), int32(maxNummer), fehlende); err != nil {
+		slog.Error("SetStartnummernBereich error", "err", err)
+		return handler.InternalError("Error while saving startnummernbereich")
+	}
+
+	return handler.OK("Startnummernbereich gespeichert")
+}
+
+func parseFehlendeNummern(s string) ([]int32, error) {
+	if strings.TrimSpace(s) == "" {
+		return []int32{}, nil
+	}
+
+	parts := strings.Split(s, ",")
+	seen := make(map[int32]struct{})
+	ret := make([]int32, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		n, err := strconv.Atoi(p)
+		if err != nil || n < 1 {
+			return nil, errors.New("invalid number")
+		}
+		if _, ok := seen[int32(n)]; ok {
+			continue
+		}
+		seen[int32(n)] = struct{}{}
+		ret = append(ret, int32(n))
+	}
+	return ret, nil
 }
 
 func PausenNew(c *handler.Context) error {

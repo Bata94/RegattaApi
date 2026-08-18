@@ -133,7 +133,11 @@ func InternalRegattaleitungStartnummernVerteilen(c *handler.Context) (templ.Comp
 }
 
 func InternalRegattaleitungStartnummernBereich(c *handler.Context) (templ.Component, error) {
-	return regattaleitung.StartnummernBereich(), nil
+	b, err := crud.GetStartnummernBereich(c.Request.Context())
+	if err != nil {
+		return nil, err
+	}
+	return regattaleitung.StartnummernBereich(b, nil), nil
 }
 
 func InternalRegattaleitungStartnummernAendernRennenWahl(c *handler.Context) (templ.Component, error) {

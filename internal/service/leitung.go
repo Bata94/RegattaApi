@@ -123,9 +123,28 @@ func SetStartnummern(ctx context.Context) error {
 		return err
 	}
 
+	bereich, err := crud.GetStartnummernBereich(ctx)
+	if err != nil {
+		return err
+	}
+
 	startNummerMap := make(map[crud.Tag]int32)
-	startNummerMap[crud.TagSa] = 1
-	startNummerMap[crud.TagSo] = 1
+	startNummerMap[crud.TagSa] = bereich.MinNummer
+	startNummerMap[crud.TagSo] = bereich.MinNummer
+
+	nextStartNummer := func(tag crud.Tag) (int32, error) {
+		for {
+			if startNummerMap[tag] > bereich.MaxNummer {
+				return 0, handler.BadRequest("Nicht genügend Startnummern im konfigurierten Bereich")
+			}
+			if !bereich.IsFehlend(startNummerMap[tag]) {
+				nummer := startNummerMap[tag]
+				startNummerMap[tag]++
+				return nummer, nil
+			}
+			startNummerMap[tag]++
+		}
+	}
 
 	for _, r := range rLs {
 		meldungen, err := r.GetMeldungen(ctx)
@@ -136,14 +155,17 @@ func SetStartnummern(ctx context.Context) error {
 			if m.Abgemeldet {
 				continue
 			}
+			nummer, err := nextStartNummer(r.Tag)
+			if err != nil {
+				return err
+			}
 			err = crud.UpdateStartNummer(ctx, sqlc.UpdateStartNummerParams{
 				Uuid:        m.Uuid,
-				StartNummer: startNummerMap[r.Tag],
+				StartNummer: nummer,
 			})
 			if err != nil {
 				return err
 			}
-			startNummerMap[r.Tag]++
 		}
 	}
 
