@@ -101,6 +101,7 @@ func ImageComponent(c *handler.Context) error {
 		imgOpt.ClassImage = class
 	}
 
+	c.Writer.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 	templ.Handler(ui_components.RawImageComponent(src, alt, imgOpt)).ServeHTTP(c.Writer, c.Request)
 	return nil
 }

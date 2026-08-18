@@ -20,7 +20,9 @@ stag.localhost {
 
 localhost, mrg.sievers.ruhr, anakin.headscale.sievers.ruhr {
     reverse_proxy api:8080
-    encode gzip
+    encode gzip {
+        minimum_length 512
+    }
 }
 
 pg.localhost {

@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/bata94/RegattaApi/internal/config"
 	"github.com/bata94/RegattaApi/internal/handlers"
@@ -42,15 +43,18 @@ func GetRouter() http.Handler {
 
 	r.Handle("GET", "/metricsApi", wrapHandler(components.MetricsAPIHandler, true))
 
-	r.Handle("GET", "/assets/{file}", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./assets/"+r.URL.Path[len("/assets/"):])
-	})
-	r.Handle("GET", "/files/{file}", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, config.C.Paths.FilesDir+r.URL.Path[len("/files/"):])
-	})
-	r.Handle("GET", "/public/{file}", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, config.C.Paths.PublicDir+r.URL.Path[len("/public/"):])
-	})
+	r.Handle("GET", "/assets/{file}", staticFileHandler("/assets/", "./assets/", func(string) string {
+		return "public, max-age=3600"
+	}))
+	r.Handle("GET", "/files/{file}", staticFileHandler("/files/", config.C.Paths.FilesDir, func(string) string {
+		return "public, max-age=3600"
+	}))
+	r.Handle("GET", "/public/{file}", staticFileHandler("/public/", config.C.Paths.PublicDir, func(name string) string {
+		if strings.HasSuffix(name, ".webp") {
+			return "public, max-age=31536000, immutable"
+		}
+		return "public, max-age=3600"
+	}))
 
 	// UI Handlers
 	baseLayoutHandler("/", pages.Index)
@@ -248,4 +252,14 @@ func GetRouter() http.Handler {
 	go handlers.RunHub()
 
 	return r
+}
+
+func staticFileHandler(prefix, dir string, cacheControl func(name string) string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		name := r.URL.Path[len(prefix):]
+		if cc := cacheControl(name); cc != "" {
+			w.Header().Set("Cache-Control", cc)
+		}
+		http.ServeFile(w, r, dir+name)
+	}
 }

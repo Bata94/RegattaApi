@@ -37,6 +37,7 @@ var excludedPaths = []string{
 	"/ws",
 	"/stream",
 	"/events",
+	"/comp/image",
 }
 
 func Compression() Middleware {
