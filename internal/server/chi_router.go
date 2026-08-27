@@ -54,6 +54,7 @@ func newChiRouter() *chi.Mux {
 	setupAPIRoutes(r)
 	setupComponentRoutes(r)
 	setupMetricsRoutes(r)
+	setupWSRoutes(r)
 
 	go handlers.RunHub()
 
@@ -222,9 +223,6 @@ func setupAPIRoutes(r *chi.Mux) {
 		r.Post("/api/v1/buero/abmeldung", api_v1.PostAbmeldung)
 		r.Post("/api/v1/buero/ummeldung", api_v1.PostUmmeldung)
 		r.Post("/api/v1/buero/nachmeldung", api_v1.PostNachmeldung)
-		r.Post("/api/v1/buero/startnummernausgabe", api_v1.StartnummernAusgabe)
-		r.Post("/api/v1/buero/startnummernwechsel", api_v1.StartnummernWechsel)
-		r.Post("/api/v1/buero/kasse/einzahlung", api_v1.KasseEinzahlung)
 		r.Post("/api/v1/buero/kasse/rechnung/all", api_v1.KasseCreateRechnungAllVereine)
 		r.Get("/api/v1/buero/kasse/rechnung/{uuid}", api_v1.KasseCreateRechnungHTML)
 		r.Post("/api/v1/buero/kasse/rechnung/{uuid}", api_v1.KasseCreateRechnungPDF)
@@ -306,6 +304,10 @@ func requireHTMX(next http.Handler) http.Handler {
 func setupMetricsRoutes(r *chi.Mux) {
 	r.Get("/metrics", adaptPageHandler(pages.MetricsPage))
 	r.Get("/metricsApi", api_v1.MetricsApi)
+}
+
+func setupWSRoutes(r *chi.Mux) {
+	r.Get("/ws/zeitnahme", api_v1.HandleZeitnahmeWS)
 }
 
 type newPageHandler func(w http.ResponseWriter, r *http.Request) templ.Component

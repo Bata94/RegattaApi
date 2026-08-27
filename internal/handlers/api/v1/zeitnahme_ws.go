@@ -3,9 +3,11 @@ package api_v1
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,12 +16,75 @@ import (
 	"github.com/bata94/RegattaApi/internal/config"
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handlers"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
-	CheckOrigin:     func(r *http.Request) bool { return true },
+	CheckOrigin:     checkWebSocketOrigin,
+}
+
+func checkWebSocketOrigin(r *http.Request) bool {
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true
+	}
+
+	allowedOrigins := strings.Split(config.C.CORS.AllowedOrigins, ",")
+	for _, allowed := range allowedOrigins {
+		allowed = strings.TrimSpace(allowed)
+		if allowed == "*" {
+			return true
+		}
+		if strings.HasPrefix(allowed, "*.") {
+			prefix := strings.TrimPrefix(allowed, "*")
+			if strings.HasSuffix(origin, prefix) {
+				return true
+			}
+			continue
+		}
+		if allowed == origin {
+			return true
+		}
+	}
+
+	if strings.HasSuffix(origin, ".localhost") || strings.HasSuffix(origin, "localhost") {
+		return true
+	}
+
+	slog.Warn("WebSocket origin rejected", "origin", origin, "allowed", allowedOrigins)
+	return false
+}
+
+func validateWebSocketToken(r *http.Request) error {
+	tokenString := getWSToken(r)
+	if tokenString == "" {
+		return fmt.Errorf("missing token")
+	}
+
+	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+		return []byte(config.C.Auth.JWTSecret), nil
+	})
+	if err != nil || !token.Valid {
+		return fmt.Errorf("invalid token: %w", err)
+	}
+
+	return nil
+}
+
+func getWSToken(r *http.Request) string {
+	c, err := r.Cookie("auth_token")
+	if err == nil && c != nil {
+		return c.Value
+	}
+
+	authHeader := r.Header.Get("Authorization")
+	if authHeader != "" {
+		return strings.TrimPrefix(authHeader, "Bearer ")
+	}
+
+	return ""
 }
 
 type wsMessage struct {
@@ -52,6 +117,12 @@ type assignFinishPayload struct {
 }
 
 func HandleZeitnahmeWS(w http.ResponseWriter, r *http.Request) {
+	if err := validateWebSocketToken(r); err != nil {
+		slog.Warn("WS auth failed", "err", err)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		slog.Error("WS upgrade failed", "err", err)

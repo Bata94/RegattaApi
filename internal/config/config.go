@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log/slog"
 	"os"
 	"strconv"
 	"time"
@@ -106,7 +107,7 @@ func Load() {
 			SSLMode:  os.Getenv("DB_SSLMODE"),
 		},
 		Auth: AuthConfig{
-			JWTSecret: getEnv("JWT_SECRET", "DO_NOT_USE_IN_PROD"),
+			JWTSecret: getEnvRequired("JWT_SECRET"),
 		},
 		CORS: CORSConfig{
 			AllowedOrigins: getEnv("CORS_ALLOWED_ORIGINS", "*"),
@@ -147,6 +148,14 @@ func getEnv(key, defaultVal string) string {
 		return v
 	}
 	return defaultVal
+}
+
+func getEnvRequired(key string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	slog.Error("required environment variable not set", "key", key)
+	return ""
 }
 
 func getEnvFloat(key string, defaultVal float64) float64 {

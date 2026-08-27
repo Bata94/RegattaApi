@@ -106,7 +106,7 @@ func GetOpenZeitnahmeStart(ctx context.Context) ([]Zeitnahme, error) {
 	defer cancel()
 	retLs := []Zeitnahme{}
 
-	q, err := DB.Queries.GetOpenStarts(ctx)
+	q, err := DB.QueriesFromCtx(ctx).GetOpenStarts(ctx)
 	if err != nil {
 		return retLs, err
 	}
@@ -124,7 +124,7 @@ func GetZeitnahmeZiel(ctx context.Context, id int) (Zeitnahme, error) {
 
 	idI32 := int32(id)
 
-	q, err := DB.Queries.GetZeitnahmeZiel(ctx, idI32)
+	q, err := DB.QueriesFromCtx(ctx).GetZeitnahmeZiel(ctx, idI32)
 	if err != nil {
 		return Zeitnahme{}, err
 	}
@@ -136,7 +136,7 @@ func GetOpenZeitnahmeZiel(ctx context.Context) ([]Zeitnahme, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	q, err := DB.Queries.GetAllOpenZeitnahmeZiel(ctx)
+	q, err := DB.QueriesFromCtx(ctx).GetAllOpenZeitnahmeZiel(ctx)
 	if err != nil {
 		return []Zeitnahme{}, err
 	}
@@ -192,10 +192,10 @@ func CreateZeitnahmeStart(ctx context.Context, rennNr *string, startNummern []st
 			Seq:      seqText,
 		}
 
-		q, err := DB.Queries.CreateZeitnahmeStart(ctx, p)
+		q, err := DB.QueriesFromCtx(ctx).CreateZeitnahmeStart(ctx, p)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				existing, findErr := DB.Queries.FindZeitnahmeStartByClientSeq(ctx, sqlc.FindZeitnahmeStartByClientSeqParams{
+				existing, findErr := DB.QueriesFromCtx(ctx).FindZeitnahmeStartByClientSeq(ctx, sqlc.FindZeitnahmeStartByClientSeqParams{
 					ClientID: clientIDText,
 					Seq:      seqText,
 				})
@@ -254,10 +254,10 @@ func CreateZeitnahmeZiel(ctx context.Context, rennNr, startNr *string, timeClien
 		Seq:      seqText,
 	}
 
-	q, err := DB.Queries.CreateZeitnahmeZiel(ctx, p)
+	q, err := DB.QueriesFromCtx(ctx).CreateZeitnahmeZiel(ctx, p)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			existing, findErr := DB.Queries.FindZeitnahmeZielByClientSeq(ctx, sqlc.FindZeitnahmeZielByClientSeqParams{
+			existing, findErr := DB.QueriesFromCtx(ctx).FindZeitnahmeZielByClientSeq(ctx, sqlc.FindZeitnahmeZielByClientSeqParams{
 				ClientID: clientIDText,
 				Seq:      seqText,
 			})
@@ -295,7 +295,7 @@ func UpdateZeitnahmeZiel(ctx context.Context, id int32, rennNr, startNr *string)
 		StartNummer:  startNummer,
 	}
 
-	q, err := DB.Queries.UpdateZeitnahmeZiel(ctx, p)
+	q, err := DB.QueriesFromCtx(ctx).UpdateZeitnahmeZiel(ctx, p)
 	if err != nil {
 		return Zeitnahme{}, err
 	}
@@ -316,7 +316,7 @@ func CreateZeitnahmeErgebnis(ctx context.Context, s, z Zeitnahme, meld Meldung) 
 		MeldungUuid:      meld.Uuid,
 	}
 
-	q, err := DB.Queries.CreateZeitnahmeErgebnis(ctx, params)
+	q, err := DB.QueriesFromCtx(ctx).CreateZeitnahmeErgebnis(ctx, params)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -326,11 +326,11 @@ func CreateZeitnahmeErgebnis(ctx context.Context, s, z Zeitnahme, meld Meldung) 
 		}
 	}
 
-	err = DB.Queries.SetZeitnahmeStartVerarbeitet(ctx, s.ID)
+	err = DB.QueriesFromCtx(ctx).SetZeitnahmeStartVerarbeitet(ctx, s.ID)
 	if err != nil {
 		return err
 	}
-	err = DB.Queries.SetZeitnahmeZielVerarbeitet(ctx, z.ID)
+	err = DB.QueriesFromCtx(ctx).SetZeitnahmeZielVerarbeitet(ctx, z.ID)
 	if err != nil {
 		return err
 	}
@@ -346,5 +346,5 @@ func GetZeitnahmeErgebnisByMeld(ctx context.Context, meldUuid uuid.UUID) (sqlc.Z
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	return DB.Queries.GetZeitnahmeErgebnisByMeld(ctx, meldUuid)
+	return DB.QueriesFromCtx(ctx).GetZeitnahmeErgebnisByMeld(ctx, meldUuid)
 }

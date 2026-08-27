@@ -305,7 +305,7 @@ func GetZeitplanung(ctx context.Context, wettkampf []sqlc.Wettkampf) (Zeitplaung
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	q, err := DB.Queries.GetRennenZeitplan(ctx, wettkampf)
+	q, err := DB.QueriesFromCtx(ctx).GetRennenZeitplan(ctx, wettkampf)
 	if err != nil {
 		return Zeitplaung{}, err
 	}
@@ -410,7 +410,7 @@ func GetAllRennenWithAthlet(ctx context.Context, p GetAllRennenParams) ([]Rennen
 		wettkampfFilterLs = []sqlc.Wettkampf{p.ShowWettkampf.Wettkampf}
 	}
 
-	baseRows, err := DB.Queries.GetAllRennenWithMeld(ctx, wettkampfFilterLs)
+	baseRows, err := DB.QueriesFromCtx(ctx).GetAllRennenWithMeld(ctx, wettkampfFilterLs)
 	if err != nil {
 		return nil, err
 	}
@@ -428,7 +428,7 @@ func GetAllRennenWithAthlet(ctx context.Context, p GetAllRennenParams) ([]Rennen
 		return races, nil
 	}
 
-	athRows, err := DB.Queries.GetAllRennenAthletRows(ctx, wettkampfFilterLs)
+	athRows, err := DB.QueriesFromCtx(ctx).GetAllRennenAthletRows(ctx, wettkampfFilterLs)
 	if err != nil {
 		return races, err
 	}
@@ -547,7 +547,7 @@ func GetRennen(ctx context.Context, uuidParam uuid.UUID) (Rennen, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	rSqlc, err := DB.Queries.GetRennenMinimal(ctx, uuidParam)
+	rSqlc, err := DB.QueriesFromCtx(ctx).GetRennenMinimal(ctx, uuidParam)
 	if err != nil {
 		if isNoRowError(err) {
 			return Rennen{}, apierr.ErrNotFound
@@ -581,7 +581,7 @@ func GetRennenMeldungen(ctx context.Context, rennenUuid uuid.UUID) ([]Meldung, e
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	q, err := DB.Queries.GetAllRennenMeldungen(ctx, rennenUuid)
+	q, err := DB.QueriesFromCtx(ctx).GetAllRennenMeldungen(ctx, rennenUuid)
 	if err != nil {
 		if isNoRowError(err) {
 			return []Meldung{}, nil
@@ -613,7 +613,7 @@ func UpdateStartZeit(ctx context.Context, params sqlc.UpdateStartZeitParams) err
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	return DB.Queries.UpdateStartZeit(ctx, params)
+	return DB.QueriesFromCtx(ctx).UpdateStartZeit(ctx, params)
 }
 
 func CreateRennen(ctx context.Context, rParams sqlc.CreateRennenParams) (Rennen, error) {

@@ -80,7 +80,7 @@ func (verein *Verein) GetRechnungsnummern(ctx context.Context) ([]string, error)
 
 	retLs := []string{}
 
-	q, err := DB.Queries.GetVereinRechnungsnummern(ctx, verein.Uuid)
+	q, err := DB.QueriesFromCtx(ctx).GetVereinRechnungsnummern(ctx, verein.Uuid)
 	if err != nil || len(q) == 0 {
 		return retLs, err
 	}
@@ -141,7 +141,7 @@ func GetAllVerein(ctx context.Context) ([]Verein, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	q, err := DB.Queries.GetAllVerein(ctx)
+	q, err := DB.QueriesFromCtx(ctx).GetAllVerein(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ func GetVerein(ctx context.Context, uuid uuid.UUID) (Verein, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	q, err := DB.Queries.GetVerein(ctx, uuid)
+	q, err := DB.QueriesFromCtx(ctx).GetVerein(ctx, uuid)
 	if err != nil {
 		if isNoRowError(err) {
 			return Verein{}, apierr.ErrNotFound

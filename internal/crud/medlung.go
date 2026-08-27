@@ -153,7 +153,7 @@ func GetAllMeldungen(ctx context.Context) ([]Meldung, error) {
 	defer cancel()
 
 	mLs := []Meldung{}
-	q, err := DB.Queries.GetAllMeldung(ctx)
+	q, err := DB.QueriesFromCtx(ctx).GetAllMeldung(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ func GetMeldungByStartNrUndTag(ctx context.Context, startNummer int, tag Tag) (M
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	q, err := DB.Queries.GetMeldungByStartNrUndTag(ctx, sqlc.GetMeldungByStartNrUndTagParams{
+	q, err := DB.QueriesFromCtx(ctx).GetMeldungByStartNrUndTag(ctx, sqlc.GetMeldungByStartNrUndTagParams{
 		StartNummer: int32(startNummer),
 		Tag:         sqlc.Tag(tag),
 	})
@@ -208,7 +208,7 @@ func GetMeldung(ctx context.Context, uuid uuid.UUID) (Meldung, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	q, err := DB.Queries.GetMeldung(ctx, uuid)
+	q, err := DB.QueriesFromCtx(ctx).GetMeldung(ctx, uuid)
 	if err != nil {
 		if isNoRowError(err) {
 			return Meldung{}, apierr.ErrNotFound
@@ -244,7 +244,7 @@ func CheckMeldungSetzung(ctx context.Context) (bool, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	_, err := DB.Queries.CheckMedlungSetzung(ctx)
+	_, err := DB.QueriesFromCtx(ctx).CheckMedlungSetzung(ctx)
 	if err != nil {
 		if isNoRowError(err) {
 			return false, nil
@@ -259,7 +259,7 @@ func CheckMeldungStartnummern(ctx context.Context) (bool, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	_, err := DB.Queries.CheckMedlungStartnummern(ctx)
+	_, err := DB.QueriesFromCtx(ctx).CheckMedlungStartnummern(ctx)
 	if err != nil {
 		if isNoRowError(err) {
 			return false, nil
@@ -320,7 +320,7 @@ func UpdateMeldungSetzung(ctx context.Context, p sqlc.UpdateMeldungSetzungParams
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	return DB.Queries.UpdateMeldungSetzung(ctx, p)
+	return DB.QueriesFromCtx(ctx).UpdateMeldungSetzung(ctx, p)
 }
 
 func UpdateSetzungBatch(ctx context.Context, p UpdateSetzungBatchParams) error {
@@ -346,7 +346,7 @@ func UpdateStartNummer(ctx context.Context, p sqlc.UpdateStartNummerParams) erro
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	return DB.Queries.UpdateStartNummer(ctx, p)
+	return DB.QueriesFromCtx(ctx).UpdateStartNummer(ctx, p)
 }
 
 func GetAllMeldungForVerein(ctx context.Context, vereinUuid uuid.UUID) ([]Meldung, error) {
@@ -355,7 +355,7 @@ func GetAllMeldungForVerein(ctx context.Context, vereinUuid uuid.UUID) ([]Meldun
 
 	meldungen := []Meldung{}
 
-	rows, err := DB.Queries.GetAllMeldungForVerein(ctx, vereinUuid)
+	rows, err := DB.QueriesFromCtx(ctx).GetAllMeldungForVerein(ctx, vereinUuid)
 	if err != nil {
 		return meldungen, err
 	}
@@ -387,21 +387,21 @@ func Ummeldung(ctx context.Context, p sqlc.UmmeldungParams) error {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	return DB.Queries.Ummeldung(ctx, p)
+	return DB.QueriesFromCtx(ctx).Ummeldung(ctx, p)
 }
 
 func Abmeldung(ctx context.Context, meldUuid uuid.UUID) error {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	return DB.Queries.Abmeldung(ctx, meldUuid)
+	return DB.QueriesFromCtx(ctx).Abmeldung(ctx, meldUuid)
 }
 
 func SetMeldungRechnungsNummer(ctx context.Context, meldUuid uuid.UUID, rechnungsNummer string) error {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	return DB.Queries.SetMeldungRechnungsNummer(ctx, sqlc.SetMeldungRechnungsNummerParams{
+	return DB.QueriesFromCtx(ctx).SetMeldungRechnungsNummer(ctx, sqlc.SetMeldungRechnungsNummerParams{
 		Uuid: meldUuid,
 		RechnungsNummer: pgtype.Text{
 			Valid:  true,
@@ -414,7 +414,7 @@ func GetStartnummerLast(ctx context.Context, tag Tag) (int32, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	lastStartNr, err := DB.Queries.GetLastStartnummer(ctx, sqlc.Tag(tag))
+	lastStartNr, err := DB.QueriesFromCtx(ctx).GetLastStartnummer(ctx, sqlc.Tag(tag))
 	if err != nil {
 		return 0, err
 	}

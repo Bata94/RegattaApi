@@ -11,7 +11,7 @@ func CreateRechnung(ctx context.Context, nummer string, verein_uuid uuid.UUID, c
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	return DB.Queries.CreateRechnung(ctx, sqlc.CreateRechnungParams{
+	return DB.QueriesFromCtx(ctx).CreateRechnung(ctx, sqlc.CreateRechnungParams{
 		Nummer:     nummer,
 		VereinUuid: verein_uuid,
 		CostSum:    int32(costSum),

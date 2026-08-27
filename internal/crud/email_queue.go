@@ -13,28 +13,28 @@ func EnqueueEmail(ctx context.Context, params sqlc.CreateEmailQueueEntryParams) 
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	return DB.Queries.CreateEmailQueueEntry(ctx, params)
+	return DB.QueriesFromCtx(ctx).CreateEmailQueueEntry(ctx, params)
 }
 
 func ClaimNextEmail(ctx context.Context) (sqlc.EmailQueue, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	return DB.Queries.ClaimNextEmailQueueEntry(ctx)
+	return DB.QueriesFromCtx(ctx).ClaimNextEmailQueueEntry(ctx)
 }
 
 func MarkEmailSent(ctx context.Context, uuid uuid.UUID) error {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	return DB.Queries.MarkEmailQueueSent(ctx, uuid)
+	return DB.QueriesFromCtx(ctx).MarkEmailQueueSent(ctx, uuid)
 }
 
 func MarkEmailFailed(ctx context.Context, uuid uuid.UUID, backoffSecs float64, lastError string) error {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	return DB.Queries.MarkEmailQueueFailed(ctx, sqlc.MarkEmailQueueFailedParams{
+	return DB.QueriesFromCtx(ctx).MarkEmailQueueFailed(ctx, sqlc.MarkEmailQueueFailedParams{
 		Uuid:      uuid,
 		Secs:      backoffSecs,
 		LastError: pgtype.Text{String: lastError, Valid: true},
@@ -45,19 +45,19 @@ func GetAllEmailQueue(ctx context.Context) ([]sqlc.EmailQueue, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	return DB.Queries.GetEmailQueueEntries(ctx)
+	return DB.QueriesFromCtx(ctx).GetEmailQueueEntries(ctx)
 }
 
 func ResetEmailQueue(ctx context.Context, uuid uuid.UUID) error {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	return DB.Queries.ResetEmailQueueEntry(ctx, uuid)
+	return DB.QueriesFromCtx(ctx).ResetEmailQueueEntry(ctx, uuid)
 }
 
 func DeleteEmailQueue(ctx context.Context, uuid uuid.UUID) error {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	return DB.Queries.DeleteEmailQueueEntry(ctx, uuid)
+	return DB.QueriesFromCtx(ctx).DeleteEmailQueueEntry(ctx, uuid)
 }

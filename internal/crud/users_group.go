@@ -21,7 +21,7 @@ func GetAllUsersGroups(ctx context.Context) ([]sqlc.UsersGroup, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	ugLs, err := DB.Queries.GetAllUserGroup(ctx)
+	ugLs, err := DB.QueriesFromCtx(ctx).GetAllUserGroup(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +37,7 @@ func GetUsersGroupsMinimal(ctx context.Context, id uuid.UUID) (sqlc.UsersGroup, 
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	ug, err := DB.Queries.GetUserGroupMinimal(ctx, id)
+	ug, err := DB.QueriesFromCtx(ctx).GetUserGroupMinimal(ctx, id)
 	if err != nil {
 		if isNoRowError(err) {
 			return sqlc.UsersGroup{}, apierr.ErrNotFound
@@ -79,7 +79,7 @@ func GetUsersGroup(ctx context.Context, id uuid.UUID) (UsersGroupWithUsers, erro
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	q, err := DB.Queries.GetUserGroup(ctx, id)
+	q, err := DB.QueriesFromCtx(ctx).GetUserGroup(ctx, id)
 	if err != nil {
 		if isNoRowError(err) {
 			return UsersGroupWithUsers{}, apierr.ErrNotFound
@@ -94,7 +94,7 @@ func GetUsersGroupByName(ctx context.Context, name string) (UsersGroupWithUsers,
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	id, err := DB.Queries.GetUserGroupUuidByName(ctx, name)
+	id, err := DB.QueriesFromCtx(ctx).GetUserGroupUuidByName(ctx, name)
 	if err != nil {
 		return UsersGroupWithUsers{}, err
 	}
@@ -106,7 +106,7 @@ func CreateUserGroup(ctx context.Context, ugParams sqlc.CreateUserGroupParams) (
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	ug, err := DB.Queries.CreateUserGroup(ctx, ugParams)
+	ug, err := DB.QueriesFromCtx(ctx).CreateUserGroup(ctx, ugParams)
 	if err != nil {
 		return sqlc.UsersGroup{}, err
 	}
@@ -118,7 +118,7 @@ func UpdateUserGroup(ctx context.Context, uuid uuid.UUID, uParams sqlc.UpdateUse
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	err := DB.Queries.UpdateUserGroup(ctx, sqlc.UpdateUserGroupParams{
+	err := DB.QueriesFromCtx(ctx).UpdateUserGroup(ctx, sqlc.UpdateUserGroupParams{
 		Uuid:         uuid,
 		Name:         uParams.Name,
 		Capabilities: uParams.Capabilities,

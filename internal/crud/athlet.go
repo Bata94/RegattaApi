@@ -123,7 +123,7 @@ func (ath *Athlet) UpdateStartberechtigung(ctx context.Context, startberechtigt 
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	err := DB.Queries.UpdateAthletAerztlBesch(ctx, sqlc.UpdateAthletAerztlBeschParams{
+	err := DB.QueriesFromCtx(ctx).UpdateAthletAerztlBesch(ctx, sqlc.UpdateAthletAerztlBeschParams{
 		Startberechtigt: startberechtigt,
 		Uuid:            ath.Uuid,
 	})
@@ -141,7 +141,7 @@ func (ath *Athlet) UpdateGewicht(ctx context.Context, gewichtParam int) error {
 
 	gewicht := int32(gewichtParam)
 
-	err := DB.Queries.UpdateAthletWaage(ctx, sqlc.UpdateAthletWaageParams{
+	err := DB.QueriesFromCtx(ctx).UpdateAthletWaage(ctx, sqlc.UpdateAthletWaageParams{
 		Gewicht: pgtype.Int4{Valid: true, Int32: gewicht},
 		Uuid:    ath.Uuid,
 	})
@@ -157,7 +157,7 @@ func GetAthlet(ctx context.Context, uuid uuid.UUID) (Athlet, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	rows, err := DB.Queries.GetAthlet(ctx, uuid)
+	rows, err := DB.QueriesFromCtx(ctx).GetAthlet(ctx, uuid)
 	if err != nil {
 		return Athlet{}, err
 	}
@@ -203,7 +203,7 @@ func GetAllAthlet(ctx context.Context) ([]Athlet, error) {
 	defer cancel()
 
 	aLs := []Athlet{}
-	q, err := DB.Queries.GetAllAthlet(ctx)
+	q, err := DB.QueriesFromCtx(ctx).GetAllAthlet(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +240,7 @@ func GetAllAthletenForVerein(ctx context.Context, vUuid uuid.UUID) ([]Athlet, er
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	q, err := DB.Queries.GetAllAthletenForVerein(ctx, vUuid)
+	q, err := DB.QueriesFromCtx(ctx).GetAllAthletenForVerein(ctx, vUuid)
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +261,7 @@ func GetAllAthletenForVereinWaage(ctx context.Context, vUuid uuid.UUID) ([]Athle
 	defer cancel()
 
 	retLs := []Athlet{}
-	q, err := DB.Queries.GetAllAthletenForVereinWaage(ctx, vUuid)
+	q, err := DB.QueriesFromCtx(ctx).GetAllAthletenForVereinWaage(ctx, vUuid)
 	if err != nil {
 		return retLs, err
 	}
@@ -286,7 +286,7 @@ func GetAllAthletenForVereinMissStartber(ctx context.Context, vUuid uuid.UUID) (
 
 	retLs := []Athlet{}
 	// TODO: klären, brauchen Stm. auch eine Startberechtigung? Brauchen Sie nicht need to change!
-	q, err := DB.Queries.GetAllAthletenForVereinMissStartber(ctx, vUuid)
+	q, err := DB.QueriesFromCtx(ctx).GetAllAthletenForVereinMissStartber(ctx, vUuid)
 	if err != nil {
 		return retLs, err
 	}

@@ -18,7 +18,7 @@ func GetAllObmannForVerein(ctx context.Context, vereinUuid uuid.UUID) ([]Obmann,
 	defer cancel()
 
 	retLs := []Obmann{}
-	q, err := DB.Queries.GetAllObmannForVerein(ctx, vereinUuid)
+	q, err := DB.QueriesFromCtx(ctx).GetAllObmannForVerein(ctx, vereinUuid)
 	if err != nil {
 		return retLs, err
 	}
@@ -34,7 +34,7 @@ func GetAllObmann(ctx context.Context) ([]Obmann, error) {
 	defer cancel()
 
 	retLs := []Obmann{}
-	q, err := DB.Queries.GetAllObmann(ctx)
+	q, err := DB.QueriesFromCtx(ctx).GetAllObmann(ctx)
 	if err != nil {
 		return retLs, err
 	}

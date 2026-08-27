@@ -16,7 +16,7 @@ func GetAllPausen(ctx context.Context) ([]Pause, error) {
 	defer cancel()
 
 	pLs := []Pause{}
-	q, err := DB.Queries.GetAllPause(ctx)
+	q, err := DB.QueriesFromCtx(ctx).GetAllPause(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func GetPausenByWettkampf(ctx context.Context, w []sqlc.Wettkampf) ([]Pause, err
 	}
 
 	pLs := []Pause{}
-	q, err := DB.Queries.GetPausenByWettkampf(ctx, w)
+	q, err := DB.QueriesFromCtx(ctx).GetPausenByWettkampf(ctx, w)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func GetPause(ctx context.Context, id int) (Pause, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	p, err := DB.Queries.GetPause(ctx, int32(id))
+	p, err := DB.QueriesFromCtx(ctx).GetPause(ctx, int32(id))
 	if err != nil {
 		if isNoRowError(err) {
 			return Pause{}, apierr.ErrNotFound
@@ -72,7 +72,7 @@ func DeletePause(ctx context.Context, id int32) error {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	err := DB.Queries.DeletePause(ctx, id)
+	err := DB.QueriesFromCtx(ctx).DeletePause(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func CreatePause(ctx context.Context, params sqlc.CreatePauseParams) (Pause, err
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	p, err := DB.Queries.CreatePause(ctx, params)
+	p, err := DB.QueriesFromCtx(ctx).CreatePause(ctx, params)
 	if err != nil {
 		return Pause{}, err
 	}
@@ -96,7 +96,7 @@ func UpdatePause(ctx context.Context, params sqlc.UpdatePauseParams) (Pause, err
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	p, err := DB.Queries.UpdatePause(ctx, params)
+	p, err := DB.QueriesFromCtx(ctx).UpdatePause(ctx, params)
 	if err != nil {
 		return Pause{}, err
 	}

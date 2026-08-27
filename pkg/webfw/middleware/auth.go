@@ -27,14 +27,6 @@ func Auth() func(http.Handler) http.Handler {
 				return
 			}
 
-			if strings.HasPrefix(tokenString, "Bearer ") {
-				w.WriteHeader(http.StatusUnauthorized)
-				if _, err := w.Write([]byte("Invalid token format")); err != nil {
-					slog.Error("failed to write auth error", "error", err)
-				}
-				return
-			}
-
 			token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
 				return []byte(secret), nil
 			})
@@ -71,6 +63,19 @@ func OptionalAuth() func(http.Handler) http.Handler {
 				}
 			}
 
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func RequireCap(capabilities ...string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if !webfw.HasAllCapabilities(r, capabilities...) {
+				slog.Warn(fmt.Sprintf("Capability check failed for %s %s. Required: %v", r.Method, r.URL.Path, capabilities))
+				http.Error(w, "Forbidden", http.StatusForbidden)
+				return
+			}
 			next.ServeHTTP(w, r)
 		})
 	}

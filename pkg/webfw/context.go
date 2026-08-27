@@ -87,6 +87,15 @@ func HasCapability(r *http.Request, cap string) bool {
 	return false
 }
 
+func HasAllCapabilities(r *http.Request, caps ...string) bool {
+	for _, required := range caps {
+		if !HasCapability(r, required) {
+			return false
+		}
+	}
+	return true
+}
+
 func WithAuthData(ctx context.Context, token *jwt.Token) context.Context {
 	claims := token.Claims.(jwt.MapClaims)
 

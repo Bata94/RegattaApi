@@ -128,7 +128,7 @@ func GetAllUsers(ctx context.Context) ([]sqlc.User, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	uLs, err := DB.Queries.GetAllUser(ctx)
+	uLs, err := DB.QueriesFromCtx(ctx).GetAllUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +144,7 @@ func GetUser(ctx context.Context, id uuid.UUID) (*User, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	u, err := DB.Queries.GetUser(ctx, id)
+	u, err := DB.QueriesFromCtx(ctx).GetUser(ctx, id)
 	if err != nil {
 		if isNoRowError(err) {
 			return nil, apierr.ErrNotFound
@@ -162,7 +162,7 @@ func GetUserByUsername(ctx context.Context, name string) (*User, error) {
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	id, err := DB.Queries.GetUserUuidByName(ctx, name)
+	id, err := DB.QueriesFromCtx(ctx).GetUserUuidByName(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +185,7 @@ func CreateUser(ctx context.Context, uInp CreateUserParams) (User, error) {
 		HashedPassword: hashedPW,
 	}
 
-	u, err := DB.Queries.CreateUser(ctx, uParams)
+	u, err := DB.QueriesFromCtx(ctx).CreateUser(ctx, uParams)
 	if err != nil {
 		return User{}, err
 	}
@@ -197,7 +197,7 @@ func UpdateUser(ctx context.Context, u uuid.UUID, uParams UpdateUserParams) erro
 	ctx, cancel := getCtx(ctx)
 	defer cancel()
 
-	err := DB.Queries.UpdateUser(ctx, sqlc.UpdateUserParams{
+	err := DB.QueriesFromCtx(ctx).UpdateUser(ctx, sqlc.UpdateUserParams{
 		Uuid:      u,
 		Username:  uParams.Username,
 		IsActive:  uParams.IsActive,
@@ -219,7 +219,7 @@ func UpdatePassword(ctx context.Context, u uuid.UUID, p string) error {
 		return err
 	}
 
-	err = DB.Queries.UpdatePassword(ctx, sqlc.UpdatePasswordParams{
+	err = DB.QueriesFromCtx(ctx).UpdatePassword(ctx, sqlc.UpdatePasswordParams{
 		Uuid:           u,
 		HashedPassword: hp,
 	})

@@ -10,8 +10,7 @@ import (
 func TestHandler(w http.ResponseWriter, r *http.Request) {
 	err := mailer.Enqueue(r.Context(), mailer.Params{
 		To: []string{
-			"bastian.sievers@gmail.com",
-			"bastian.sievers+test@gmail.com",
+			"test@example.com",
 		},
 		CC:      []string{},
 		Subject: "Test Mail",

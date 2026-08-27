@@ -14,18 +14,6 @@ type AbmeldungsParams struct {
 	Uuid string `json:"uuid"`
 }
 
-func StartnummernAusgabe(w http.ResponseWriter, r *http.Request) {
-	webfw.APIError(w, webfw.NotFound("Not found"))
-}
-
-func StartnummernWechsel(w http.ResponseWriter, r *http.Request) {
-	webfw.APIError(w, webfw.NotFound("Not found"))
-}
-
-func KasseEinzahlung(w http.ResponseWriter, r *http.Request) {
-	webfw.APIError(w, webfw.NotFound("Not found"))
-}
-
 func KasseCreateRechnungPDF(w http.ResponseWriter, r *http.Request) {
 	uuid, err := webfw.GetUUID(r, "uuid")
 	if err != nil {

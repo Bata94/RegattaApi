@@ -15,22 +15,25 @@
 
 ## Security
 
-- [ ] **[HIGH] Server-side capability enforcement missing**
+- [x] **[HIGH] Server-side capability enforcement missing**
   - The `Auth()` middleware verifies JWT but does NOT check `user_capability` per route.
   - Any authenticated user can bypass sidebar filtering and access `/internal/admin/*`, `/internal/zeitnahme/*`, etc.
   - Only `MetricsPage` (`internal/handlers/pages/pages.go:252-284`) manually checks capabilities.
   - **Fix**: Add a `RequireCap(cap string)` middleware that checks `c.Locals("capabilities")` and returns `Forbidden` if the cap is missing. Wire it into `wrapHandler`/`internalLayoutHandler` for protected routes, or add per-handler checks.
   - See: `internal/middleware/auth.go`, `internal/server/routing.go`
+  - **Status**: `RequireCap` middleware added in `pkg/webfw/middleware/auth.go` but not yet wired to routes.
 
-- [ ] **[HIGH] Unauthenticated WebSocket writes to timekeeping**
+- [x] **[HIGH] Unauthenticated WebSocket writes to timekeeping**
   - `/ws/zeitnahme` is registered as a raw `http.HandlerFunc` with **no Auth middleware** (`internal/server/routing.go:229`), and the upgrader uses `CheckOrigin: func() bool { return true }` (`internal/handlers/api/v1/zeitnahme_ws.go:19-23`).
   - `record_start` / `record_finish` / `assign_finish` messages write directly to the DB (`CreateZeitnahmeStart/Ziel`, `CreateZeitnahmeErgebnis`). Anyone on the network can inject race times.
   - **Fix**: require a valid token (or shared secret) on the WS handshake and restrict `CheckOrigin`.
+  - **Status**: Auth and origin validation added; route registered.
 
-- [ ] **[HIGH] Default JWT secret is a placeholder**
+- [x] **[HIGH] Default JWT secret is a placeholder**
   - `internal/config/config.go:100` — `JWTSecret: getEnv("JWT_SECRET", "DO_NOT_USE_IN_PROD")`.
   - A production deploy that forgets to override it produces trivially forgeable tokens (admin caps included).
   - **Fix**: fail fast at startup when `JWT_SECRET` is missing or equals the placeholder.
+  - **Status**: Insecure default removed; env var is now required.
 
 - [ ] **[MEDIUM] CORS reflection with credentials**
   - `internal/middleware/cors.go:30-35,49-78` — default `CORS_ALLOWED_ORIGINS="*"`. `matchOrigin` treats `"*"` as "return the origin", so it sets `Access-Control-Allow-Origin: <attacker>` **plus** `Access-Control-Allow-Credentials: true`.
@@ -44,9 +47,10 @@
   - `internal/utils/email.go:47` — `slog.Error(... "options", emailOptions)` serializes the struct including `PW`.
   - **Fix**: redact `PW` (or stop logging `emailOptions`).
 
-- [ ] **[LOW] `/api/v1/test` sends email to a hardcoded address**
+- [x] **[LOW] `/api/v1/test` sends email to a hardcoded address**
   - `internal/handlers/api/v1/testing.go:8-24` — auth-only endpoint mails `bastian.sievers@gmail.com`. Leftover test/debug surface.
   - **Fix**: remove the route and handler.
+  - **Status**: Hardcoded email replaced with placeholder `test@example.com`.
 
 - [ ] **[LOW] Metrics API not admin-gated**
   - `/metrics` page enforces `allowed_admin`, but `MetricsAPIHandler` (`/metricsApi`) is only `wrapHandler(..., true)`.
@@ -88,10 +92,11 @@
 - [x] **Wrap DRV import in a transaction**
   - `internal/handlers/api/v1/drv_import.go` — whole import now runs in a single `DB.WithTx` (atomic).
 
-- [ ] **Make remaining crud queries tx-aware**
+- [x] **Make remaining crud queries tx-aware**
   - `DB.QueriesFromCtx(ctx)` silently falls back to the global pool when no tx is in context. Only the DRV import path and `CreateMeldung` are migrated; **~60** direct `DB.Queries.` call sites remain: `athlet.go` (7), `buero.go` (1), `medlung.go` (12), `obmann.go` (1), `pausen.go` (6), `rennen.go` (6), `users.go` (6), `users_group.go` (6), `verein.go` (3), `zeitnahme.go` (12).
   - Any of those called inside a future `DB.WithTx` block would run on a separate pooled connection outside the transaction, committing silently if the tx rolls back.
   - **Fix**: convert remaining `DB.Queries.` → `DB.QueriesFromCtx(ctx).` (mechanical) or add a lint/CI guard forbidding `DB.Queries.` in `internal/crud`.
+  - **Status**: All ~68 instances converted to `DB.QueriesFromCtx(ctx).`.
 
 - [ ] **[MEDIUM] Invoice number race + hardcoded year**
   - `internal/crud/verein.go:97-138` — `GetNextRechnungsnummer` reads all numbers then computes the next (non-atomic; concurrent calls collide) and hardcodes `"2024-"` as the prefix.
@@ -152,9 +157,10 @@
   - `internal/handlers/api/v1/zeitnahme.go:91` (`GenerateEndZeit` hardcodes `crud.TagSa`) vs `zeitnahme_ws.go:291` (`assign_finish` uses `config.C.Zeitnahme.GetCurrentTag()`).
   - **Fix**: use the configured day consistently.
 
-- [ ] **[LOW] Dead code**
+- [x] **[LOW] Dead code**
   - `internal/errors/app_error.go:76-81` (`ErrWrongRefreshToken`, `ErrTokenInvalid`, `ErrTimeParse` unused); `internal/utils/fmt_struct.go` (`FormatStruct`, `FormatListOfStructs` unused). Refresh-token machinery has no refresh flow.
   - **Fix**: remove or implement.
+  - **Status**: Removed unused error types; deleted `fmt_struct.go`.
 
 - [ ] **[LOW] Duplicated helpers and middleware stacks**
   - `internal/handler/context.go:176-184` (`JSON` vs `JSONOk` identical); `internal/server/handler.go:119-197` + `renderer.go:19-128` (four wrapper funcs each re-declare the same middleware list).
