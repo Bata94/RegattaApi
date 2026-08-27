@@ -5,16 +5,11 @@
 
 ---
 
-## Architecture / Web Framework
+## General
 
-- [ ] **[HIGH] Extract a self-written, Fiber-like web framework on `net/http`**
-  - Formalize the current bespoke stack into a reusable framework under `pkg/` (e.g. `pkg/webfw/`).
-  - Today this is split across `internal/server/handler.go` (hand-rolled `{param}` matcher), `internal/handler` (`Context`, `AppError`), and four duplicated middleware stacks in `internal/server/handler.go` + `internal/server/renderer.go` (~152 routes).
-  - API should feel like Fiber but stay `net/http`-compatible:
-    - `app.Get("/path/:param", handler)` / `app.Post(...)` route registration, grouped/prefix routes.
-    - `ctx.Next()` middleware chain + unified pipeline (Recovery / Compression / Logging / CORS / RateLimit / Timeout ± Auth / OptionalAuth) — replace the four hand-assembled wrapper stacks.
-    - Context helpers: `ctx.JSON` / `ctx.HTML` / `ctx.Status`, path/query/body parsing, form/file helpers.
-  - Preserve the existing HTMX toast/error-handling contract (`HX-Retarget: #toast-container` + `HX-Swap: beforeend`) and `httptest` compatibility.
+- [ ] **[HIGH] Migrate to Go 1.27
+- [ ] **[MEDIUM] Explore stdlib UUID pkg
+- [ ] **[MEDIUM] Explore stdlib json v2 pkg
 
 ---
 
