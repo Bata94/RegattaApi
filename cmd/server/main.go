@@ -6,9 +6,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/bata94/RegattaApi/internal/config"
 	DB "github.com/bata94/RegattaApi/internal/db"
+	"github.com/bata94/RegattaApi/internal/handlers/api/v1"
 	"github.com/bata94/RegattaApi/internal/mailer"
 	"github.com/bata94/RegattaApi/internal/server"
 	"github.com/bata94/RegattaApi/internal/utils"
@@ -42,23 +45,74 @@ func main() {
 	go mailer.RunWorker(context.Background())
 
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	go func() {
-		for sig := range c {
-			slog.Info("Received signal", "sig", sig)
-			if sig == os.Interrupt {
-				if err := DB.ShutdownConnection(); err != nil {
-					slog.Error("Error shutting down DB connection", "err", err)
-				}
-				os.Exit(0)
-			}
+		sig := <-c
+		slog.Info("Received signal, shutting down", "sig", sig)
+		cancel()
+	}()
+
+	mainAddr := config.C.Server.Host + ":" + config.C.Server.Port
+	wsAddr := config.C.Server.Host + ":" + config.C.Server.WSPort
+
+	mainServer := &http.Server{
+		Addr:    mainAddr,
+		Handler: server.GetRouter(),
+	}
+
+	wsMux := http.NewServeMux()
+	wsMux.HandleFunc("/ws/zeitnahme", api_v1.HandleZeitnahmeWS)
+	wsServer := &http.Server{
+		Addr:    wsAddr,
+		Handler: wsMux,
+	}
+
+	errCh := make(chan error, 2)
+	var fatalErr error
+
+	go func() {
+		slog.Info("Starting main server", "addr", mainAddr)
+		if err := mainServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			errCh <- err
 		}
 	}()
 
-	addr := config.C.Server.Host + ":" + config.C.Server.Port
-	slog.Info("Starting server", "addr", addr)
-	if err := http.ListenAndServe(addr, server.GetRouter()); err != nil {
-		slog.Error("Server failed", "err", err)
+	go func() {
+		slog.Info("Starting WebSocket server", "addr", wsAddr)
+		if err := wsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			errCh <- err
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		slog.Info("Shutting down servers...")
+	case err := <-errCh:
+		fatalErr = err
+		slog.Error("Server exited unexpectedly, shutting down", "err", err)
+		cancel()
+	}
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer shutdownCancel()
+	if err := mainServer.Shutdown(shutdownCtx); err != nil {
+		slog.Error("Main server shutdown error", "err", err)
+	}
+	if err := wsServer.Shutdown(shutdownCtx); err != nil {
+		slog.Error("WebSocket server shutdown error", "err", err)
+	}
+
+	if err := DB.ShutdownConnection(); err != nil {
+		slog.Error("Error shutting down DB connection", "err", err)
+	}
+
+	slog.Info("Shutdown complete")
+
+	if fatalErr != nil {
 		os.Exit(1)
 	}
 }

@@ -1,8 +1,10 @@
 dev.localhost {
-    @ws path /ws/*
-    reverse_proxy @ws api-dev:8080
+    @ws {
+        path /ws/*
+    }
+    reverse_proxy @ws api-dev:8081
 
-    reverse_proxy api-dev:8090 {
+    reverse_proxy api-dev:8080 {
         # Force the browser to never cache by overwriting headers
         header_up Cache-Control "no-cache, no-store, must-revalidate"
         header_up Pragma "no-cache"

@@ -16,6 +16,7 @@ import (
 	"github.com/bata94/RegattaApi/pkg/webfw"
 	webfw_middleware "github.com/bata94/RegattaApi/pkg/webfw/middleware"
 	"github.com/go-chi/chi/v5"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func newChiRouter() *chi.Mux {
@@ -26,6 +27,27 @@ func newChiRouter() *chi.Mux {
 	r.Use(webfw_middleware.Logging())
 	r.Use(webfw_middleware.CORS())
 	r.Use(webfw_middleware.RateLimit())
+
+	navBarConfig.Entries = []ui_components.NavBarEntry{
+		{Name: "Livestream", URL: "/live"},
+		{Name: "Ausschreibung", URL: "/ausschreibung"},
+		{Name: "Zeitplan", URL: "/zeitplan"},
+		{Name: "Meldeergebnis", URL: "/meldeergebnis"},
+		{Name: "Ergebnisse", URL: "/ergebnisse"},
+		{
+			Name:         "Internes",
+			URL:          "",
+			RequiredCaps: []string{"allowed_logged_in"},
+			SubEntries: []ui_components.NavBarEntry{
+				{Name: "Profil", URL: "/internal/profil", RequiredCaps: []string{"allowed_logged_in"}},
+				{Name: "Zeitnahme", URL: "/internal/zeitnahme", RequiredCaps: []string{"allowed_zeitnahme"}},
+				{Name: "Startlisten", URL: "/internal/startlisten", RequiredCaps: []string{"allowed_startlisten"}},
+				{Name: "Regattabüro", URL: "/internal/regattabuero", RequiredCaps: []string{"allowed_regattabuero"}},
+				{Name: "Regattaleitung", URL: "/internal/regattaleitung", RequiredCaps: []string{"allowed_regattaleitung"}},
+				{Name: "Admin", URL: "/internal/admin", RequiredCaps: []string{"allowed_admin"}},
+			},
+		},
+	}
 
 	setupPublicRoutes(r)
 	setupInternalRoutes(r)
@@ -40,6 +62,7 @@ func newChiRouter() *chi.Mux {
 
 func setupPublicRoutes(r *chi.Mux) {
 	r.Group(func(r chi.Router) {
+		r.Use(webfw_middleware.OptionalAuth())
 		r.Use(webfw_middleware.Timeout(60 * time.Second))
 
 		r.Get("/", adaptPageHandler(pages.Index))
@@ -74,96 +97,96 @@ func setupInternalRoutes(r *chi.Mux) {
 		r.Use(webfw_middleware.Auth())
 		r.Use(webfw_middleware.Timeout(60 * time.Second))
 
-		r.Get("/internal", adaptPageHandler(pages.InternalIndex))
-		r.Get("/internal/profil", adaptPageHandler(pages.ProfilPage))
+		r.Get("/internal", adaptInternalPageHandler(pages.InternalIndex))
+		r.Get("/internal/profil", adaptInternalPageHandler(pages.ProfilPage))
 		r.Get("/internal/profil/password/{uuid}", components.ChangePasswordGet)
 		r.Put("/internal/profil/password/{uuid}", components.ChangePasswordPost)
 
-		r.Get("/internal/zeitnahme", adaptPageHandler(pages.InternalZeitnahme))
-		r.Get("/internal/zeitnahme/start", adaptPageHandler(pages.InternalZeitnahmeStart))
-		r.Get("/internal/zeitnahme/ziel", adaptPageHandler(pages.InternalZeitnahmeZiel))
-		r.Get("/internal/zeitnahme/vorsortierung", adaptPageHandler(pages.InternalZeitnahmeVorsortierung))
-		r.Get("/internal/zeitnahme/wenderichter", adaptPageHandler(pages.InternalZeitnahmeWenderichter))
+		r.Get("/internal/zeitnahme", adaptInternalPageHandler(pages.InternalZeitnahme))
+		r.Get("/internal/zeitnahme/start", adaptInternalPageHandler(pages.InternalZeitnahmeStart))
+		r.Get("/internal/zeitnahme/ziel", adaptInternalPageHandler(pages.InternalZeitnahmeZiel))
+		r.Get("/internal/zeitnahme/vorsortierung", adaptInternalPageHandler(pages.InternalZeitnahmeVorsortierung))
+		r.Get("/internal/zeitnahme/wenderichter", adaptInternalPageHandler(pages.InternalZeitnahmeWenderichter))
 
-		r.Get("/internal/startlisten", adaptPageHandler(pages.InternalStartlisten))
+		r.Get("/internal/startlisten", adaptInternalPageHandler(pages.InternalStartlisten))
 
-		r.Get("/internal/regattabuero", adaptPageHandler(pages.InternalRegattabuero))
-		r.Get("/internal/regattabuero/vereinswahl", adaptPageHandler(pages.InternalVereinswahl))
-		r.Get("/internal/regattabuero/{v_uuid}/abmeldung", adaptPageHandler(pages.InternalRegattabueroAbmeldung))
-		r.Get("/internal/regattabuero/{v_uuid}/abmeldung/{m_uuid}", adaptPageHandler(pages.InternalRegattabueroAbmeldungMeldung))
+		r.Get("/internal/regattabuero", adaptInternalPageHandler(pages.InternalRegattabuero))
+		r.Get("/internal/regattabuero/vereinswahl", adaptInternalPageHandler(pages.InternalVereinswahl))
+		r.Get("/internal/regattabuero/{v_uuid}/abmeldung", adaptInternalPageHandler(pages.InternalRegattabueroAbmeldung))
+		r.Get("/internal/regattabuero/{v_uuid}/abmeldung/{m_uuid}", adaptInternalPageHandler(pages.InternalRegattabueroAbmeldungMeldung))
 		r.Delete("/internal/regattabuero/{v_uuid}/abmeldung/{m_uuid}", components.AbmeldungDelete)
-		r.Get("/internal/regattabuero/{v_uuid}/ummeldung", adaptPageHandler(pages.InternalRegattabueroUmmeldung))
-		r.Get("/internal/regattabuero/{v_uuid}/ummeldung/{m_uuid}", adaptPageHandler(pages.InternalRegattabueroUmmeldungMeldung))
+		r.Get("/internal/regattabuero/{v_uuid}/ummeldung", adaptInternalPageHandler(pages.InternalRegattabueroUmmeldung))
+		r.Get("/internal/regattabuero/{v_uuid}/ummeldung/{m_uuid}", adaptInternalPageHandler(pages.InternalRegattabueroUmmeldungMeldung))
 		r.Post("/internal/regattabuero/{v_uuid}/ummeldung/{m_uuid}", components.UmmeldungPost)
-		r.Get("/internal/regattabuero/{v_uuid}/nachmeldung", adaptPageHandler(pages.InternalRegattabueroNachmeldung))
-		r.Get("/internal/regattabuero/{v_uuid}/nachmeldung/{r_uuid}", adaptPageHandler(pages.InternalRegattabueroNachmeldungRennen))
+		r.Get("/internal/regattabuero/{v_uuid}/nachmeldung", adaptInternalPageHandler(pages.InternalRegattabueroNachmeldung))
+		r.Get("/internal/regattabuero/{v_uuid}/nachmeldung/{r_uuid}", adaptInternalPageHandler(pages.InternalRegattabueroNachmeldungRennen))
 		r.Post("/internal/regattabuero/{v_uuid}/nachmeldung/{r_uuid}", components.NachmeldungPost)
-		r.Get("/internal/regattabuero/{v_uuid}/nachmeldung/success/{m_uuid}", adaptPageHandler(pages.InternalRegattabueroNachmeldungSuccess))
-		r.Get("/internal/regattabuero/{v_uuid}/waage", adaptPageHandler(pages.InternalRegattabueroWaageWahl))
-		r.Get("/internal/regattabuero/{v_uuid}/waage/{a_uuid}", adaptPageHandler(pages.InternalRegattabueroWaage))
+		r.Get("/internal/regattabuero/{v_uuid}/nachmeldung/success/{m_uuid}", adaptInternalPageHandler(pages.InternalRegattabueroNachmeldungSuccess))
+		r.Get("/internal/regattabuero/{v_uuid}/waage", adaptInternalPageHandler(pages.InternalRegattabueroWaageWahl))
+		r.Get("/internal/regattabuero/{v_uuid}/waage/{a_uuid}", adaptInternalPageHandler(pages.InternalRegattabueroWaage))
 		r.Post("/internal/regattabuero/{v_uuid}/waage/{a_uuid}", components.WaagePost)
-		r.Get("/internal/regattabuero/{v_uuid}/startberechtigung", adaptPageHandler(pages.InternalRegattabueroStartberechtigung))
-		r.Get("/internal/regattabuero/{v_uuid}/startberechtigung/{a_uuid}", adaptPageHandler(pages.InternalRegattabueroStartberechtigungAthlet))
+		r.Get("/internal/regattabuero/{v_uuid}/startberechtigung", adaptInternalPageHandler(pages.InternalRegattabueroStartberechtigung))
+		r.Get("/internal/regattabuero/{v_uuid}/startberechtigung/{a_uuid}", adaptInternalPageHandler(pages.InternalRegattabueroStartberechtigungAthlet))
 		r.Post("/internal/regattabuero/{v_uuid}/startberechtigung/{a_uuid}", components.StartberechtigungPost)
-		r.Get("/internal/regattabuero/{v_uuid}/new_athlet", adaptPageHandler(pages.InternalRegattabueroNewAthlet))
+		r.Get("/internal/regattabuero/{v_uuid}/new_athlet", adaptInternalPageHandler(pages.InternalRegattabueroNewAthlet))
 		r.Post("/internal/regattabuero/{v_uuid}/new_athlet", components.NewAthletPost)
-		r.Get("/internal/regattabuero/kasse", adaptPageHandler(pages.InternalRegattabueroKasse))
-		r.Get("/internal/regattabuero/startnummernausgabe", adaptPageHandler(pages.InternalRegattabueroStartnummernAusgabe))
-		r.Get("/internal/regattabuero/aenderungen_obleute", adaptPageHandler(pages.InternalRegattabueroAenderungenObleute))
-		r.Get("/internal/regattabuero/setzungsverwaltung/aenderung", adaptPageHandler(pages.InternalRegattaleitungSetzungAenderung))
+		r.Get("/internal/regattabuero/kasse", adaptInternalPageHandler(pages.InternalRegattabueroKasse))
+		r.Get("/internal/regattabuero/startnummernausgabe", adaptInternalPageHandler(pages.InternalRegattabueroStartnummernAusgabe))
+		r.Get("/internal/regattabuero/aenderungen_obleute", adaptInternalPageHandler(pages.InternalRegattabueroAenderungenObleute))
+		r.Get("/internal/regattabuero/setzungsverwaltung/aenderung", adaptInternalPageHandler(pages.InternalRegattaleitungSetzungAenderung))
 		r.Post("/internal/regattabuero/setzungsverwaltung/aenderung/rennen/{param}", components.SetzungsVerwaltungAenderungRennenPost)
-		r.Get("/internal/regattabuero/setzungsverwaltung/aenderung/rennen/{param}", adaptPageHandler(pages.InternalRegattaleitungSetzungAenderungRennen))
-		r.Get("/internal/regattabuero/startnummern/aenderung", adaptPageHandler(pages.InternalRegattaleitungStartnummernAendernRennenWahl))
+		r.Get("/internal/regattabuero/setzungsverwaltung/aenderung/rennen/{param}", adaptInternalPageHandler(pages.InternalRegattaleitungSetzungAenderungRennen))
+		r.Get("/internal/regattabuero/startnummern/aenderung", adaptInternalPageHandler(pages.InternalRegattaleitungStartnummernAendernRennenWahl))
 
-		r.Get("/internal/regattaleitung", adaptPageHandler(pages.InternalRegattaleitung))
-		r.Get("/internal/regattaleitung/drvupload", adaptPageHandler(pages.InternalRegattaleitungDrvUpload))
+		r.Get("/internal/regattaleitung", adaptInternalPageHandler(pages.InternalRegattaleitung))
+		r.Get("/internal/regattaleitung/drvupload", adaptInternalPageHandler(pages.InternalRegattaleitungDrvUpload))
 		r.Post("/internal/regattaleitung/drvupload", components.DrvUploadPost)
-		r.Get("/internal/regattaleitung/setzungsverwaltung", adaptPageHandler(pages.InternalRegattaleitungSetzung))
-		r.Get("/internal/regattaleitung/setzungsverwaltung/losung", adaptPageHandler(pages.InternalRegattaleitungSetzungLosung))
+		r.Get("/internal/regattaleitung/setzungsverwaltung", adaptInternalPageHandler(pages.InternalRegattaleitungSetzung))
+		r.Get("/internal/regattaleitung/setzungsverwaltung/losung", adaptInternalPageHandler(pages.InternalRegattaleitungSetzungLosung))
 		r.Post("/internal/regattaleitung/setzungsverwaltung/losung", components.SetzungsVerwaltungLosungPost)
 		r.Delete("/internal/regattaleitung/setzungsverwaltung/losung", components.SetzungsVerwaltungLosungDelete)
-		r.Get("/internal/regattaleitung/setzungsverwaltung/aenderung", adaptPageHandler(pages.InternalRegattaleitungSetzungAenderung))
+		r.Get("/internal/regattaleitung/setzungsverwaltung/aenderung", adaptInternalPageHandler(pages.InternalRegattaleitungSetzungAenderung))
 		r.Post("/internal/regattaleitung/setzungsverwaltung/aenderung/rennen/{param}", components.SetzungsVerwaltungAenderungRennenPost)
-		r.Get("/internal/regattaleitung/setzungsverwaltung/aenderung/rennen/{param}", adaptPageHandler(pages.InternalRegattaleitungSetzungAenderungRennen))
+		r.Get("/internal/regattaleitung/setzungsverwaltung/aenderung/rennen/{param}", adaptInternalPageHandler(pages.InternalRegattaleitungSetzungAenderungRennen))
 
-		r.Get("/internal/regattaleitung/pausen", adaptPageHandler(pages.InternalRegattaleitungPausen))
+		r.Get("/internal/regattaleitung/pausen", adaptInternalPageHandler(pages.InternalRegattaleitungPausen))
 		r.Get("/internal/regattaleitung/pausen/new/{nach_rennen_uuid}", components.PausenNew)
 		r.Post("/internal/regattaleitung/pausen", components.PausenPost)
 		r.Delete("/internal/regattaleitung/pausen/{id}", components.PausenDelete)
 
-		r.Get("/internal/regattaleitung/zeitplan", adaptPageHandler(pages.InternalRegattaleitungZeitplan))
+		r.Get("/internal/regattaleitung/zeitplan", adaptInternalPageHandler(pages.InternalRegattaleitungZeitplan))
 		r.Post("/internal/regattaleitung/zeitplan", components.ZeitplanPost)
-		r.Get("/internal/regattaleitung/startnummern", adaptPageHandler(pages.InternalRegattaleitungStartnummern))
-		r.Get("/internal/regattaleitung/startnummern/verteilen", adaptPageHandler(pages.InternalRegattaleitungStartnummernVerteilen))
+		r.Get("/internal/regattaleitung/startnummern", adaptInternalPageHandler(pages.InternalRegattaleitungStartnummern))
+		r.Get("/internal/regattaleitung/startnummern/verteilen", adaptInternalPageHandler(pages.InternalRegattaleitungStartnummernVerteilen))
 		r.Post("/internal/regattaleitung/startnummern/verteilen", components.StartnummernVerteilenPost)
 		r.Delete("/internal/regattaleitung/startnummern/verteilen", components.StartnummernVerteilenDelete)
-		r.Get("/internal/regattaleitung/startnummern/bereich", adaptPageHandler(pages.InternalRegattaleitungStartnummernBereich))
+		r.Get("/internal/regattaleitung/startnummern/bereich", adaptInternalPageHandler(pages.InternalRegattaleitungStartnummernBereich))
 		r.Post("/internal/regattaleitung/startnummern/bereich", components.StartnummernBereichPost)
-		r.Get("/internal/regattaleitung/startnummern/aenderung", adaptPageHandler(pages.InternalRegattaleitungStartnummernAendernRennenWahl))
-		r.Get("/internal/regattaleitung/startnummern/aenderung/{r_uuid}", adaptPageHandler(pages.InternalRegattaleitungStartnummernAendernMeldungsWahl))
-		r.Get("/internal/regattaleitung/startnummern/aenderung/{r_uuid}/{m_uuid}", adaptPageHandler(pages.InternalRegattaleitungStartnummernAendern))
+		r.Get("/internal/regattaleitung/startnummern/aenderung", adaptInternalPageHandler(pages.InternalRegattaleitungStartnummernAendernRennenWahl))
+		r.Get("/internal/regattaleitung/startnummern/aenderung/{r_uuid}", adaptInternalPageHandler(pages.InternalRegattaleitungStartnummernAendernMeldungsWahl))
+		r.Get("/internal/regattaleitung/startnummern/aenderung/{r_uuid}/{m_uuid}", adaptInternalPageHandler(pages.InternalRegattaleitungStartnummernAendern))
 		r.Post("/internal/regattaleitung/startnummern/aenderung/{r_uuid}/{m_uuid}", components.StartnummernAendernPost)
-		r.Get("/internal/regattaleitung/pdf_meldeergebnis", adaptPageHandler(pages.InternalRegattaleitungPdfMeldeergebnis))
+		r.Get("/internal/regattaleitung/pdf_meldeergebnis", adaptInternalPageHandler(pages.InternalRegattaleitungPdfMeldeergebnis))
 		r.Post("/internal/regattaleitung/pdf_meldeergebnis", components.PdfMeldeergebnisPost)
-		r.Get("/internal/regattaleitung/vereine", adaptPageHandler(pages.InternalRegattaleitungVereinsverwaltung))
+		r.Get("/internal/regattaleitung/vereine", adaptInternalPageHandler(pages.InternalRegattaleitungVereinsverwaltung))
 		r.Get("/internal/regattaleitung/vereine/{uuid}", components.VereinEditNew)
 		r.Post("/internal/regattaleitung/vereine/{uuid}", components.VereinEditNewPost)
 		r.Delete("/internal/regattaleitung/vereine/{uuid}", components.VereinDelete)
-		r.Get("/internal/regattaleitung/obleute", adaptPageHandler(pages.InternalRegattaleitungObleute))
+		r.Get("/internal/regattaleitung/obleute", adaptInternalPageHandler(pages.InternalRegattaleitungObleute))
 		r.Get("/internal/regattaleitung/obleute/{uuid}", components.ObmannEditNew)
 		r.Post("/internal/regattaleitung/obleute/{uuid}", components.ObmannEditNewPost)
 		r.Delete("/internal/regattaleitung/obleute/{uuid}", components.ObmannDelete)
-		r.Get("/internal/regattaleitung/email", adaptPageHandler(pages.InternalRegattaleitungEmail))
+		r.Get("/internal/regattaleitung/email", adaptInternalPageHandler(pages.InternalRegattaleitungEmail))
 		r.Post("/internal/regattaleitung/email", components.EmailSendPost)
 
-		r.Get("/internal/admin", adaptPageHandler(pages.InternalAdmin))
-		r.Get("/internal/admin/users", adaptPageHandler(pages.InternalAdminUsers))
+		r.Get("/internal/admin", adaptInternalPageHandler(pages.InternalAdmin))
+		r.Get("/internal/admin/users", adaptInternalPageHandler(pages.InternalAdminUsers))
 		r.Get("/internal/admin/user/{uuid}", components.UserEditNew)
 		r.Post("/internal/admin/user/{uuid}", components.UserEditNewPost)
-		r.Get("/internal/admin/usergroups", adaptPageHandler(pages.InternalAdminUserGroups))
+		r.Get("/internal/admin/usergroups", adaptInternalPageHandler(pages.InternalAdminUserGroups))
 		r.Get("/internal/admin/usergroups/{uuid}", components.UserGroupEditNew)
 		r.Post("/internal/admin/usergroups/{uuid}", components.UserGroupEditNewPost)
-		r.Get("/internal/admin/email_queue", adaptPageHandler(pages.InternalAdminEmailQueue))
+		r.Get("/internal/admin/email_queue", adaptInternalPageHandler(pages.InternalAdminEmailQueue))
 		r.Post("/internal/admin/email_queue/{uuid}/retry", components.EmailQueueRetry)
 		r.Delete("/internal/admin/email_queue/{uuid}", components.EmailQueueDelete)
 	})
@@ -177,6 +200,13 @@ func setupAPIRoutes(r *chi.Mux) {
 		r.Post("/api/auth/login", api_v1.Login)
 		r.Post("/api/auth/logout", api_v1.Logout)
 		r.Get("/api/auth/valid", api_v1.AuthValidate)
+		r.Get("/api/v1/leitung/meldeergebnis", api_v1.GetMeldeergebnisHtml)
+	})
+
+	r.Group(func(r chi.Router) {
+		r.Use(webfw_middleware.ErrorHandler)
+		r.Use(webfw_middleware.Auth())
+		r.Use(webfw_middleware.Timeout(30 * time.Second))
 
 		r.Get("/api/auth/me", api_v1.AuthMe)
 		r.Get("/api/v1/test", api_v1.TestHandler)
@@ -200,7 +230,6 @@ func setupAPIRoutes(r *chi.Mux) {
 		r.Post("/api/v1/buero/kasse/rechnung/{uuid}", api_v1.KasseCreateRechnungPDF)
 
 		r.Get("/api/v1/leitung/pdfFooter", api_v1.GetPdfFooter)
-		r.Get("/api/v1/leitung/meldeergebnis", api_v1.GetMeldeergebnisHtml)
 		r.Get("/api/v1/leitung/meldeergebnis/list", api_v1.GetMeldeergebnisList)
 		r.Get("/api/v1/leitung/meldeergebnis/{filename}", api_v1.GetMeldeergebnisFilename)
 		r.Post("/api/v1/leitung/meldeergebnis", api_v1.GenerateMeldeergebnis)
@@ -247,18 +276,30 @@ func setupAPIRoutes(r *chi.Mux) {
 		r.Post("/api/v1/zeitnahme/start", api_v1.PostZeitnahmeStart)
 		r.Get("/api/v1/zeitnahme/openStarts", api_v1.GetOpenStarts)
 		r.Post("/api/v1/zeitnahme/genErgebnis", api_v1.GenerateEndZeit)
-
-		r.Get("/ws/zeitnahme", api_v1.HandleZeitnahmeWS)
 	})
 }
 
 func setupComponentRoutes(r *chi.Mux) {
+	r.Get("/comp/image", components.ImageComponent)
+
 	r.Group(func(r chi.Router) {
-		r.Get("/comp/image", components.ImageComponent)
+		r.Use(webfw_middleware.Timeout(60 * time.Second))
+		r.Use(requireHTMX)
+
 		r.Get("/comp/zeitplan/{wettkampf}", components.ZeitplanCollapseBody)
 		r.Get("/comp/ausschreibung/{wettkampf}", components.AusschreibungRennenCollapseBody)
 		r.Get("/comp/meldeergebnis/{wettkampf}", components.MeldeergebnisCollapseBody)
 		r.Get("/comp/internal/rennen_tab/{wettkampf}", components.RennenTab)
+	})
+}
+
+func requireHTMX(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !webfw.IsHtmxRequest(r) {
+			http.NotFound(w, r)
+			return
+		}
+		next.ServeHTTP(w, r)
 	})
 }
 
@@ -288,6 +329,145 @@ func adaptPageHandler(h newPageHandler) http.HandlerFunc {
 			}
 			templ.Handler(ui_layouts.BaseLayout(page, navbarCfg)).ServeHTTP(w, r)
 		}
+	}
+}
+
+func adaptInternalPageHandler(h newPageHandler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		page := h(w, r)
+		if page == nil {
+			return
+		}
+
+		if webfw.IsHtmxRequest(r) {
+			templ.Handler(page).ServeHTTP(w, r)
+			return
+		}
+
+		caps := webfw.GetCapabilities(r)
+		if caps == nil {
+			caps = []string{}
+		}
+
+		username := ""
+		userToken := webfw.GetUser(r)
+		if userToken != nil {
+			if claims, ok := userToken.Claims.(jwt.MapClaims); ok {
+				if u, ok := claims["username"].(string); ok {
+					username = u
+				}
+			}
+		}
+		if username == "" {
+			username = "?"
+		}
+
+		path := r.URL.Path
+		cats := buildSidebarCategories(path, caps)
+		title := pageTitleFromPath(path)
+
+		templ.Handler(ui_layouts.InternalLayout(page, cats, caps, username, title)).ServeHTTP(w, r)
+	}
+}
+
+func buildSidebarCategories(currentPath string, caps []string) []ui_components.SidebarCategory {
+	return []ui_components.SidebarCategory{
+		{
+			Name:         "Zeitnahme",
+			URL:          "/internal/zeitnahme",
+			RequiredCaps: []string{"allowed_zeitnahme"},
+			IsActive:     strings.HasPrefix(currentPath, "/internal/zeitnahme"),
+			Entries: []ui_components.SidebarEntry{
+				{Name: "Startgericht", URL: "/internal/zeitnahme/start", RequiredCaps: []string{"allowed_zeitnahme"}},
+				{Name: "Zielgericht", URL: "/internal/zeitnahme/ziel", RequiredCaps: []string{"allowed_zeitnahme"}},
+				{Name: "Vorsortierung", URL: "/internal/zeitnahme/vorsortierung", RequiredCaps: []string{"allowed_zeitnahme"}},
+				{Name: "Wenderichter", URL: "/internal/zeitnahme/wenderichter", RequiredCaps: []string{"allowed_zeitnahme"}},
+			},
+		},
+		{
+			Name:         "Startlisten",
+			URL:          "/internal/startlisten",
+			RequiredCaps: []string{"allowed_startlisten"},
+			IsActive:     strings.HasPrefix(currentPath, "/internal/startlisten"),
+			Entries: []ui_components.SidebarEntry{
+				{Name: "Langstrecke", URL: "#", RequiredCaps: []string{"allowed_startlisten"}},
+				{Name: "Slalom", URL: "#", RequiredCaps: []string{"allowed_startlisten"}},
+				{Name: "Kurzstrecke", URL: "#", RequiredCaps: []string{"allowed_startlisten"}},
+				{Name: "Staffel", URL: "#", RequiredCaps: []string{"allowed_startlisten"}},
+				{Name: "Aktuelles Rennen", URL: "#", RequiredCaps: []string{"allowed_startlisten"}},
+			},
+		},
+		{
+			Name:         "Regattabüro",
+			URL:          "/internal/regattabuero",
+			RequiredCaps: []string{"allowed_regattabuero"},
+			IsActive:     strings.HasPrefix(currentPath, "/internal/regattabuero"),
+			Entries: []ui_components.SidebarEntry{
+				{Name: "Abmeldung", URL: "/internal/regattabuero/vereinswahl?next=abmeldung&title=Vereinswahl%20für%20Abmeldung", RequiredCaps: []string{"allowed_regattabuero"}},
+				{Name: "Ummeldung", URL: "/internal/regattabuero/vereinswahl?next=ummeldung&title=Vereinswahl%20für%20Ummeldung", RequiredCaps: []string{"allowed_regattabuero"}},
+				{Name: "Nachmeldung", URL: "/internal/regattabuero/vereinswahl?next=nachmeldung&title=Vereinswahl%20für%20Nachmeldung", RequiredCaps: []string{"allowed_regattabuero"}},
+				{Name: "Waage", URL: "/internal/regattabuero/vereinswahl?next=waage&title=Vereinswahl%20für%20Waage", RequiredCaps: []string{"allowed_regattabuero"}},
+				{Name: "Startberechtigung", URL: "/internal/regattabuero/vereinswahl?next=startberechtigung&title=Vereinswahl%20für%20Startberechtigung", RequiredCaps: []string{"allowed_regattabuero"}},
+				{Name: "Sportler anlegen", URL: "/internal/regattabuero/vereinswahl?next=new_athlet&title=Vereinswahl%20für%20neuen%20Sportler", RequiredCaps: []string{"allowed_regattabuero"}},
+				{Name: "Kasse", URL: "/internal/regattabuero/kasse", RequiredCaps: []string{"allowed_regattabuero"}},
+				{Name: "Startnummern Ausgabe/Rückgabe", URL: "/internal/regattabuero/startnummernausgabe", RequiredCaps: []string{"allowed_regattabuero"}},
+				{Name: "Startnummern ändern", URL: "/internal/regattabuero/startnummern/aenderung", RequiredCaps: []string{"allowed_regattabuero"}},
+				{Name: "Setzungsänderung", URL: "/internal/regattabuero/setzungsverwaltung/aenderung", RequiredCaps: []string{"allowed_regattabuero"}},
+				{Name: "Änderungen von Obleuten", URL: "/internal/regattabuero/aenderungen_obleute", RequiredCaps: []string{"allowed_regattabuero"}},
+			},
+		},
+		{
+			Name:         "Regattaleitung",
+			URL:          "/internal/regattaleitung",
+			RequiredCaps: []string{"allowed_regattaleitung"},
+			IsActive:     strings.HasPrefix(currentPath, "/internal/regattaleitung"),
+			Entries: []ui_components.SidebarEntry{
+				{Name: "DRV Datei Upload", URL: "/internal/regattaleitung/drvupload", RequiredCaps: []string{"allowed_regattaleitung"}},
+				{Name: "Setzungsauslosung", URL: "/internal/regattaleitung/setzungsverwaltung/losung", RequiredCaps: []string{"allowed_regattaleitung"}},
+				{Name: "Setzungsänderung", URL: "/internal/regattaleitung/setzungsverwaltung/aenderung", RequiredCaps: []string{"allowed_regattaleitung"}},
+				{Name: "Pausen", URL: "/internal/regattaleitung/pausen", RequiredCaps: []string{"allowed_regattaleitung"}},
+				{Name: "Zeitplan", URL: "/internal/regattaleitung/zeitplan", RequiredCaps: []string{"allowed_regattaleitung"}},
+				{Name: "Startnummern verteilen", URL: "/internal/regattaleitung/startnummern/verteilen", RequiredCaps: []string{"allowed_regattaleitung"}},
+				{Name: "Startnummernbereiche", URL: "/internal/regattaleitung/startnummern/bereich", RequiredCaps: []string{"allowed_regattaleitung"}},
+				{Name: "Startnummern ändern", URL: "/internal/regattaleitung/startnummern/aenderung", RequiredCaps: []string{"allowed_regattaleitung"}},
+				{Name: "PDF Meldeergebnis", URL: "/internal/regattaleitung/pdf_meldeergebnis", RequiredCaps: []string{"allowed_regattaleitung"}},
+				{Name: "Vereine verwalten", URL: "/internal/regattaleitung/vereine", RequiredCaps: []string{"allowed_regattaleitung"}},
+				{Name: "Obleute verwalten", URL: "/internal/regattaleitung/obleute", RequiredCaps: []string{"allowed_regattaleitung"}},
+				{Name: "E-Mail senden", URL: "/internal/regattaleitung/email", RequiredCaps: []string{"allowed_regattaleitung"}},
+			},
+		},
+		{
+			Name:         "Admin",
+			URL:          "/internal/admin",
+			RequiredCaps: []string{"allowed_admin"},
+			IsActive:     strings.HasPrefix(currentPath, "/internal/admin"),
+			Entries: []ui_components.SidebarEntry{
+				{Name: "Nutzer Verwaltung", URL: "/internal/admin/users", RequiredCaps: []string{"allowed_admin"}},
+				{Name: "Nutzergruppen", URL: "/internal/admin/usergroups", RequiredCaps: []string{"allowed_admin"}},
+				{Name: "E-Mail Queue", URL: "/internal/admin/email_queue", RequiredCaps: []string{"allowed_admin"}},
+			},
+		},
+	}
+}
+
+func pageTitleFromPath(path string) string {
+	switch {
+	case path == "/internal" || path == "/internal/":
+		return "Dashboard"
+	case strings.HasPrefix(path, "/internal/profil"):
+		return "Profil"
+	case strings.HasPrefix(path, "/internal/zeitnahme"):
+		return "Zeitnahme"
+	case strings.HasPrefix(path, "/internal/startlisten"):
+		return "Startlisten"
+	case strings.HasPrefix(path, "/internal/regattabuero"):
+		return "Regattabüro"
+	case strings.HasPrefix(path, "/internal/regattaleitung"):
+		return "Regattaleitung"
+	case strings.HasPrefix(path, "/internal/admin"):
+		return "Admin"
+	default:
+		return "Intern"
 	}
 }
 

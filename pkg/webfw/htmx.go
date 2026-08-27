@@ -49,14 +49,14 @@ func ErrorToast(w http.ResponseWriter, r *http.Request, msg string) {
 }
 
 func SuccessWithForm(w http.ResponseWriter, r *http.Request, form templ.Component, msg string) {
+	w.Header().Set("HX-Retarget", "#toast-container")
+	w.Header().Set("HX-Swap", "beforeend")
 	w.WriteHeader(http.StatusOK)
 	if form != nil {
 		if err := form.Render(context.Background(), w); err != nil {
 			slog.Warn("form render error", "err", err)
 		}
 	}
-	w.Header().Set("HX-Retarget", "#toast-container")
-	w.Header().Set("HX-Swap", "beforeend")
 	templ.Handler(ui_components.Toast(msg, ui_components.Success)).ServeHTTP(w, r)
 }
 

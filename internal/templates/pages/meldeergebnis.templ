@@ -154,7 +154,7 @@ templ Meldeergebnis() {
   {{
     pdfLS, errFiles := utils.GetFilenames("meldeergebnis")
     var pdfUrl string
-    if errFiles != nil {
+    if errFiles != nil || len(pdfLS) == 0 {
       pdfUrl = "#"
     } else {
       pdfUrl = fmt.Sprintf("/files/meldeergebnis/%s", pdfLS[len(pdfLS)-1])

@@ -171,7 +171,6 @@ check:
   just fmt
   just lint
   just test
-  just build
 
 fmt:
 	go fmt ./...

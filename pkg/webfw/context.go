@@ -1,12 +1,15 @@
 package webfw
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-const ctxKeyLocals = "webfw_locals"
+type contextKey string
+
+const ctxKeyLocals contextKey = "webfw_locals"
 
 func GetLocals(r *http.Request, key string) any {
 	locals := r.Context().Value(ctxKeyLocals)
@@ -82,4 +85,25 @@ func HasCapability(r *http.Request, cap string) bool {
 		}
 	}
 	return false
+}
+
+func WithAuthData(ctx context.Context, token *jwt.Token) context.Context {
+	claims := token.Claims.(jwt.MapClaims)
+
+	locals := make(map[string]any)
+	locals["logged_in"] = true
+
+	var capabilities []string
+	if capsRaw, ok := claims["capabilities"].([]any); ok {
+		for _, c := range capsRaw {
+			if s, ok := c.(string); ok {
+				capabilities = append(capabilities, s)
+			}
+		}
+	}
+	capabilities = append(capabilities, "allowed_logged_in")
+	locals["capabilities"] = capabilities
+	locals["user"] = token
+
+	return context.WithValue(ctx, ctxKeyLocals, locals)
 }

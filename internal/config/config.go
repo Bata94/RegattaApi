@@ -47,8 +47,9 @@ func (z ZeitnahmeConfig) GetCurrentTag() string {
 }
 
 type ServerConfig struct {
-	Port string
-	Host string
+	Port   string
+	Host   string
+	WSPort string
 }
 
 type DBConfig struct {
@@ -91,8 +92,9 @@ type PathsConfig struct {
 func Load() {
 	C = Config{
 		Server: ServerConfig{
-			Port: getEnv("PORT", "3000"),
-			Host: getEnv("HOST", "127.0.0.1"),
+			Port:   getEnv("PORT", "3000"),
+			Host:   getEnv("HOST", "127.0.0.1"),
+			WSPort: getEnv("WS_PORT", "8081"),
 		},
 		DB: DBConfig{
 			Host:     os.Getenv("DB_HOST"),

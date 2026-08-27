@@ -16,27 +16,27 @@ import (
 type AppError = apierr.AppError
 
 func NotFound(msg string) *AppError {
-	slog.Error("NotFound", "msg", msg)
+	slog.Debug("NotFound", "msg", msg)
 	return apierr.NotFound(msg)
 }
 
 func BadRequest(msg string) *AppError {
-	slog.Error("BadRequest", "msg", msg)
+	slog.Debug("BadRequest", "msg", msg)
 	return apierr.BadRequest(msg)
 }
 
 func Unauthorized(msg string) *AppError {
-	slog.Error("Unauthorized", "msg", msg)
+	slog.Debug("Unauthorized", "msg", msg)
 	return apierr.Unauthorized(msg)
 }
 
 func Forbidden(msg string) *AppError {
-	slog.Error("Forbidden", "msg", msg)
+	slog.Debug("Forbidden", "msg", msg)
 	return apierr.Forbidden(msg)
 }
 
 func NotAcceptable(msg string) *AppError {
-	slog.Error("NotAcceptable", "msg", msg)
+	slog.Debug("NotAcceptable", "msg", msg)
 	return apierr.NotAcceptable(msg)
 }
 
@@ -46,7 +46,7 @@ func InternalError(msg string) *AppError {
 }
 
 func ValidationError(fieldErrors map[string]string) *AppError {
-	slog.Error("ValidationError", "fieldErrors", fieldErrors)
+	slog.Debug("ValidationError", "fieldErrors", fieldErrors)
 	return apierr.ValidationError(fieldErrors)
 }
 
