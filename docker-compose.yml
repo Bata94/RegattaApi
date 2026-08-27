@@ -3,6 +3,11 @@ volumes:
   postgres-config:
   pgadmin:
   api-dev-files:
+  api-public:
+  api-bin:
+  api-tmp:
+  caddy-config:
+  caddy-data:
 
 services:
   caddy:
@@ -13,8 +18,8 @@ services:
       - "9090:9090"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
-      - ./caddy/config:/config
-      - ./caddy/data:/data
+      - caddy-config:/config
+      - caddy-data:/data
     restart: unless-stopped
 
   gotenberg:
@@ -76,7 +81,9 @@ services:
       - ./pkg:/opt/app/pkg
       - ./sqlc:/opt/app/sqlc
       - api-dev-files:/opt/app/files
-      - ./main.go:/opt/app/main.go
+      - api-public:/opt/app/public
+      - api-bin:/opt/app/bin
+      - api-tmp:/opt/app/tmp
     # ports:
     #   - 8081:8080
     #   - 8090:8090

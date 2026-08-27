@@ -96,24 +96,24 @@ mod-tidy:
 # Build WASM module for Zielgericht
 wasm-build:
 	@echo "Building WASM module..."
-	GOOS=js GOARCH=wasm go build -o public/wasm/zeitnahme.wasm ./cmd/wasm/zeitnahme/
+	GOOS=js GOARCH=wasm go build -buildvcs=false -o public/wasm/zeitnahme.wasm ./cmd/wasm/zeitnahme/
 
 # Build the application
 build: templ tailwind-gen wasm-build # swagger-gen
 	@echo "Building..."
-	go build -o bin/main main.go
+	go build -buildvcs=false -o bin/main ./cmd/server
 
 build-air: templ tailwind-gen wasm-build # swagger-gen
 	@echo "Building..."
-	go build -o tmp/main main.go
+	go build -buildvcs=false -o tmp/main ./cmd/server
 
 full-build: templ tailwind-gen sqlc-gen wasm-build # db-up # swagger-fmt build
 	@echo "Full-Building..."
-	CGO_ENABLED=1 go build -o bin/mainDocker main.go
+	CGO_ENABLED=1 go build -buildvcs=false -o bin/mainDocker ./cmd/server
 
 # Run the application
 run: sqlc-gen
-	go run main.go
+	go run ./cmd/server
 
 # Test the application
 test:
@@ -125,6 +125,8 @@ clean:
 	@echo "Cleaning..."
 	rm -rf bin/*
 	rm -rf tmp/*
+	rm -rf public/*
+	rm -rf node_modules/
 
 # Live Reload
 watch: sqlc-gen build

@@ -5,3 +5,14 @@ public/
 files/
 .direnv/
 .git/
+.vscode/
+.idea/
+*.log
+*.db
+*.db*
+go.work
+drvFiles/
+caddy/
+assets/css/output.css
+internal/templates/**/*.txt
+internal/templates/**/*_templ.go
