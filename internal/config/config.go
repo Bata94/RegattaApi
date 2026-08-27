@@ -72,8 +72,9 @@ type CORSConfig struct {
 }
 
 type RateConfig struct {
-	RPS   float64
-	Burst int
+	RPS            float64
+	Burst          int
+	UserMultiplier int
 }
 
 type EmailConfig struct {
@@ -113,8 +114,9 @@ func Load() {
 			AllowedHeaders: getEnv("CORS_ALLOWED_HEADERS", "Content-Type, Authorization"),
 		},
 		Rate: RateConfig{
-			RPS:   getEnvFloat("RATE_LIMIT_RPS", 10),
-			Burst: getEnvInt("RATE_LIMIT_BURST", 20),
+			RPS:            getEnvFloat("RATE_LIMIT_RPS", 30),
+			Burst:          getEnvInt("RATE_LIMIT_BURST", 60),
+			UserMultiplier: getEnvInt("RATE_LIMIT_USER_MULTIPLIER", 10),
 		},
 		Email: EmailConfig{
 			Sender:   os.Getenv("EMAIL_SENDER"),

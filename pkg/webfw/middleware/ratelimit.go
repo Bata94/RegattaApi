@@ -5,19 +5,27 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/bata94/RegattaApi/internal/config"
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/time/rate"
 )
 
+type limiterEntry struct {
+	limiter *rate.Limiter
+	burst   int
+}
+
 type RateLimiter struct {
-	mu       sync.RWMutex
-	limiters map[string]*rate.Limiter
-	rate     rate.Limit
-	burst    int
-	cleanup  time.Duration
+	mu             sync.RWMutex
+	limiters       map[string]*limiterEntry
+	rate           rate.Limit
+	burst          int
+	userMultiplier int
+	cleanup        time.Duration
 }
 
 var (
@@ -27,11 +35,16 @@ var (
 
 func InitRateLimiter() {
 	once.Do(func() {
+		multiplier := config.C.Rate.UserMultiplier
+		if multiplier < 1 {
+			multiplier = 1
+		}
 		globalLimiter = &RateLimiter{
-			limiters: make(map[string]*rate.Limiter),
-			rate:     rate.Limit(config.C.Rate.RPS),
-			burst:    config.C.Rate.Burst,
-			cleanup:  5 * time.Minute,
+			limiters:       make(map[string]*limiterEntry),
+			rate:           rate.Limit(config.C.Rate.RPS),
+			burst:          config.C.Rate.Burst,
+			userMultiplier: multiplier,
+			cleanup:        5 * time.Minute,
 		}
 
 		go globalLimiter.cleanupLoop()
@@ -45,18 +58,21 @@ func RateLimit() func(http.Handler) http.Handler {
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			key := getRateLimitKey(r)
-			limiter := globalLimiter.getLimiter(key)
+			if isStaticAssetPath(r.URL.Path) {
+				next.ServeHTTP(w, r)
+				return
+			}
 
-			if !limiter.Allow() {
-				burst := globalLimiter.burst
+			key, limit, burst := globalLimiter.limitsForKey(r)
+			entry := globalLimiter.getLimiter(key, limit, burst)
 
+			if !entry.limiter.Allow() {
 				remaining := 0
-				if limiter.Tokens() > 0 {
-					remaining = int(limiter.Tokens())
+				if entry.limiter.Tokens() > 0 {
+					remaining = int(entry.limiter.Tokens())
 				}
 
-				w.Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", burst))
+				w.Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", entry.burst))
 				w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(remaining))
 				w.Header().Set("X-RateLimit-Reset", fmt.Sprintf("%d", time.Now().Add(time.Second).Unix()))
 				w.Header().Set("Retry-After", "1")
@@ -68,8 +84,8 @@ func RateLimit() func(http.Handler) http.Handler {
 				return
 			}
 
-			w.Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", globalLimiter.burst))
-			remaining := int(limiter.Tokens())
+			w.Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", entry.burst))
+			remaining := int(entry.limiter.Tokens())
 			if remaining < 0 {
 				remaining = 0
 			}
@@ -81,40 +97,70 @@ func RateLimit() func(http.Handler) http.Handler {
 	}
 }
 
-func getRateLimitKey(r *http.Request) string {
-	if userID := r.Context().Value("user_id"); userID != nil {
-		if uid, ok := userID.(string); ok && uid != "" {
-			return "user:" + uid
-		}
+func isStaticAssetPath(path string) bool {
+	return strings.HasPrefix(path, "/assets/") ||
+		strings.HasPrefix(path, "/public/") ||
+		strings.HasPrefix(path, "/files/")
+}
+
+func (rl *RateLimiter) limitsForKey(r *http.Request) (string, rate.Limit, int) {
+	if userID := userIDFromRequest(r); userID != "" {
+		mult := rate.Limit(rl.userMultiplier)
+		return "user:" + userID, rl.rate * mult, rl.burst * rl.userMultiplier
 	}
 
 	ip := IP(r)
 	if ip == "" {
 		ip = "unknown"
 	}
-	return "ip:" + ip
+	return "ip:" + ip, rl.rate, rl.burst
 }
 
-func (rl *RateLimiter) getLimiter(key string) *rate.Limiter {
+func userIDFromRequest(r *http.Request) string {
+	tokenString := getToken(r)
+	if tokenString == "" || strings.HasPrefix(tokenString, "Bearer ") {
+		return ""
+	}
+
+	secret := config.C.Auth.JWTSecret
+	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+		return []byte(secret), nil
+	})
+	if err != nil || !token.Valid {
+		return ""
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok {
+		if uid, ok := claims["user_id"].(string); ok {
+			return uid
+		}
+	}
+	return ""
+}
+
+func (rl *RateLimiter) getLimiter(key string, limit rate.Limit, burst int) *limiterEntry {
 	rl.mu.RLock()
-	limiter, exists := rl.limiters[key]
+	entry, exists := rl.limiters[key]
 	rl.mu.RUnlock()
 
 	if exists {
-		return limiter
+		return entry
 	}
 
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
-	if limiter, exists = rl.limiters[key]; exists {
-		return limiter
+	if entry, exists = rl.limiters[key]; exists {
+		return entry
 	}
 
-	limiter = rate.NewLimiter(rl.rate, rl.burst)
-	rl.limiters[key] = limiter
+	entry = &limiterEntry{
+		limiter: rate.NewLimiter(limit, burst),
+		burst:   burst,
+	}
+	rl.limiters[key] = entry
 
-	return limiter
+	return entry
 }
 
 func (rl *RateLimiter) cleanupLoop() {
@@ -123,8 +169,8 @@ func (rl *RateLimiter) cleanupLoop() {
 
 	for range ticker.C {
 		rl.mu.Lock()
-		for key, limiter := range rl.limiters {
-			if limiter.Tokens() >= float64(rl.burst) {
+		for key, entry := range rl.limiters {
+			if entry.limiter.Tokens() >= float64(entry.burst) {
 				delete(rl.limiters, key)
 			}
 		}
