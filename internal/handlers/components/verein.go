@@ -6,37 +6,39 @@ import (
 
 	"github.com/a-h/templ"
 	"github.com/bata94/RegattaApi/internal/crud"
-	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	regattaleitung "github.com/bata94/RegattaApi/internal/templates/pages/regattaleitung"
+	"github.com/bata94/RegattaApi/pkg/webfw"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-func VereinEditNew(c *handler.Context) error {
+func VereinEditNew(w http.ResponseWriter, r *http.Request) {
 	var v crud.Verein
-	switch c.Param("uuid") {
+	switch webfw.Param(r, "uuid") {
 	case "":
-		return handler.NotFound("Verein not found")
+		webfw.ErrorToast(w, r, "Verein not found")
+		return
 	case "new":
 		v = crud.Verein{}
 	default:
-		vereinUuid, err := uuid.Parse(c.Param("uuid"))
+		vereinUuid, err := uuid.Parse(webfw.Param(r, "uuid"))
 		if err != nil {
-			return handler.NotAcceptable("Invalid UUID")
+			webfw.ErrorToast(w, r, "Invalid UUID")
+			return
 		}
-		v, err = crud.GetVereinMinimal(c.Request.Context(), vereinUuid)
+		v, err = crud.GetVereinMinimal(r.Context(), vereinUuid)
 		if err != nil {
-			return handler.NotFound("Verein not found")
+			webfw.ErrorToast(w, r, "Verein not found")
+			return
 		}
 	}
 
-	templ.Handler(regattaleitung.VereinEdit(v, "", nil)).ServeHTTP(c.Writer, c.Request)
-	return nil
+	templ.Handler(regattaleitung.VereinEdit(v, "", nil)).ServeHTTP(w, r)
 }
 
-func VereinEditNewPost(c *handler.Context) error {
-	uuidStr := c.Param("uuid")
+func VereinEditNewPost(w http.ResponseWriter, r *http.Request) {
+	uuidStr := webfw.Param(r, "uuid")
 	isNew := uuidStr == "new"
 
 	var vereinUuid uuid.UUID
@@ -44,19 +46,21 @@ func VereinEditNewPost(c *handler.Context) error {
 		var err error
 		vereinUuid, err = uuid.NewV7()
 		if err != nil {
-			return handler.NotAcceptable("Bad Request")
+			webfw.ErrorToast(w, r, "Bad Request")
+			return
 		}
 	} else {
 		var err error
 		vereinUuid, err = uuid.Parse(uuidStr)
 		if err != nil {
-			return handler.NotAcceptable("Bad Request")
+			webfw.ErrorToast(w, r, "Bad Request")
+			return
 		}
 	}
 
-	name := c.FormValue("name")
-	kurzform := c.FormValue("kurzform")
-	kuerzel := c.FormValue("kuerzel")
+	name := r.FormValue("name")
+	kurzform := r.FormValue("kurzform")
+	kuerzel := r.FormValue("kuerzel")
 
 	v := crud.Verein{Verein: sqlc.Verein{
 		Uuid:     vereinUuid,
@@ -77,11 +81,12 @@ func VereinEditNewPost(c *handler.Context) error {
 	}
 
 	if len(fieldErrors) > 0 {
-		return handler.BadRequest("Bitte alle Pflichtfelder ausfüllen").WithForm(regattaleitung.VereinEdit(v, "", fieldErrors))
+		webfw.ErrorWithForm(w, r, regattaleitung.VereinEdit(v, "", fieldErrors), "Bitte alle Pflichtfelder ausfüllen")
+		return
 	}
 
 	if isNew {
-		_, err := crud.CreateVerein(c.Request.Context(), sqlc.CreateVereinParams{
+		_, err := crud.CreateVerein(r.Context(), sqlc.CreateVereinParams{
 			Uuid:     vereinUuid,
 			Name:     name,
 			Kurzform: kurzform,
@@ -91,12 +96,14 @@ func VereinEditNewPost(c *handler.Context) error {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 				fieldErrors["kuerzel"] = "Kürzel bereits vergeben"
-				return handler.BadRequest("Kürzel bereits vergeben").WithForm(regattaleitung.VereinEdit(v, "", fieldErrors))
+				webfw.ErrorWithForm(w, r, regattaleitung.VereinEdit(v, "", fieldErrors), "Kürzel bereits vergeben")
+				return
 			}
-			return handler.BadRequest("Fehler beim Erstellen des Vereins").WithForm(regattaleitung.VereinEdit(v, "", nil))
+			webfw.ErrorWithForm(w, r, regattaleitung.VereinEdit(v, "", nil), "Fehler beim Erstellen des Vereins")
+			return
 		}
 	} else {
-		_, err := crud.UpdateVerein(c.Request.Context(), vereinUuid, sqlc.UpdateVereinParams{
+		_, err := crud.UpdateVerein(r.Context(), vereinUuid, sqlc.UpdateVereinParams{
 			Uuid:     vereinUuid,
 			Name:     name,
 			Kurzform: kurzform,
@@ -106,36 +113,40 @@ func VereinEditNewPost(c *handler.Context) error {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 				fieldErrors["kuerzel"] = "Kürzel bereits vergeben"
-				return handler.BadRequest("Kürzel bereits vergeben").WithForm(regattaleitung.VereinEdit(v, "", fieldErrors))
+				webfw.ErrorWithForm(w, r, regattaleitung.VereinEdit(v, "", fieldErrors), "Kürzel bereits vergeben")
+				return
 			}
-			return handler.BadRequest("Fehler beim Aktualisieren des Vereins").WithForm(regattaleitung.VereinEdit(v, "", nil))
+			webfw.ErrorWithForm(w, r, regattaleitung.VereinEdit(v, "", nil), "Fehler beim Aktualisieren des Vereins")
+			return
 		}
 	}
 
-	c.Writer.Header().Set("HX-Redirect", "/internal/regattaleitung/vereine")
-	c.Writer.WriteHeader(http.StatusOK)
-	return nil
+	webfw.SetRedirect(w, "/internal/regattaleitung/vereine")
+	w.WriteHeader(http.StatusOK)
 }
 
-func VereinDelete(c *handler.Context) error {
-	vereinUuid, err := uuid.Parse(c.Param("uuid"))
+func VereinDelete(w http.ResponseWriter, r *http.Request) {
+	vereinUuid, err := uuid.Parse(webfw.Param(r, "uuid"))
 	if err != nil {
-		return handler.NotAcceptable("Invalid UUID")
+		webfw.ErrorToast(w, r, "Invalid UUID")
+		return
 	}
 
-	athletenCount, err := crud.CountAthletenForVerein(c.Request.Context(), vereinUuid)
+	athletenCount, err := crud.CountAthletenForVerein(r.Context(), vereinUuid)
 	if err != nil {
-		return handler.InternalError("Error while checking verein")
+		webfw.ErrorToast(w, r, "Error while checking verein")
+		return
 	}
 
 	if athletenCount > 0 {
-		return handler.BadRequest("Verein kann nicht gelöscht werden, da noch Athleten zugeordnet sind")
+		webfw.ErrorToast(w, r, "Verein kann nicht gelöscht werden, da noch Athleten zugeordnet sind")
+		return
 	}
 
-	if err := crud.DeleteVerein(c.Request.Context(), vereinUuid); err != nil {
-		return handler.InternalError("Error while deleting verein")
+	if err := crud.DeleteVerein(r.Context(), vereinUuid); err != nil {
+		webfw.ErrorToast(w, r, "Error while deleting verein")
+		return
 	}
 
-	templ.Handler(regattaleitung.Vereinsverwaltung()).ServeHTTP(c.Writer, c.Request)
-	return nil
+	templ.Handler(regattaleitung.Vereinsverwaltung()).ServeHTTP(w, r)
 }

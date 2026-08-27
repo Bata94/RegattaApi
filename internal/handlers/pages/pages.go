@@ -2,11 +2,11 @@ package pages
 
 import (
 	"log/slog"
+	"net/http"
 
 	"github.com/a-h/templ"
 	"github.com/bata94/RegattaApi/internal/config"
 	"github.com/bata94/RegattaApi/internal/crud"
-	"github.com/bata94/RegattaApi/internal/handler"
 	ui_pages "github.com/bata94/RegattaApi/internal/templates/pages"
 	admin "github.com/bata94/RegattaApi/internal/templates/pages/admin"
 	dashboard "github.com/bata94/RegattaApi/internal/templates/pages/dashboard"
@@ -16,67 +16,69 @@ import (
 	startlisten "github.com/bata94/RegattaApi/internal/templates/pages/startlisten"
 	vereinswahl "github.com/bata94/RegattaApi/internal/templates/pages/vereinswahl"
 	zeitnahme "github.com/bata94/RegattaApi/internal/templates/pages/zeitnahme"
+	"github.com/bata94/RegattaApi/pkg/webfw"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
-func Index(c *handler.Context) (templ.Component, error) {
-	return ui_pages.Index(), nil
+func Index(w http.ResponseWriter, r *http.Request) templ.Component {
+	return ui_pages.Index()
 }
 
-func Livestream(c *handler.Context) (templ.Component, error) {
-	return ui_pages.Livestream(), nil
+func Livestream(w http.ResponseWriter, r *http.Request) templ.Component {
+	return ui_pages.Livestream()
 }
 
-func Ausschreibung(c *handler.Context) (templ.Component, error) {
-	return ui_pages.Ausschreibung(), nil
+func Ausschreibung(w http.ResponseWriter, r *http.Request) templ.Component {
+	return ui_pages.Ausschreibung()
 }
 
-func Zeitplan(c *handler.Context) (templ.Component, error) {
-	return ui_pages.Zeitplan(), nil
+func Zeitplan(w http.ResponseWriter, r *http.Request) templ.Component {
+	return ui_pages.Zeitplan()
 }
 
-func Meldeergebnis(c *handler.Context) (templ.Component, error) {
-	return ui_pages.Meldeergebnis(), nil
+func Meldeergebnis(w http.ResponseWriter, r *http.Request) templ.Component {
+	return ui_pages.Meldeergebnis()
 }
 
-func Ergebnisse(c *handler.Context) (templ.Component, error) {
-	return ui_pages.Ergebnisse(), nil
+func Ergebnisse(w http.ResponseWriter, r *http.Request) templ.Component {
+	return ui_pages.Ergebnisse()
 }
 
-func Login(c *handler.Context) (templ.Component, error) {
-	return ui_pages.Login("", nil), nil
+func Login(w http.ResponseWriter, r *http.Request) templ.Component {
+	return ui_pages.Login("", nil)
 }
 
-func Datenschutz(c *handler.Context) (templ.Component, error) {
-	return ui_pages.Datenschutz(), nil
+func Datenschutz(w http.ResponseWriter, r *http.Request) templ.Component {
+	return ui_pages.Datenschutz()
 }
 
-func InternalZeitnahme(c *handler.Context) (templ.Component, error) {
-	return zeitnahme.Zeitnahme(), nil
+func InternalZeitnahme(w http.ResponseWriter, r *http.Request) templ.Component {
+	return zeitnahme.Zeitnahme()
 }
 
-func InternalZeitnahmeZiel(c *handler.Context) (templ.Component, error) {
-	return zeitnahme.Ziel(), nil
+func InternalZeitnahmeZiel(w http.ResponseWriter, r *http.Request) templ.Component {
+	return zeitnahme.Ziel()
 }
 
-func InternalZeitnahmeVorsortierung(c *handler.Context) (templ.Component, error) {
-	return zeitnahme.Vorsortierung(), nil
+func InternalZeitnahmeVorsortierung(w http.ResponseWriter, r *http.Request) templ.Component {
+	return zeitnahme.Vorsortierung()
 }
 
-func InternalZeitnahmeWenderichter(c *handler.Context) (templ.Component, error) {
-	return zeitnahme.Wenderichter(), nil
+func InternalZeitnahmeWenderichter(w http.ResponseWriter, r *http.Request) templ.Component {
+	return zeitnahme.Wenderichter()
 }
 
-func InternalZeitnahmeStart(c *handler.Context) (templ.Component, error) {
-	rennen, err := crud.GetAllRennenWithAthlet(c.Request.Context(), crud.GetAllRennenParams{
+func InternalZeitnahmeStart(w http.ResponseWriter, r *http.Request) templ.Component {
+	rennen, err := crud.GetAllRennenWithAthlet(r.Context(), crud.GetAllRennenParams{
 		GetMeldungen: true,
 		GetAthleten:  true,
 		ShowEmpty:    false,
 		ShowStarted:  false,
 	})
 	if err != nil {
-		return nil, handler.InternalError("Fehler beim Laden der Rennen")
+		webfw.HandlePageError(w, r, webfw.InternalError("Fehler beim Laden der Rennen"))
+		return nil
 	}
 
 	for i := range rennen {
@@ -85,159 +87,162 @@ func InternalZeitnahmeStart(c *handler.Context) (templ.Component, error) {
 		}
 	}
 
-	return zeitnahme.Start(rennen), nil
+	return zeitnahme.Start(rennen)
 }
 
-func InternalStartlisten(c *handler.Context) (templ.Component, error) {
-	return startlisten.Startlisten(), nil
+func InternalStartlisten(w http.ResponseWriter, r *http.Request) templ.Component {
+	return startlisten.Startlisten()
 }
 
-func InternalRegattabuero(c *handler.Context) (templ.Component, error) {
-	return regattabuero.Dashboard(), nil
+func InternalRegattabuero(w http.ResponseWriter, r *http.Request) templ.Component {
+	return regattabuero.Dashboard()
 }
 
-func InternalRegattaleitung(c *handler.Context) (templ.Component, error) {
-	return regattaleitung.Dashboard(), nil
+func InternalRegattaleitung(w http.ResponseWriter, r *http.Request) templ.Component {
+	return regattaleitung.Dashboard()
 }
 
-func InternalRegattaleitungDrvUpload(c *handler.Context) (templ.Component, error) {
-	return regattaleitung.DrvFileUpload(""), nil
+func InternalRegattaleitungDrvUpload(w http.ResponseWriter, r *http.Request) templ.Component {
+	return regattaleitung.DrvFileUpload("")
 }
 
-func InternalRegattaleitungSetzung(c *handler.Context) (templ.Component, error) {
-	return regattaleitung.Setzung(), nil
+func InternalRegattaleitungSetzung(w http.ResponseWriter, r *http.Request) templ.Component {
+	return regattaleitung.Setzung()
 }
 
-func InternalRegattaleitungSetzungLosung(c *handler.Context) (templ.Component, error) {
-	return regattaleitung.SetzungLosung(), nil
+func InternalRegattaleitungSetzungLosung(w http.ResponseWriter, r *http.Request) templ.Component {
+	return regattaleitung.SetzungLosung()
 }
 
-func InternalRegattaleitungSetzungAenderung(c *handler.Context) (templ.Component, error) {
-	return regattaleitung.SetzungAenderung(), nil
+func InternalRegattaleitungSetzungAenderung(w http.ResponseWriter, r *http.Request) templ.Component {
+	return regattaleitung.SetzungAenderung()
 }
 
-func InternalRegattaleitungPausen(c *handler.Context) (templ.Component, error) {
-	return regattaleitung.Pausen(), nil
+func InternalRegattaleitungPausen(w http.ResponseWriter, r *http.Request) templ.Component {
+	return regattaleitung.Pausen()
 }
 
-func InternalRegattaleitungZeitplan(c *handler.Context) (templ.Component, error) {
-	return regattaleitung.Zeitplan("", nil), nil
+func InternalRegattaleitungZeitplan(w http.ResponseWriter, r *http.Request) templ.Component {
+	return regattaleitung.Zeitplan("", nil)
 }
 
-func InternalRegattaleitungStartnummern(c *handler.Context) (templ.Component, error) {
-	return regattaleitung.Startnummern(), nil
+func InternalRegattaleitungStartnummern(w http.ResponseWriter, r *http.Request) templ.Component {
+	return regattaleitung.Startnummern()
 }
 
-func InternalRegattaleitungStartnummernVerteilen(c *handler.Context) (templ.Component, error) {
-	return regattaleitung.StartnummernVerteilen(), nil
+func InternalRegattaleitungStartnummernVerteilen(w http.ResponseWriter, r *http.Request) templ.Component {
+	return regattaleitung.StartnummernVerteilen()
 }
 
-func InternalRegattaleitungStartnummernBereich(c *handler.Context) (templ.Component, error) {
-	b, err := crud.GetStartnummernBereich(c.Request.Context())
+func InternalRegattaleitungStartnummernBereich(w http.ResponseWriter, r *http.Request) templ.Component {
+	b, err := crud.GetStartnummernBereich(r.Context())
 	if err != nil {
-		return nil, err
+		webfw.HandlePageError(w, r, webfw.InternalError("Error loading startnummernbereich: "+err.Error()))
+		return nil
 	}
-	return regattaleitung.StartnummernBereich(b, nil), nil
+	return regattaleitung.StartnummernBereich(b, nil)
 }
 
-func InternalRegattaleitungStartnummernAendernRennenWahl(c *handler.Context) (templ.Component, error) {
-	return regattaleitung.StartnummernAendernRennenWahl(), nil
+func InternalRegattaleitungStartnummernAendernRennenWahl(w http.ResponseWriter, r *http.Request) templ.Component {
+	return regattaleitung.StartnummernAendernRennenWahl()
 }
 
-func InternalRegattaleitungStartnummernAendernMeldungsWahl(c *handler.Context) (templ.Component, error) {
-	rUuidStr := c.Param("r_uuid")
+func InternalRegattaleitungStartnummernAendernMeldungsWahl(w http.ResponseWriter, r *http.Request) templ.Component {
+	rUuidStr := webfw.Param(r, "r_uuid")
 	rUuid, err := uuid.Parse(rUuidStr)
 	if err != nil {
-		return nil, handler.NotAcceptable("Invalid UUID")
+		webfw.HandlePageError(w, r, webfw.NotAcceptable("Invalid UUID"))
+		return nil
 	}
 
-	r, err := crud.GetRennen(c.Request.Context(), rUuid)
+	rennen, err := crud.GetRennen(r.Context(), rUuid)
 	if err != nil {
-		return nil, handler.NotFound("Rennen nicht gefunden")
+		webfw.HandlePageError(w, r, webfw.NotFound("Rennen nicht gefunden"))
+		return nil
 	}
 
-	for i := range r.Meldungen {
-		r.Meldungen[i].Rennen = &r
+	for i := range rennen.Meldungen {
+		rennen.Meldungen[i].Rennen = &rennen
 	}
 
-	return regattaleitung.StartnummernAendernMeldungsWahl(r), nil
+	return regattaleitung.StartnummernAendernMeldungsWahl(rennen)
 }
 
-func InternalRegattaleitungStartnummernAendern(c *handler.Context) (templ.Component, error) {
-	// rUuidStr := c.Param("r_uuid")
-	mUuidStr := c.Param("m_uuid")
+func InternalRegattaleitungStartnummernAendern(w http.ResponseWriter, r *http.Request) templ.Component {
+	mUuidStr := webfw.Param(r, "m_uuid")
 
-	// rUuid, err := uuid.Parse(rUuidStr)
-	// if err != nil {
-	// 	return nil, handler.NotAcceptable("Invalid UUID")
-	// }
 	mUuid, err := uuid.Parse(mUuidStr)
 	if err != nil {
-		return nil, handler.NotAcceptable("Invalid UUID")
+		webfw.HandlePageError(w, r, webfw.NotAcceptable("Invalid UUID"))
+		return nil
 	}
 
-	m, err := crud.GetMeldung(c.Request.Context(), mUuid)
+	m, err := crud.GetMeldung(r.Context(), mUuid)
 	if err != nil {
-		return nil, handler.NotFound("Meldung nicht gefunden")
+		webfw.HandlePageError(w, r, webfw.NotFound("Meldung nicht gefunden"))
+		return nil
 	}
 
-	return regattaleitung.StartnummernAendern(m, nil), nil
+	return regattaleitung.StartnummernAendern(m, nil)
 }
 
-func InternalRegattaleitungPdfMeldeergebnis(c *handler.Context) (templ.Component, error) {
-	return regattaleitung.PdfMeldeergebnis(false), nil
+func InternalRegattaleitungPdfMeldeergebnis(w http.ResponseWriter, r *http.Request) templ.Component {
+	return regattaleitung.PdfMeldeergebnis(false)
 }
 
-func InternalRegattaleitungVereinsverwaltung(c *handler.Context) (templ.Component, error) {
-	return regattaleitung.Vereinsverwaltung(), nil
+func InternalRegattaleitungVereinsverwaltung(w http.ResponseWriter, r *http.Request) templ.Component {
+	return regattaleitung.Vereinsverwaltung()
 }
 
-func InternalRegattaleitungObleute(c *handler.Context) (templ.Component, error) {
-	return regattaleitung.Obleute(), nil
+func InternalRegattaleitungObleute(w http.ResponseWriter, r *http.Request) templ.Component {
+	return regattaleitung.Obleute()
 }
 
-func InternalRegattaleitungEmail(c *handler.Context) (templ.Component, error) {
-	return regattaleitung.EmailCompose("", "", "", nil, false, nil, nil), nil
+func InternalRegattaleitungEmail(w http.ResponseWriter, r *http.Request) templ.Component {
+	return regattaleitung.EmailCompose("", "", "", nil, false, nil, nil)
 }
 
-func InternalAdmin(c *handler.Context) (templ.Component, error) {
-	return admin.Dashboard(), nil
+func InternalAdmin(w http.ResponseWriter, r *http.Request) templ.Component {
+	return admin.Dashboard()
 }
 
-func InternalAdminUsers(c *handler.Context) (templ.Component, error) {
-	return admin.Users(), nil
+func InternalAdminUsers(w http.ResponseWriter, r *http.Request) templ.Component {
+	return admin.Users()
 }
 
-func InternalAdminUserGroups(c *handler.Context) (templ.Component, error) {
-	return admin.UserGroups(), nil
+func InternalAdminUserGroups(w http.ResponseWriter, r *http.Request) templ.Component {
+	return admin.UserGroups()
 }
 
-func InternalAdminEmailQueue(c *handler.Context) (templ.Component, error) {
-	return admin.EmailQueue(), nil
+func InternalAdminEmailQueue(w http.ResponseWriter, r *http.Request) templ.Component {
+	return admin.EmailQueue()
 }
 
-func InternalIndex(c *handler.Context) (templ.Component, error) {
-	caps, ok := c.GetLocals("capabilities").([]string)
-	if !ok {
+func InternalIndex(w http.ResponseWriter, r *http.Request) templ.Component {
+	caps := webfw.GetCapabilities(r)
+	if caps == nil {
 		caps = []string{}
 	}
-	return dashboard.Dashboard(caps), nil
+	return dashboard.Dashboard(caps)
 }
 
-func ProfilPage(c *handler.Context) (templ.Component, error) {
-	userToken, ok := c.GetLocals("user").(*jwt.Token)
-	if !ok {
-		return nil, handler.Unauthorized("Nicht angemeldet")
+func ProfilPage(w http.ResponseWriter, r *http.Request) templ.Component {
+	userToken := webfw.GetUser(r)
+	if userToken == nil {
+		webfw.HandlePageError(w, r, webfw.Unauthorized("Nicht angemeldet"))
+		return nil
 	}
 
 	claims := userToken.Claims.(jwt.MapClaims)
 	userUuidStr, ok := claims["user_id"].(string)
 	if !ok {
-		return nil, handler.Unauthorized("Invalid token")
+		webfw.HandlePageError(w, r, webfw.Unauthorized("Invalid token"))
+		return nil
 	}
 	username, ok := claims["username"].(string)
 	if !ok {
-		return nil, handler.Unauthorized("Invalid token")
+		webfw.HandlePageError(w, r, webfw.Unauthorized("Invalid token"))
+		return nil
 	}
 
 	userGroup := ""
@@ -256,7 +261,8 @@ func ProfilPage(c *handler.Context) (templ.Component, error) {
 
 	userUuid, err := uuid.Parse(userUuidStr)
 	if err != nil {
-		return nil, handler.Unauthorized("Invalid token")
+		webfw.HandlePageError(w, r, webfw.Unauthorized("Invalid token"))
+		return nil
 	}
 
 	data := profil.ProfilData{
@@ -266,28 +272,31 @@ func ProfilPage(c *handler.Context) (templ.Component, error) {
 		Capabilities: capabilities,
 	}
 
-	return profil.Profil(data), nil
+	return profil.Profil(data)
 }
 
-func MetricsPage(c *handler.Context) (templ.Component, error) {
+func MetricsPage(w http.ResponseWriter, r *http.Request) templ.Component {
 	secret := config.C.Auth.JWTSecret
 
-	tokenString := c.Cookie("auth_token")
+	tokenString := webfw.Cookie(r, "auth_token")
 	if tokenString == "" {
-		return nil, handler.Unauthorized("Nicht angemeldet")
+		webfw.HandlePageError(w, r, webfw.Unauthorized("Nicht angemeldet"))
+		return nil
 	}
 
 	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (any, error) {
 		return []byte(secret), nil
 	})
 	if err != nil || !token.Valid {
-		return nil, handler.Unauthorized("Ungültiges oder abgelaufenes Token")
+		webfw.HandlePageError(w, r, webfw.Unauthorized("Ungültiges oder abgelaufenes Token"))
+		return nil
 	}
 
 	claims := token.Claims.(jwt.MapClaims)
 	caps, ok := claims["capabilities"].([]any)
 	if !ok {
-		return nil, handler.Forbidden("Keine Admin-Berechtigung")
+		webfw.HandlePageError(w, r, webfw.Forbidden("Keine Admin-Berechtigung"))
+		return nil
 	}
 	hasAdmin := false
 	for _, c := range caps {
@@ -297,18 +306,20 @@ func MetricsPage(c *handler.Context) (templ.Component, error) {
 		}
 	}
 	if !hasAdmin {
-		return nil, handler.Forbidden("Keine Admin-Berechtigung")
+		webfw.HandlePageError(w, r, webfw.Forbidden("Keine Admin-Berechtigung"))
+		return nil
 	}
 
-	return ui_pages.Metrics(), nil
+	return ui_pages.Metrics()
 }
 
-func InternalVereinswahl(c *handler.Context) (templ.Component, error) {
-	next := c.GetQueryParam("next")
+func InternalVereinswahl(w http.ResponseWriter, r *http.Request) templ.Component {
+	next := webfw.Query(r, "next")
 	if next == "" {
-		return nil, handler.BadRequest("Next param is required")
+		webfw.HandlePageError(w, r, webfw.BadRequest("Next param is required"))
+		return nil
 	}
-	title := c.GetQueryParam("title")
+	title := webfw.Query(r, "title")
 	nextUrl := "/internal/regattabuero/%s/" + next
 
 	var (
@@ -322,307 +333,350 @@ func InternalVereinswahl(c *handler.Context) (templ.Component, error) {
 	case "startberechtigung":
 		vereine, err = crud.GetForAllVereineMissingAthlet(crud.Startberechtigt)
 	default:
-		vereine, err = crud.GetAllVerein(c.Request.Context())
+		vereine, err = crud.GetAllVerein(r.Context())
 	}
 	if err != nil {
-		return nil, handler.InternalError("Fehler beim Laden der Vereine")
+		webfw.HandlePageError(w, r, webfw.InternalError("Fehler beim Laden der Vereine"))
+		return nil
 	}
 
-	return vereinswahl.Vereinswahl(nextUrl, title, vereine), nil
+	return vereinswahl.Vereinswahl(nextUrl, title, vereine)
 }
 
-func InternalRegattabueroAbmeldung(c *handler.Context) (templ.Component, error) {
-	vereinUuidStr := c.Param("v_uuid")
+func InternalRegattabueroAbmeldung(w http.ResponseWriter, r *http.Request) templ.Component {
+	vereinUuidStr := webfw.Param(r, "v_uuid")
 	vereinUuid, err := uuid.Parse(vereinUuidStr)
 	if err != nil {
-		return nil, handler.NotAcceptable("Invalid UUID")
+		webfw.HandlePageError(w, r, webfw.NotAcceptable("Invalid UUID"))
+		return nil
 	}
-	verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
+	verein, err := crud.GetVerein(r.Context(), vereinUuid)
 	if err != nil {
-		return nil, handler.InternalError("Error while loading verein")
+		webfw.HandlePageError(w, r, webfw.InternalError("Error while loading verein"))
+		return nil
 	}
-	meldungen, err := crud.GetAllMeldungForVerein(c.Request.Context(), vereinUuid)
+	meldungen, err := crud.GetAllMeldungForVerein(r.Context(), vereinUuid)
 	if err != nil {
-		return nil, handler.InternalError("Error while loading meldungen")
+		webfw.HandlePageError(w, r, webfw.InternalError("Error while loading meldungen"))
+		return nil
 	}
-	return regattabuero.Abmeldung(verein, meldungen), nil
+	return regattabuero.Abmeldung(verein, meldungen)
 }
 
-func InternalRegattabueroAbmeldungMeldung(c *handler.Context) (templ.Component, error) {
-	vereinUuidStr := c.Param("v_uuid")
+func InternalRegattabueroAbmeldungMeldung(w http.ResponseWriter, r *http.Request) templ.Component {
+	vereinUuidStr := webfw.Param(r, "v_uuid")
 	vereinUuid, err := uuid.Parse(vereinUuidStr)
 	if err != nil {
-		return nil, handler.NotAcceptable("Invalid UUID")
+		webfw.HandlePageError(w, r, webfw.NotAcceptable("Invalid UUID"))
+		return nil
 	}
-	meldungUuidStr := c.Param("m_uuid")
+	meldungUuidStr := webfw.Param(r, "m_uuid")
 	meldungUuid, err := uuid.Parse(meldungUuidStr)
 	if err != nil {
-		return nil, handler.NotAcceptable("Invalid UUID")
+		webfw.HandlePageError(w, r, webfw.NotAcceptable("Invalid UUID"))
+		return nil
 	}
 
-	verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
+	verein, err := crud.GetVerein(r.Context(), vereinUuid)
 	if err != nil {
-		return nil, handler.InternalError("Error while loading verein")
+		webfw.HandlePageError(w, r, webfw.InternalError("Error while loading verein"))
+		return nil
 	}
-	meldung, err := crud.GetMeldung(c.Request.Context(), meldungUuid)
+	meldung, err := crud.GetMeldung(r.Context(), meldungUuid)
 	if err != nil {
-		return nil, handler.InternalError("Error while loading meldung")
+		webfw.HandlePageError(w, r, webfw.InternalError("Error while loading meldung"))
+		return nil
 	}
 
 	if meldung.VereinUuid != verein.Uuid {
-		return nil, handler.NotAcceptable("Invalid UUID")
+		webfw.HandlePageError(w, r, webfw.NotAcceptable("Invalid UUID"))
+		return nil
 	}
 
-	return regattabuero.AbmeldungMeldung(verein, meldung), nil
+	return regattabuero.AbmeldungMeldung(verein, meldung)
 }
 
-func InternalRegattabueroUmmeldung(c *handler.Context) (templ.Component, error) {
-	vereinUuidStr := c.Param("v_uuid")
+func InternalRegattabueroUmmeldung(w http.ResponseWriter, r *http.Request) templ.Component {
+	vereinUuidStr := webfw.Param(r, "v_uuid")
 	vereinUuid, err := uuid.Parse(vereinUuidStr)
 	if err != nil {
-		return nil, handler.NotAcceptable("Invalid UUID")
+		webfw.HandlePageError(w, r, webfw.NotAcceptable("Invalid UUID"))
+		return nil
 	}
-	verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
+	verein, err := crud.GetVerein(r.Context(), vereinUuid)
 	if err != nil {
-		return nil, handler.InternalError("Error while loading verein")
+		webfw.HandlePageError(w, r, webfw.InternalError("Error while loading verein"))
+		return nil
 	}
-	meldungen, err := crud.GetAllMeldungForVerein(c.Request.Context(), vereinUuid)
+	meldungen, err := crud.GetAllMeldungForVerein(r.Context(), vereinUuid)
 	if err != nil {
-		return nil, handler.InternalError("Error while loading meldungen")
+		webfw.HandlePageError(w, r, webfw.InternalError("Error while loading meldungen"))
+		return nil
 	}
-	return regattabuero.Ummeldung(verein, meldungen), nil
+	return regattabuero.Ummeldung(verein, meldungen)
 }
 
-func InternalRegattabueroUmmeldungMeldung(c *handler.Context) (templ.Component, error) {
-	vereinUuidStr := c.Param("v_uuid")
+func InternalRegattabueroUmmeldungMeldung(w http.ResponseWriter, r *http.Request) templ.Component {
+	vereinUuidStr := webfw.Param(r, "v_uuid")
 	vereinUuid, err := uuid.Parse(vereinUuidStr)
 	if err != nil {
-		return nil, handler.NotAcceptable("Invalid UUID")
+		webfw.HandlePageError(w, r, webfw.NotAcceptable("Invalid UUID"))
+		return nil
 	}
-	meldungUuidStr := c.Param("m_uuid")
+	meldungUuidStr := webfw.Param(r, "m_uuid")
 	meldungUuid, err := uuid.Parse(meldungUuidStr)
 	if err != nil {
-		return nil, handler.NotAcceptable("Invalid UUID")
+		webfw.HandlePageError(w, r, webfw.NotAcceptable("Invalid UUID"))
+		return nil
 	}
 
-	verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
+	verein, err := crud.GetVerein(r.Context(), vereinUuid)
 	if err != nil {
-		return nil, handler.InternalError("Error while loading verein")
+		webfw.HandlePageError(w, r, webfw.InternalError("Error while loading verein"))
+		return nil
 	}
-	meldung, err := crud.GetMeldung(c.Request.Context(), meldungUuid)
+	meldung, err := crud.GetMeldung(r.Context(), meldungUuid)
 	if err != nil {
-		return nil, handler.InternalError("Error while loading meldung")
+		webfw.HandlePageError(w, r, webfw.InternalError("Error while loading meldung"))
+		return nil
 	}
 
 	if meldung.VereinUuid != verein.Uuid {
-		return nil, handler.NotAcceptable("Invalid UUID")
+		webfw.HandlePageError(w, r, webfw.NotAcceptable("Invalid UUID"))
+		return nil
 	}
 
-	athleten, err := crud.GetAllAthletenForVerein(c.Request.Context(), verein.Uuid)
+	athleten, err := crud.GetAllAthletenForVerein(r.Context(), verein.Uuid)
 	if err != nil {
-		return nil, handler.InternalError("Error while loading athleten")
+		webfw.HandlePageError(w, r, webfw.InternalError("Error while loading athleten"))
+		return nil
 	}
 
-	// TODO: Filter only viable athleten
-	return regattabuero.UmmeldungMeldung(verein, meldung, athleten, "", nil), nil
+	return regattabuero.UmmeldungMeldung(verein, meldung, athleten, "", nil)
 }
 
-func InternalRegattabueroNachmeldung(c *handler.Context) (templ.Component, error) {
-	vereinUuidStr := c.Param("v_uuid")
+func InternalRegattabueroNachmeldung(w http.ResponseWriter, r *http.Request) templ.Component {
+	vereinUuidStr := webfw.Param(r, "v_uuid")
 	vereinUuid, err := uuid.Parse(vereinUuidStr)
 	if err != nil {
-		return nil, handler.NotAcceptable("Invalid UUID")
+		webfw.HandlePageError(w, r, webfw.NotAcceptable("Invalid UUID"))
+		return nil
 	}
-	verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
+	verein, err := crud.GetVerein(r.Context(), vereinUuid)
 	if err != nil {
-		return nil, handler.InternalError("Error while loading verein")
+		webfw.HandlePageError(w, r, webfw.InternalError("Error while loading verein"))
+		return nil
 	}
-	return regattabuero.Nachmeldung(verein), nil
+	return regattabuero.Nachmeldung(verein)
 }
 
-func InternalRegattabueroNachmeldungRennen(c *handler.Context) (templ.Component, error) {
-	vereinUuidStr := c.Param("v_uuid")
+func InternalRegattabueroNachmeldungRennen(w http.ResponseWriter, r *http.Request) templ.Component {
+	vereinUuidStr := webfw.Param(r, "v_uuid")
 	vereinUuid, err := uuid.Parse(vereinUuidStr)
 	if err != nil {
 		slog.Error("Invalid verein UUID", "err", err)
-		return nil, handler.NotAcceptable("Invalid UUID")
+		webfw.HandlePageError(w, r, webfw.NotAcceptable("Invalid UUID"))
+		return nil
 	}
-	rennenUuidStr := c.Param("r_uuid")
+	rennenUuidStr := webfw.Param(r, "r_uuid")
 	rennenUuid, err := uuid.Parse(rennenUuidStr)
 	if err != nil {
 		slog.Error("Invalid rennen UUID", "err", err)
-		return nil, handler.NotAcceptable("Invalid UUID")
+		webfw.HandlePageError(w, r, webfw.NotAcceptable("Invalid UUID"))
+		return nil
 	}
 
-	verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
+	verein, err := crud.GetVerein(r.Context(), vereinUuid)
 	if err != nil {
 		slog.Error("Error loading verein", "err", err)
-		return nil, handler.InternalError("Error while loading verein")
+		webfw.HandlePageError(w, r, webfw.InternalError("Error while loading verein"))
+		return nil
 	}
-	rennen, err := crud.GetRennen(c.Request.Context(), rennenUuid)
+	rennen, err := crud.GetRennen(r.Context(), rennenUuid)
 	if err != nil {
 		slog.Error("Error loading rennen", "err", err)
-		return nil, handler.InternalError("Error while loading rennen")
+		webfw.HandlePageError(w, r, webfw.InternalError("Error while loading rennen"))
+		return nil
 	}
 
-	athleten, err := crud.GetAllAthletenForVerein(c.Request.Context(), verein.Uuid)
+	athleten, err := crud.GetAllAthletenForVerein(r.Context(), verein.Uuid)
 	if err != nil {
 		slog.Error("Error loading athleten", "err", err)
-		return nil, handler.InternalError("Error while loading athleten")
+		webfw.HandlePageError(w, r, webfw.InternalError("Error while loading athleten"))
+		return nil
 	}
 
-	return regattabuero.NachmeldungMeldung(verein, rennen, athleten, "", nil), nil
+	return regattabuero.NachmeldungMeldung(verein, rennen, athleten, "", nil)
 }
 
-func InternalRegattabueroNachmeldungSuccess(c *handler.Context) (templ.Component, error) {
-	meldungUuidStr := c.Param("m_uuid")
+func InternalRegattabueroNachmeldungSuccess(w http.ResponseWriter, r *http.Request) templ.Component {
+	meldungUuidStr := webfw.Param(r, "m_uuid")
 	meldungUuid, err := uuid.Parse(meldungUuidStr)
 	if err != nil {
-		return nil, handler.NotAcceptable("Invalid UUID")
+		webfw.HandlePageError(w, r, webfw.NotAcceptable("Invalid UUID"))
+		return nil
 	}
-	m, err := crud.GetMeldung(c.Request.Context(), meldungUuid)
+	m, err := crud.GetMeldung(r.Context(), meldungUuid)
 	if err != nil {
-		return nil, handler.InternalError("Error while loading meldung")
+		webfw.HandlePageError(w, r, webfw.InternalError("Error while loading meldung"))
+		return nil
 	}
-	return regattabuero.NachmeldungSuccess(m), nil
+	return regattabuero.NachmeldungSuccess(m)
 }
 
-func InternalRegattabueroWaageWahl(c *handler.Context) (templ.Component, error) {
-	vereinUuidStr := c.Param("v_uuid")
+func InternalRegattabueroWaageWahl(w http.ResponseWriter, r *http.Request) templ.Component {
+	vereinUuidStr := webfw.Param(r, "v_uuid")
 	vereinUuid, err := uuid.Parse(vereinUuidStr)
 	if err != nil {
-		return nil, handler.NotAcceptable("Invalid UUID")
+		webfw.HandlePageError(w, r, webfw.NotAcceptable("Invalid UUID"))
+		return nil
 	}
-	verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
+	verein, err := crud.GetVerein(r.Context(), vereinUuid)
 	if err != nil {
-		return nil, handler.InternalError("Error while loading verein")
+		webfw.HandlePageError(w, r, webfw.InternalError("Error while loading verein"))
+		return nil
 	}
-	athleten, err := crud.GetAllAthletenForVereinWaage(c.Request.Context(), verein.Uuid)
+	athleten, err := crud.GetAllAthletenForVereinWaage(r.Context(), verein.Uuid)
 	if err != nil {
-		return nil, handler.InternalError("Error while loading athleten")
+		webfw.HandlePageError(w, r, webfw.InternalError("Error while loading athleten"))
+		return nil
 	}
 
 	for i := range athleten {
 		athleten[i].Verein = &verein
 	}
 
-	return regattabuero.WaageWahl(verein, athleten), nil
+	return regattabuero.WaageWahl(verein, athleten)
 }
 
-func InternalRegattabueroWaage(c *handler.Context) (templ.Component, error) {
-	vereinUuidStr := c.Param("v_uuid")
+func InternalRegattabueroWaage(w http.ResponseWriter, r *http.Request) templ.Component {
+	vereinUuidStr := webfw.Param(r, "v_uuid")
 	vereinUuid, err := uuid.Parse(vereinUuidStr)
 	if err != nil {
-		return nil, handler.NotAcceptable("Invalid UUID")
+		webfw.HandlePageError(w, r, webfw.NotAcceptable("Invalid UUID"))
+		return nil
 	}
-	athletUuidStr := c.Param("a_uuid")
+	athletUuidStr := webfw.Param(r, "a_uuid")
 	athletUuid, err := uuid.Parse(athletUuidStr)
 	if err != nil {
-		return nil, handler.NotAcceptable("Invalid UUID")
+		webfw.HandlePageError(w, r, webfw.NotAcceptable("Invalid UUID"))
+		return nil
 	}
 
-	verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
+	verein, err := crud.GetVerein(r.Context(), vereinUuid)
 	if err != nil {
-		return nil, handler.InternalError("Error while loading verein")
+		webfw.HandlePageError(w, r, webfw.InternalError("Error while loading verein"))
+		return nil
 	}
-	athlet, err := crud.GetAthlet(c.Request.Context(), athletUuid)
+	athlet, err := crud.GetAthlet(r.Context(), athletUuid)
 	if err != nil {
-		return nil, handler.InternalError("Error while loading athlet")
+		webfw.HandlePageError(w, r, webfw.InternalError("Error while loading athlet"))
+		return nil
 	}
 
 	if athlet.VereinUuid != verein.Uuid {
-		return nil, handler.NotAcceptable("Invalid UUID")
+		webfw.HandlePageError(w, r, webfw.NotAcceptable("Invalid UUID"))
+		return nil
 	}
 
-	return regattabuero.Waage(athlet, "", nil), nil
+	return regattabuero.Waage(athlet, "", nil)
 }
 
-func InternalRegattabueroStartberechtigung(c *handler.Context) (templ.Component, error) {
-	vereinUuidStr := c.Param("v_uuid")
+func InternalRegattabueroStartberechtigung(w http.ResponseWriter, r *http.Request) templ.Component {
+	vereinUuidStr := webfw.Param(r, "v_uuid")
 	vereinUuid, err := uuid.Parse(vereinUuidStr)
 	if err != nil {
-		return nil, handler.NotAcceptable("Invalid UUID")
+		webfw.HandlePageError(w, r, webfw.NotAcceptable("Invalid UUID"))
+		return nil
 	}
-	verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
+	verein, err := crud.GetVerein(r.Context(), vereinUuid)
 	if err != nil {
-		return nil, handler.InternalError("Error while loading verein")
+		webfw.HandlePageError(w, r, webfw.InternalError("Error while loading verein"))
+		return nil
 	}
-	athleten, err := crud.GetAllAthletenForVereinMissStartber(c.Request.Context(), verein.Uuid)
+	athleten, err := crud.GetAllAthletenForVereinMissStartber(r.Context(), verein.Uuid)
 	if err != nil {
-		return nil, handler.InternalError("Error while loading athleten")
+		webfw.HandlePageError(w, r, webfw.InternalError("Error while loading athleten"))
+		return nil
 	}
 
 	for i := range athleten {
 		athleten[i].Verein = &verein
 	}
 
-	return regattabuero.StartberechtigungWahl(verein, athleten), nil
+	return regattabuero.StartberechtigungWahl(verein, athleten)
 }
 
-func InternalRegattabueroStartberechtigungAthlet(c *handler.Context) (templ.Component, error) {
-	vereinUuidStr := c.Param("v_uuid")
+func InternalRegattabueroStartberechtigungAthlet(w http.ResponseWriter, r *http.Request) templ.Component {
+	vereinUuidStr := webfw.Param(r, "v_uuid")
 	vereinUuid, err := uuid.Parse(vereinUuidStr)
 	if err != nil {
-		return nil, handler.NotAcceptable("Invalid UUID")
+		webfw.HandlePageError(w, r, webfw.NotAcceptable("Invalid UUID"))
+		return nil
 	}
-	athletUuidStr := c.Param("a_uuid")
+	athletUuidStr := webfw.Param(r, "a_uuid")
 	athletUuid, err := uuid.Parse(athletUuidStr)
 	if err != nil {
-		return nil, handler.NotAcceptable("Invalid UUID")
+		webfw.HandlePageError(w, r, webfw.NotAcceptable("Invalid UUID"))
+		return nil
 	}
 
-	verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
+	verein, err := crud.GetVerein(r.Context(), vereinUuid)
 	if err != nil {
-		return nil, handler.InternalError("Error while loading verein")
+		webfw.HandlePageError(w, r, webfw.InternalError("Error while loading verein"))
+		return nil
 	}
-	athlet, err := crud.GetAthlet(c.Request.Context(), athletUuid)
+	athlet, err := crud.GetAthlet(r.Context(), athletUuid)
 	if err != nil {
-		return nil, handler.InternalError("Error while loading athlet")
+		webfw.HandlePageError(w, r, webfw.InternalError("Error while loading athlet"))
+		return nil
 	}
 
 	if athlet.VereinUuid != verein.Uuid {
-		return nil, handler.NotAcceptable("Invalid UUID")
+		webfw.HandlePageError(w, r, webfw.NotAcceptable("Invalid UUID"))
+		return nil
 	}
 
-	// TODO: Implement Form Errors
-	return regattabuero.Startberechtigung(athlet, "", nil), nil
+	return regattabuero.Startberechtigung(athlet, "", nil)
 }
 
-func InternalRegattabueroNewAthlet(c *handler.Context) (templ.Component, error) {
-	vereinUuidStr := c.Param("v_uuid")
+func InternalRegattabueroNewAthlet(w http.ResponseWriter, r *http.Request) templ.Component {
+	vereinUuidStr := webfw.Param(r, "v_uuid")
 	vereinUuid, err := uuid.Parse(vereinUuidStr)
 	if err != nil {
-		return nil, handler.NotAcceptable("Invalid UUID")
+		webfw.HandlePageError(w, r, webfw.NotAcceptable("Invalid UUID"))
+		return nil
 	}
-	verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
+	verein, err := crud.GetVerein(r.Context(), vereinUuid)
 	if err != nil {
-		return nil, handler.InternalError("Error while loading verein")
+		webfw.HandlePageError(w, r, webfw.InternalError("Error while loading verein"))
+		return nil
 	}
-	return regattabuero.NewAthlet(verein, "", nil), nil
+	return regattabuero.NewAthlet(verein, "", nil)
 }
 
-func InternalRegattabueroKasse(c *handler.Context) (templ.Component, error) {
-	return regattabuero.Kasse(), nil
+func InternalRegattabueroKasse(w http.ResponseWriter, r *http.Request) templ.Component {
+	return regattabuero.Kasse()
 }
 
-func InternalRegattabueroStartnummernAusgabe(c *handler.Context) (templ.Component, error) {
-	return regattabuero.StartnummernAusgabe(), nil
+func InternalRegattabueroStartnummernAusgabe(w http.ResponseWriter, r *http.Request) templ.Component {
+	return regattabuero.StartnummernAusgabe()
 }
 
-func InternalRegattabueroAenderungenObleute(c *handler.Context) (templ.Component, error) {
-	return regattabuero.AenderungenObleute(), nil
+func InternalRegattabueroAenderungenObleute(w http.ResponseWriter, r *http.Request) templ.Component {
+	return regattabuero.AenderungenObleute()
 }
 
-func InternalRegattaleitungSetzungAenderungRennen(c *handler.Context) (templ.Component, error) {
-	paramStr := c.Param("param")
+func InternalRegattaleitungSetzungAenderungRennen(w http.ResponseWriter, r *http.Request) templ.Component {
+	paramStr := webfw.Param(r, "param")
 	slog.Debug("Param", "value", paramStr)
 
 	slog.Debug("Param is a Rennen UUID")
 	rUuid, err := uuid.Parse(paramStr)
 	if err != nil {
 		slog.Error("Error", "err", err)
-		templ.Handler(ui_pages.Error(404, "Rennen nicht gefunden")).ServeHTTP(c.Writer, c.Request)
-		return nil, nil
+		webfw.HandlePageError(w, r, webfw.NotFound("Rennen nicht gefunden"))
+		return nil
 	}
-	return regattaleitung.SetzungAenderungRennen(rUuid), nil
+	return regattaleitung.SetzungAenderungRennen(rUuid)
 }

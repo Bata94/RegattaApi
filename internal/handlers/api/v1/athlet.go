@@ -1,11 +1,12 @@
 package api_v1
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/bata94/RegattaApi/internal/crud"
-	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/bata94/RegattaApi/internal/sqlc"
+	"github.com/bata94/RegattaApi/pkg/webfw"
 	"github.com/google/uuid"
 )
 
@@ -18,39 +19,44 @@ type NewAthletParams struct {
 	Geschlecht      string `json:"geschlecht"`
 }
 
-func GetAthlet(c *handler.Context) error {
-	id, err := c.GetUUID("uuid")
+func GetAthlet(w http.ResponseWriter, r *http.Request) {
+	id, err := webfw.GetUUID(r, "uuid")
 	if err != nil {
-		return handler.BadRequest(err.Error())
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
-	a, err := crud.GetAthletMinimal(c.Request.Context(), id)
+	a, err := crud.GetAthletMinimal(r.Context(), id)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.NotFound("Athlet nicht gefunden"))
+		return
 	}
 
-	return c.JSON(a)
+	webfw.JSON(w, r, a)
 }
 
-func GetAllAthlet(c *handler.Context) error {
-	aLs, err := crud.GetAllAthlet(c.Request.Context())
+func GetAllAthlet(w http.ResponseWriter, r *http.Request) {
+	aLs, err := crud.GetAllAthlet(r.Context())
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON(aLs)
+	webfw.JSON(w, r, aLs)
 }
 
-func CreateAthlet(c *handler.Context) error {
+func CreateAthlet(w http.ResponseWriter, r *http.Request) {
 	aParams := new(NewAthletParams)
-	err := c.BodyParser(&aParams)
+	err := webfw.ParseBody(r, &aParams)
 	if err != nil {
-		return handler.BadRequest(err.Error())
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
 	vereinUuid, err := uuid.Parse(aParams.VereinUUID)
 	if err != nil {
-		return handler.BadRequest(err.Error())
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
 	var geschlecht sqlc.Geschlecht
@@ -64,7 +70,7 @@ func CreateAthlet(c *handler.Context) error {
 		geschlecht = sqlc.GeschlechtX
 	}
 
-	a, err := crud.CreateAthlet(c.Request.Context(), sqlc.CreateAthletParams{
+	a, err := crud.CreateAthlet(r.Context(), sqlc.CreateAthletParams{
 		Uuid:            uuid.New(),
 		VereinUuid:      vereinUuid,
 		Name:            aParams.Name,
@@ -74,10 +80,11 @@ func CreateAthlet(c *handler.Context) error {
 		Geschlecht:      geschlecht,
 	})
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON(a)
+	webfw.JSON(w, r, a)
 }
 
 type UpdateAthletStartberechtigungParams struct {
@@ -85,45 +92,51 @@ type UpdateAthletStartberechtigungParams struct {
 	Startberechtigt bool   `json:"startberechtigt"`
 }
 
-func UpdateAthletStartberechtigung(c *handler.Context) error {
+func UpdateAthletStartberechtigung(w http.ResponseWriter, r *http.Request) {
 	p := new(UpdateAthletStartberechtigungParams)
-	err := c.BodyParser(p)
+	err := webfw.ParseBody(r, p)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
 	id, err := uuid.Parse(p.Uuid)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
-	ath, err := crud.GetAthletMinimal(c.Request.Context(), id)
+	ath, err := crud.GetAthletMinimal(r.Context(), id)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.NotFound("Athlet nicht gefunden"))
+		return
 	}
 
-	err = ath.UpdateStartberechtigung(c.Request.Context(), p.Startberechtigt)
+	err = ath.UpdateStartberechtigung(r.Context(), p.Startberechtigt)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON("Athlet erfolgreich angepasst!")
+	webfw.JSON(w, r, "Athlet erfolgreich angepasst!")
 }
 
-func GetAthletWaage(c *handler.Context) error {
+func GetAthletWaage(w http.ResponseWriter, r *http.Request) {
 	ls, err := crud.GetForAllVereineMissingAthlet(crud.Waage)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
-	return c.JSON(ls)
+	webfw.JSON(w, r, ls)
 }
 
-func GetAthletStartberechtigung(c *handler.Context) error {
+func GetAthletStartberechtigung(w http.ResponseWriter, r *http.Request) {
 	ls, err := crud.GetForAllVereineMissingAthlet(crud.Startberechtigt)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
-	return c.JSON(ls)
+	webfw.JSON(w, r, ls)
 }
 
 type UpdateAthletWaageParams struct {
@@ -131,27 +144,31 @@ type UpdateAthletWaageParams struct {
 	Gewicht int    `json:"gewicht"`
 }
 
-func UpdateAthletWaage(c *handler.Context) error {
+func UpdateAthletWaage(w http.ResponseWriter, r *http.Request) {
 	p := new(UpdateAthletWaageParams)
-	err := c.BodyParser(p)
+	err := webfw.ParseBody(r, p)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
 	id, err := uuid.Parse(p.Uuid)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
-	ath, err := crud.GetAthletMinimal(c.Request.Context(), id)
+	ath, err := crud.GetAthletMinimal(r.Context(), id)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.NotFound("Athlet nicht gefunden"))
+		return
 	}
 
-	err = ath.UpdateGewicht(c.Request.Context(), p.Gewicht)
+	err = ath.UpdateGewicht(r.Context(), p.Gewicht)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON("Athlet erfolgreich angepasst!")
+	webfw.JSON(w, r, "Athlet erfolgreich angepasst!")
 }

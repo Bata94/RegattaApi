@@ -7,10 +7,9 @@ import (
 	"strings"
 
 	"github.com/bata94/RegattaApi/internal/config"
-	"github.com/bata94/RegattaApi/internal/handler"
 )
 
-func CORS() Middleware {
+func CORS() func(http.Handler) http.Handler {
 	originsEnv := config.C.CORS.AllowedOrigins
 	methods := config.C.CORS.AllowedMethods
 	headers := config.C.CORS.AllowedHeaders
@@ -20,29 +19,29 @@ func CORS() Middleware {
 		allowedOrigins[i] = strings.TrimSpace(allowedOrigins[i])
 	}
 
-	return func(next handler.Handler) handler.Handler {
-		return func(c *handler.Context) error {
-			origin := c.Request.Header.Get("Origin")
-			slog.Debug(fmt.Sprintf("CORS DEBUG: Origin=%q Allowed=%v Method=%s", origin, allowedOrigins, c.Method()))
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			origin := r.Header.Get("Origin")
+			slog.Debug(fmt.Sprintf("CORS DEBUG: Origin=%q Allowed=%v Method=%s", origin, allowedOrigins, r.Method))
 			matchedOrigin := matchOrigin(origin, allowedOrigins)
 			slog.Debug(fmt.Sprintf("CORS DEBUG: Matched=%q", matchedOrigin))
 
 			if matchedOrigin != "" {
-				c.Writer.Header().Set("Access-Control-Allow-Origin", matchedOrigin)
-				c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+				w.Header().Set("Access-Control-Allow-Origin", matchedOrigin)
+				w.Header().Set("Access-Control-Allow-Credentials", "true")
 			} else if len(allowedOrigins) > 0 && allowedOrigins[0] == "*" {
-				c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+				w.Header().Set("Access-Control-Allow-Origin", "*")
 			}
 
-			c.Writer.Header().Set("Access-Control-Allow-Methods", methods)
-			c.Writer.Header().Set("Access-Control-Allow-Headers", headers)
+			w.Header().Set("Access-Control-Allow-Methods", methods)
+			w.Header().Set("Access-Control-Allow-Headers", headers)
 
-			if c.Method() == "OPTIONS" {
-				c.Status(http.StatusOK)
-				return nil
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				return
 			}
-			return next(c)
-		}
+			next.ServeHTTP(w, r)
+		})
 	}
 }
 

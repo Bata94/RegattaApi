@@ -16,7 +16,6 @@ import (
 	"github.com/bata94/RegattaApi/internal/config"
 	"github.com/bata94/RegattaApi/internal/crud"
 	apierr "github.com/bata94/RegattaApi/internal/errors"
-	"github.com/bata94/RegattaApi/internal/handler"
 	api_v1 "github.com/bata94/RegattaApi/internal/handlers/api/v1"
 	"github.com/bata94/RegattaApi/internal/service"
 	"github.com/bata94/RegattaApi/internal/sqlc"
@@ -26,12 +25,13 @@ import (
 	regattabuero "github.com/bata94/RegattaApi/internal/templates/pages/regattabuero"
 	regattaleitung "github.com/bata94/RegattaApi/internal/templates/pages/regattaleitung"
 	"github.com/bata94/RegattaApi/internal/utils"
+	"github.com/bata94/RegattaApi/pkg/webfw"
 	"github.com/google/uuid"
 )
 
-func LoginPost(c *handler.Context) error {
-	username := c.FormValue("username")
-	password := c.FormValue("password")
+func LoginPost(w http.ResponseWriter, r *http.Request) {
+	username := r.FormValue("username")
+	password := r.FormValue("password")
 
 	if username == "" || password == "" {
 		fieldErrors := make(map[string]string)
@@ -41,16 +41,18 @@ func LoginPost(c *handler.Context) error {
 		if password == "" {
 			fieldErrors["password"] = "Passwort erforderlich"
 		}
-		return handler.BadRequest("Bitte alle Felder ausfüllen").WithForm(ui_pages.Login("", fieldErrors))
+		webfw.ErrorWithForm(w, r, ui_pages.Login("", fieldErrors), "Bitte alle Felder ausfüllen")
+		return
 	}
 
-	u, err := crud.AuthLogin(c.Request.Context(), crud.LoginParams{Username: username, Password: password})
+	u, err := crud.AuthLogin(r.Context(), crud.LoginParams{Username: username, Password: password})
 	if err != nil {
-		return handler.BadRequest("Benutzername oder Passwort ist falsch").WithForm(ui_pages.Login("", nil))
+		webfw.ErrorWithForm(w, r, ui_pages.Login("", nil), "Benutzername oder Passwort ist falsch")
+		return
 	}
 
-	secure := c.Request.TLS != nil
-	http.SetCookie(c.Writer, &http.Cookie{
+	secure := r.TLS != nil
+	http.SetCookie(w, &http.Cookie{
 		Name:     "auth_token",
 		Value:    u.Jwt.Token,
 		MaxAge:   72 * 60 * 60,
@@ -60,18 +62,18 @@ func LoginPost(c *handler.Context) error {
 		Path:     "/",
 	})
 
-	c.Writer.Header().Set("HX-Redirect", "/internal")
-	c.Writer.WriteHeader(http.StatusOK)
-	return nil
+	webfw.SetRedirect(w, "/internal")
+	w.WriteHeader(http.StatusOK)
 }
 
-func ImageComponent(c *handler.Context) error {
-	queryParams := c.Request.URL.Query()
+func ImageComponent(w http.ResponseWriter, r *http.Request) {
+	queryParams := r.URL.Query()
 	src := queryParams.Get("src")
 	alt := queryParams.Get("alt")
 
 	if src == "" {
-		return handler.NotFound("Image src is empty")
+		webfw.ErrorToast(w, r, "Image src is empty")
+		return
 	}
 
 	imgOpt := ui_components.DefaultImageOptions()
@@ -101,55 +103,57 @@ func ImageComponent(c *handler.Context) error {
 		imgOpt.ClassImage = class
 	}
 
-	c.Writer.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-	templ.Handler(ui_components.RawImageComponent(src, alt, imgOpt)).ServeHTTP(c.Writer, c.Request)
-	return nil
+	webfw.SetCacheControl(w, "public, max-age=31536000, immutable")
+	templ.Handler(ui_components.RawImageComponent(src, alt, imgOpt)).ServeHTTP(w, r)
 }
 
-func UserEditNew(c *handler.Context) error {
+func UserEditNew(w http.ResponseWriter, r *http.Request) {
 	var u *crud.User
-	if c.Param("uuid") == "" {
-		return handler.NotFound("User not found")
-	} else if c.Param("uuid") == "new" {
+	if webfw.Param(r, "uuid") == "" {
+		webfw.ErrorToast(w, r, "User not found")
+		return
+	} else if webfw.Param(r, "uuid") == "new" {
 		u = &crud.User{
 			User:      sqlc.User{},
 			UserGroup: &sqlc.UsersGroup{},
 		}
 	} else {
-		uuid, err := uuid.Parse(c.Param("uuid"))
+		userUUID, err := uuid.Parse(webfw.Param(r, "uuid"))
 		if err != nil {
-			return handler.NotAcceptable("Invalid UUID")
+			webfw.ErrorToast(w, r, "Invalid UUID")
+			return
 		}
-		u, err = crud.GetUser(c.Request.Context(), uuid)
+		u, err = crud.GetUser(r.Context(), userUUID)
 		if err != nil {
-			return handler.NotFound("User not found")
+			webfw.ErrorToast(w, r, "User not found")
+			return
 		}
 	}
 
-	templ.Handler(ui_components.UserEdit(*u, "", nil)).ServeHTTP(c.Writer, c.Request)
-	return nil
+	templ.Handler(ui_components.UserEdit(*u, "", nil)).ServeHTTP(w, r)
 }
 
-func UserEditNewPost(c *handler.Context) error {
+func UserEditNewPost(w http.ResponseWriter, r *http.Request) {
 	var (
 		u        *crud.User
 		userUuid uuid.UUID
 		err      error
 	)
 
-	uuidStr := c.Param("uuid")
+	uuidStr := webfw.Param(r, "uuid")
 	if uuidStr == "new" {
 		userUuid, err = uuid.NewV7()
 	} else {
 		userUuid, err = uuid.Parse(uuidStr)
 	}
 
-	username := c.FormValue("username")
-	groupUuid, errGroupUuid := uuid.Parse(c.FormValue("user_group_uuid"))
-	isNotActive := c.FormValue("is_not_active") == "on"
+	username := r.FormValue("username")
+	groupUuid, errGroupUuid := uuid.Parse(r.FormValue("user_group_uuid"))
+	isNotActive := r.FormValue("is_not_active") == "on"
 
 	if err != nil || errGroupUuid != nil {
-		return handler.NotAcceptable("Invalid UUID")
+		webfw.ErrorToast(w, r, "Invalid UUID")
+		return
 	}
 
 	fieldErrors := make(map[string]string)
@@ -160,7 +164,7 @@ func UserEditNewPost(c *handler.Context) error {
 		fieldErrors["user_group_uuid"] = "Nutzergruppe erforderlich"
 	}
 	if uuidStr == "new" {
-		password := c.FormValue("password")
+		password := r.FormValue("password")
 		if password == "" {
 			fieldErrors["password"] = "Passwort erforderlich"
 		}
@@ -176,7 +180,8 @@ func UserEditNewPost(c *handler.Context) error {
 				Uuid: groupUuid,
 			},
 		}
-		return handler.BadRequest("Bitte alle Pflichtfelder ausfüllen").WithForm(ui_components.UserEdit(*u, "", fieldErrors))
+		webfw.ErrorWithForm(w, r, ui_components.UserEdit(*u, "", fieldErrors), "Bitte alle Pflichtfelder ausfüllen")
+		return
 	}
 
 	if uuidStr == "new" {
@@ -190,21 +195,22 @@ func UserEditNewPost(c *handler.Context) error {
 				Uuid: groupUuid,
 			},
 		}
-		_, err = crud.CreateUser(c.Request.Context(), crud.CreateUserParams{
+		_, err = crud.CreateUser(r.Context(), crud.CreateUserParams{
 			GroupUuid: groupUuid,
 			Username:  username,
-			Password:  c.FormValue("password"),
+			Password:  r.FormValue("password"),
 		})
 		if err != nil {
-			return handler.BadRequest("Error while creating user, Err: " + err.Error()).WithForm(ui_components.UserEdit(*u, "", nil))
+			webfw.ErrorWithForm(w, r, ui_components.UserEdit(*u, "", nil), "Error while creating user, Err: "+err.Error())
+			return
 		}
 
-		c.Writer.Header().Set("HX-Redirect", "/internal/admin/users")
-		c.Writer.WriteHeader(http.StatusOK)
-		return nil
+		webfw.SetRedirect(w, "/internal/admin/users")
+		w.WriteHeader(http.StatusOK)
+		return
 	}
 
-	u, err = crud.GetUser(c.Request.Context(), userUuid)
+	u, err = crud.GetUser(r.Context(), userUuid)
 	if err != nil {
 		u = &crud.User{
 			User: sqlc.User{
@@ -216,63 +222,68 @@ func UserEditNewPost(c *handler.Context) error {
 				Uuid: groupUuid,
 			},
 		}
-		return handler.BadRequest("Error while updating user, Err: " + err.Error()).WithForm(ui_components.UserEdit(*u, "", nil))
+		webfw.ErrorWithForm(w, r, ui_components.UserEdit(*u, "", nil), "Error while updating user, Err: "+err.Error())
+		return
 	}
 
-	err = crud.UpdateUser(c.Request.Context(), u.Uuid, crud.UpdateUserParams{
+	err = crud.UpdateUser(r.Context(), u.Uuid, crud.UpdateUserParams{
 		Username:  username,
-		IsActive:  c.FormValue("is_not_active") != "on",
+		IsActive:  r.FormValue("is_not_active") != "on",
 		GroupUuid: groupUuid,
 	})
 	if err != nil {
-		return handler.BadRequest("Error while updating user, Err: " + err.Error()).WithForm(ui_components.UserEdit(*u, "", nil))
+		webfw.ErrorWithForm(w, r, ui_components.UserEdit(*u, "", nil), "Error while updating user, Err: "+err.Error())
+		return
 	}
 
-	c.Writer.Header().Set("HX-Redirect", "/internal/admin/users")
-	c.Writer.WriteHeader(http.StatusOK)
-	return nil
+	webfw.SetRedirect(w, "/internal/admin/users")
+	w.WriteHeader(http.StatusOK)
 }
 
-func UserGroupEditNew(c *handler.Context) error {
+func UserGroupEditNew(w http.ResponseWriter, r *http.Request) {
 	var ug sqlc.UsersGroup
-	if c.Param("uuid") == "" {
-		return handler.NotFound("UserGroup not found")
-	} else if c.Param("uuid") == "new" {
+	if webfw.Param(r, "uuid") == "" {
+		webfw.ErrorToast(w, r, "UserGroup not found")
+		return
+	} else if webfw.Param(r, "uuid") == "new" {
 		ug = sqlc.UsersGroup{}
 	} else {
-		uuid, err := uuid.Parse(c.Param("uuid"))
+		grpUUID, err := uuid.Parse(webfw.Param(r, "uuid"))
 		if err != nil {
-			return handler.NotAcceptable("Invalid UUID")
+			webfw.ErrorToast(w, r, "Invalid UUID")
+			return
 		}
-		ug, err = crud.GetUsersGroupsMinimal(c.Request.Context(), uuid)
+		ug, err = crud.GetUsersGroupsMinimal(r.Context(), grpUUID)
 		if err != nil {
-			return handler.NotFound("UserGroup not found")
+			webfw.ErrorToast(w, r, "UserGroup not found")
+			return
 		}
 	}
 
-	templ.Handler(ui_components.UserGroupEdit(ug, "", nil)).ServeHTTP(c.Writer, c.Request)
-	return nil
+	templ.Handler(ui_components.UserGroupEdit(ug, "", nil)).ServeHTTP(w, r)
 }
 
-func UserGroupEditNewPost(c *handler.Context) error {
-	uuidStr := c.Param("uuid")
+func UserGroupEditNewPost(w http.ResponseWriter, r *http.Request) {
+	uuidStr := webfw.Param(r, "uuid")
 	var groupUuid uuid.UUID
 
 	if uuidStr == "new" {
 		var err error
 		groupUuid, err = uuid.NewV7()
 		if err != nil {
-			return handler.NotAcceptable("Bad Request")
+			webfw.ErrorToast(w, r, "Bad Request")
+			return
 		}
 	} else {
 		var err error
 		groupUuid, err = uuid.Parse(uuidStr)
 		if err != nil {
-			return handler.NotAcceptable("Bad Request")
+			webfw.ErrorToast(w, r, "Bad Request")
+			return
 		}
 	}
 
-	name := c.FormValue("name")
+	name := r.FormValue("name")
 
 	fieldErrors := make(map[string]string)
 	if name == "" {
@@ -291,7 +302,7 @@ func UserGroupEditNewPost(c *handler.Context) error {
 	}
 	var capabilities []sqlc.UserCapability
 	for _, cf := range capList {
-		if c.FormValue(cf.formName) == "on" {
+		if r.FormValue(cf.formName) == "on" {
 			capabilities = append(capabilities, cf.value)
 		}
 	}
@@ -303,61 +314,66 @@ func UserGroupEditNewPost(c *handler.Context) error {
 	}
 
 	if len(fieldErrors) > 0 {
-		return handler.BadRequest("Bitte alle Pflichtfelder ausfüllen").WithForm(ui_components.UserGroupEdit(ug, "", fieldErrors))
+		webfw.ErrorWithForm(w, r, ui_components.UserGroupEdit(ug, "", fieldErrors), "Bitte alle Pflichtfelder ausfüllen")
+		return
 	}
 
 	if uuidStr == "new" {
-		_, err := crud.CreateUserGroup(c.Request.Context(), sqlc.CreateUserGroupParams{
+		_, err := crud.CreateUserGroup(r.Context(), sqlc.CreateUserGroupParams{
 			Name:         name,
 			Capabilities: capabilities,
 		})
 		if err != nil {
-			return handler.BadRequest("Fehler beim Erstellen der Nutzergruppe").WithForm(ui_components.UserGroupEdit(ug, "", nil))
+			webfw.ErrorWithForm(w, r, ui_components.UserGroupEdit(ug, "", nil), "Fehler beim Erstellen der Nutzergruppe")
+			return
 		}
 	} else {
-		err := crud.UpdateUserGroup(c.Request.Context(), groupUuid, sqlc.UpdateUserGroupParams{
+		err := crud.UpdateUserGroup(r.Context(), groupUuid, sqlc.UpdateUserGroupParams{
 			Name:         name,
 			Capabilities: capabilities,
 		})
 		if err != nil {
-			return handler.BadRequest("Fehler beim Aktualisieren der Nutzergruppe").WithForm(ui_components.UserGroupEdit(ug, "", nil))
+			webfw.ErrorWithForm(w, r, ui_components.UserGroupEdit(ug, "", nil), "Fehler beim Aktualisieren der Nutzergruppe")
+			return
 		}
 	}
 
-	c.Writer.Header().Set("HX-Redirect", "/internal/admin/usergroups")
-	c.Writer.WriteHeader(http.StatusOK)
-	return nil
+	webfw.SetRedirect(w, "/internal/admin/usergroups")
+	w.WriteHeader(http.StatusOK)
 }
 
-func ChangePasswordGet(c *handler.Context) error {
-	userUuidStr := c.Param("uuid")
+func ChangePasswordGet(w http.ResponseWriter, r *http.Request) {
+	userUuidStr := webfw.Param(r, "uuid")
 	userUuid, err := uuid.Parse(userUuidStr)
 	if err != nil {
-		return handler.NotAcceptable("Invalid UUID")
+		webfw.ErrorToast(w, r, "Invalid UUID")
+		return
 	}
-	user, err := crud.GetUser(c.Request.Context(), userUuid)
+	user, err := crud.GetUser(r.Context(), userUuid)
 	if err != nil {
-		return handler.NotFound("User not found")
+		webfw.ErrorToast(w, r, "User not found")
+		return
 	}
 
-	templ.Handler(profil.ChangePasswordDialogBody(*user, "", nil)).ServeHTTP(c.Writer, c.Request)
-	return nil
+	templ.Handler(profil.ChangePasswordDialogBody(*user, "", nil)).ServeHTTP(w, r)
 }
 
-func ChangePasswordPost(c *handler.Context) error {
-	userUuidStr := c.Param("uuid")
+func ChangePasswordPost(w http.ResponseWriter, r *http.Request) {
+	userUuidStr := webfw.Param(r, "uuid")
 	userUuid, err := uuid.Parse(userUuidStr)
 	if err != nil {
-		return handler.NotAcceptable("Invalid UUID")
+		webfw.ErrorToast(w, r, "Invalid UUID")
+		return
 	}
-	user, err := crud.GetUser(c.Request.Context(), userUuid)
+	user, err := crud.GetUser(r.Context(), userUuid)
 	if err != nil {
-		return handler.NotFound("User not found")
+		webfw.ErrorToast(w, r, "User not found")
+		return
 	}
 
-	currentPassword := c.FormValue("current_password")
-	newPassword1 := c.FormValue("new_password_1")
-	newPassword2 := c.FormValue("new_password_2")
+	currentPassword := r.FormValue("current_password")
+	newPassword1 := r.FormValue("new_password_1")
+	newPassword2 := r.FormValue("new_password_2")
 
 	fieldErrors := make(map[string]string)
 	topMsg := ""
@@ -383,127 +399,129 @@ func ChangePasswordPost(c *handler.Context) error {
 		topMsg = "Aktuelles Passwort ist falsch"
 	}
 	if len(fieldErrors) > 0 {
-		return handler.BadRequest(topMsg).WithForm(profil.ChangePasswordDialogBody(*user, "", fieldErrors))
+		webfw.ErrorWithForm(w, r, profil.ChangePasswordDialogBody(*user, "", fieldErrors), topMsg)
+		return
 	}
 
-	err = crud.UpdatePassword(c.Request.Context(), userUuid, newPassword1)
+	err = crud.UpdatePassword(r.Context(), userUuid, newPassword1)
 	if err != nil {
-		return handler.InternalError("Error while updating password")
+		webfw.ErrorToast(w, r, "Error while updating password")
+		return
 	}
 
-	c.Writer.Header().Set("HX-Redirect", "/internal/profil")
-	c.Writer.WriteHeader(http.StatusOK)
-	return nil
+	webfw.SetRedirect(w, "/internal/profil")
+	w.WriteHeader(http.StatusOK)
 }
 
-func DrvUploadPost(c *handler.Context) error {
-	err := api_v1.DrvMeldungUpload(c)
-	if err != nil {
-		return handler.BadRequest("Ein Fehler ist aufgetreten! Bitte versuche es erneut.")
-	}
-
-	return handler.OK("Upload erfolgreich!")
+func DrvUploadPost(w http.ResponseWriter, r *http.Request) {
+	api_v1.DrvMeldungUpload(w, r)
+	webfw.SuccessToast(w, r, "Upload erfolgreich!")
 }
 
-func SetzungsVerwaltungLosungPost(c *handler.Context) error {
-	err := api_v1.SetzungsLosung(c)
-	if err != nil {
-		return handler.BadRequest(fmt.Sprintf("Ein Fehler ist aufgetreten: %s", err.Error()))
-	}
-	return handler.OK("Losung erfolgreich!")
+func SetzungsVerwaltungLosungPost(w http.ResponseWriter, r *http.Request) {
+	api_v1.SetzungsLosung(w, r)
+	webfw.SuccessToast(w, r, "Losung erfolgreich!")
 }
 
-func SetzungsVerwaltungLosungDelete(c *handler.Context) error {
-	err := api_v1.ResetSetzung(c)
-	if err != nil {
-		return handler.BadRequest(fmt.Sprintf("Ein Fehler ist aufgetreten: %s", err.Error()))
-	}
-	return handler.OK("Setzung erfolgreich zurückgesetzt!")
+func SetzungsVerwaltungLosungDelete(w http.ResponseWriter, r *http.Request) {
+	api_v1.ResetSetzung(w, r)
+	webfw.SuccessToast(w, r, "Setzung erfolgreich zurückgesetzt!")
 }
 
-func SetzungsVerwaltungAenderungRennenPost(c *handler.Context) error {
+func SetzungsVerwaltungAenderungRennenPost(w http.ResponseWriter, r *http.Request) {
 	var (
 		err    error
 		rUuid  uuid.UUID
 		rennen crud.Rennen
 	)
 
-	rUuid, err = uuid.Parse(c.Param("param"))
+	rUuid, err = uuid.Parse(webfw.Param(r, "param"))
 	if err != nil {
-		return handler.NotAcceptable("Invalid UUID")
+		webfw.ErrorToast(w, r, "Invalid UUID")
+		return
 	}
 
-	rennen, err = crud.GetRennen(c.Request.Context(), rUuid)
+	rennen, err = crud.GetRennen(r.Context(), rUuid)
 	if err != nil {
-		return handler.NotFound("Rennen nicht gefunden")
+		webfw.ErrorToast(w, r, "Rennen nicht gefunden")
+		return
 	}
 
-	payloadStr := c.FormValue("params")
+	payloadStr := r.FormValue("params")
 	payload := make(map[string]any)
 	err = json.Unmarshal([]byte(payloadStr), &payload)
 	if err != nil {
-		return handler.NotAcceptable("Invalid JSON")
+		webfw.ErrorToast(w, r, "Invalid JSON")
+		return
 	}
 
 	meldOrderLs, ok := payload["order"].([]any)
 	if !ok {
-		return handler.BadRequest("Order nicht gefunden")
+		webfw.ErrorToast(w, r, "Order nicht gefunden")
+		return
 	}
 	abteilungParam := payload["abteilung"]
 	if abteilungParam == nil {
-		return handler.NotAcceptable("Abteilung nicht gefunden")
+		webfw.ErrorToast(w, r, "Abteilung nicht gefunden")
+		return
 	}
 	targetAbteilung := int32(abteilungParam.(float64))
 
 	for i, m := range meldOrderLs {
 		mUuid, err := uuid.Parse(m.(string))
 		if err != nil {
-			return handler.NotAcceptable("Invalid UUID")
+			webfw.ErrorToast(w, r, "Invalid UUID")
+			return
 		}
 
 		for _, meldung := range rennen.Meldungen {
 			if meldung.Uuid == mUuid {
 				bahn := int32(i) + 1
 
-				err = crud.UpdateMeldungSetzung(c.Request.Context(), sqlc.UpdateMeldungSetzungParams{
+				err = crud.UpdateMeldungSetzung(r.Context(), sqlc.UpdateMeldungSetzungParams{
 					Uuid:      meldung.Uuid,
 					Abteilung: targetAbteilung,
 					Bahn:      bahn,
 				})
 				if err != nil {
-					return handler.InternalError("Error while updating meldung setzung")
+					webfw.ErrorToast(w, r, "Error while updating meldung setzung")
+					return
 				}
 				continue
 			}
 		}
 	}
 
-	return handler.OK("Setzung erfolgreich!")
+	webfw.SuccessToast(w, r, "Setzung erfolgreich!")
 }
 
-func StartnummernAendernPost(c *handler.Context) error {
-	rennenUuidStr := c.Param("r_uuid")
-	meldungUuidStr := c.Param("m_uuid")
+func StartnummernAendernPost(w http.ResponseWriter, r *http.Request) {
+	rennenUuidStr := webfw.Param(r, "r_uuid")
+	meldungUuidStr := webfw.Param(r, "m_uuid")
 
 	rennenUuid, err := uuid.Parse(rennenUuidStr)
 	if err != nil {
-		return handler.NotAcceptable("Invalid UUID")
+		webfw.ErrorToast(w, r, "Invalid UUID")
+		return
 	}
 	meldungUuid, err := uuid.Parse(meldungUuidStr)
 	if err != nil {
-		return handler.NotAcceptable("Invalid UUID")
+		webfw.ErrorToast(w, r, "Invalid UUID")
+		return
 	}
 
-	m, err := crud.GetMeldung(c.Request.Context(), meldungUuid)
+	m, err := crud.GetMeldung(r.Context(), meldungUuid)
 	if err != nil {
-		return handler.NotFound("Meldung nicht gefunden")
+		webfw.ErrorToast(w, r, "Meldung nicht gefunden")
+		return
 	}
 	if m.RennenUuid != rennenUuid {
-		return handler.NotAcceptable("Invalid UUID")
+		webfw.ErrorToast(w, r, "Invalid UUID")
+		return
 	}
 
 	fieldErrors := make(map[string]string)
-	startnummer := c.FormValue("startnummer")
+	startnummer := r.FormValue("startnummer")
 	if startnummer == "" {
 		fieldErrors["startnummer"] = "Startnummer erforderlich"
 	}
@@ -512,9 +530,10 @@ func StartnummernAendernPost(c *handler.Context) error {
 		fieldErrors["startnummer"] = "Ungültige Startnummer"
 	}
 
-	bereich, err := crud.GetStartnummernBereich(c.Request.Context())
+	bereich, err := crud.GetStartnummernBereich(r.Context())
 	if err != nil {
-		return handler.InternalError("Error while loading startnummernbereich")
+		webfw.ErrorToast(w, r, "Error while loading startnummernbereich")
+		return
 	}
 
 	startNummerInt32 := int32(startNummerInt)
@@ -525,43 +544,45 @@ func StartnummernAendernPost(c *handler.Context) error {
 		fieldErrors["startnummer"] = "Startnummer ist als fehlend markiert"
 	}
 
-	checkStartnummer, err := crud.GetMeldungByStartNrUndTag(c.Request.Context(), startNummerInt, m.Rennen.Tag)
+	checkStartnummer, err := crud.GetMeldungByStartNrUndTag(r.Context(), startNummerInt, m.Rennen.Tag)
 	if err != nil && !errors.As(err, &apierr.ErrNotFound) {
-		return handler.InternalError("Error while loading meldung")
+		webfw.ErrorToast(w, r, "Error while loading meldung")
+		return
 	}
 	if checkStartnummer.Uuid != uuid.Nil {
 		fieldErrors["startnummer"] = "Startnummer bereits vergeben"
 	}
 
 	if len(fieldErrors) > 0 {
-		templ.Handler(regattaleitung.StartnummernAendern(m, fieldErrors)).ServeHTTP(c.Writer, c.Request)
-		return nil
+		templ.Handler(regattaleitung.StartnummernAendern(m, fieldErrors)).ServeHTTP(w, r)
+		return
 	}
 
-	err = crud.UpdateStartNummer(c.Request.Context(), sqlc.UpdateStartNummerParams{
+	err = crud.UpdateStartNummer(r.Context(), sqlc.UpdateStartNummerParams{
 		Uuid:        m.Uuid,
 		StartNummer: int32(startNummerInt),
 	})
 	if err != nil {
 		slog.Error("UpdateStartNummer error", "err", err)
-		return handler.InternalError("Error while updating startnummer")
+		webfw.ErrorToast(w, r, "Error while updating startnummer")
+		return
 	}
 
-	m, err = crud.GetMeldung(c.Request.Context(), m.Uuid)
+	m, err = crud.GetMeldung(r.Context(), m.Uuid)
 	if err != nil {
 		slog.Error("GetMeldung error", "err", err)
-		return handler.InternalError("Error while loading meldung")
+		webfw.ErrorToast(w, r, "Error while loading meldung")
+		return
 	}
 
-	templ.Handler(regattaleitung.StartnummernAendern(m, fieldErrors)).ServeHTTP(c.Writer, c.Request)
-	return nil
+	templ.Handler(regattaleitung.StartnummernAendern(m, fieldErrors)).ServeHTTP(w, r)
 }
 
-func StartnummernBereichPost(c *handler.Context) error {
+func StartnummernBereichPost(w http.ResponseWriter, r *http.Request) {
 	fieldErrors := make(map[string]string)
 
-	minStr := c.FormValue("min_nummer")
-	maxStr := c.FormValue("max_nummer")
+	minStr := r.FormValue("min_nummer")
+	maxStr := r.FormValue("max_nummer")
 
 	minNummer, err := strconv.Atoi(minStr)
 	if err != nil || minNummer < 1 {
@@ -572,7 +593,7 @@ func StartnummernBereichPost(c *handler.Context) error {
 		fieldErrors["max_nummer"] = "Größte Startnummer muss mindestens 1 sein"
 	}
 
-	fehlendeStr := c.FormValue("fehlende_nummern")
+	fehlendeStr := r.FormValue("fehlende_nummern")
 	fehlende, err := parseFehlendeNummern(fehlendeStr)
 	if err != nil {
 		fieldErrors["fehlende_nummern"] = "Ungültige fehlende Startnummern"
@@ -598,15 +619,17 @@ func StartnummernBereichPost(c *handler.Context) error {
 	})
 
 	if len(fieldErrors) > 0 {
-		return handler.BadRequest("Ungültiger Startnummernbereich").WithForm(regattaleitung.StartnummernBereich(b, fieldErrors))
+		webfw.ErrorWithForm(w, r, regattaleitung.StartnummernBereich(b, fieldErrors), "Ungültiger Startnummernbereich")
+		return
 	}
 
-	if _, err := crud.SetStartnummernBereich(c.Request.Context(), int32(minNummer), int32(maxNummer), fehlende); err != nil {
+	if _, err := crud.SetStartnummernBereich(r.Context(), int32(minNummer), int32(maxNummer), fehlende); err != nil {
 		slog.Error("SetStartnummernBereich error", "err", err)
-		return handler.InternalError("Error while saving startnummernbereich")
+		webfw.ErrorToast(w, r, "Error while saving startnummernbereich")
+		return
 	}
 
-	return handler.OK("Startnummernbereich gespeichert")
+	webfw.SuccessToast(w, r, "Startnummernbereich gespeichert")
 }
 
 func parseFehlendeNummern(s string) ([]int32, error) {
@@ -635,83 +658,87 @@ func parseFehlendeNummern(s string) ([]int32, error) {
 	return ret, nil
 }
 
-func PausenNew(c *handler.Context) error {
-	nachRennenUuidStr := c.Param("nach_rennen_uuid")
+func PausenNew(w http.ResponseWriter, r *http.Request) {
+	nachRennenUuidStr := webfw.Param(r, "nach_rennen_uuid")
 	nachRennenUuid, err := uuid.Parse(nachRennenUuidStr)
 	if err != nil {
-		return handler.NotAcceptable("Invalid UUID")
+		webfw.ErrorToast(w, r, "Invalid UUID")
+		return
 	}
 	p := crud.Pause{Pause: sqlc.Pause{ID: int32(-2), NachRennenUuid: nachRennenUuid, Laenge: 45}}
 
-	templ.Handler(regattaleitung.PausenEntry(p)).ServeHTTP(c.Writer, c.Request)
-	return nil
+	templ.Handler(regattaleitung.PausenEntry(p)).ServeHTTP(w, r)
 }
 
-func PausenPost(c *handler.Context) error {
-	idStr := c.FormValue("id")
+func PausenPost(w http.ResponseWriter, r *http.Request) {
+	idStr := r.FormValue("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		slog.Error(fmt.Sprintf("ID: %s - Error: %s", idStr, err.Error()))
-		return handler.NotAcceptable("Invalid ID")
+		webfw.ErrorToast(w, r, "Invalid ID")
+		return
 	}
-	laengeStr := c.FormValue("laenge")
+	laengeStr := r.FormValue("laenge")
 	laenge, err := strconv.Atoi(laengeStr)
 	if err != nil || laenge < 0 || laenge > 120 {
 		slog.Error(fmt.Sprintf("Laenge: %s - Error: %s", laengeStr, err.Error()))
-		return handler.NotAcceptable("Invalid laenge")
+		webfw.ErrorToast(w, r, "Invalid laenge")
+		return
 	}
-	nachRennenUuidStr := c.FormValue("nach_rennen_uuid")
+	nachRennenUuidStr := r.FormValue("nach_rennen_uuid")
 	nachRennenUuid, err := uuid.Parse(nachRennenUuidStr)
 	if err != nil {
 		slog.Error(fmt.Sprintf("UUID: %s - Error: %s", nachRennenUuidStr, err.Error()))
-		return handler.NotAcceptable("Invalid UUID")
+		webfw.ErrorToast(w, r, "Invalid UUID")
+		return
 	}
 
 	if id == -2 {
-		_, err = crud.CreatePause(c.Request.Context(), sqlc.CreatePauseParams{
+		_, err = crud.CreatePause(r.Context(), sqlc.CreatePauseParams{
 			NachRennenUuid: nachRennenUuid,
 			Laenge:         int32(laenge),
 		})
 		if err != nil {
-			return handler.InternalError("Error while creating pause")
+			webfw.ErrorToast(w, r, "Error while creating pause")
+			return
 		}
 
-		templ.Handler(regattaleitung.Pausen()).ServeHTTP(c.Writer, c.Request)
-		return nil
+		templ.Handler(regattaleitung.Pausen()).ServeHTTP(w, r)
 	} else {
-		_, err = crud.UpdatePause(c.Request.Context(), sqlc.UpdatePauseParams{
+		_, err = crud.UpdatePause(r.Context(), sqlc.UpdatePauseParams{
 			ID:     int32(id),
 			Laenge: int32(laenge),
 		})
 		if err != nil {
-			return handler.InternalError("Error while updating pause")
+			webfw.ErrorToast(w, r, "Error while updating pause")
+			return
 		}
 
-		templ.Handler(regattaleitung.Pausen()).ServeHTTP(c.Writer, c.Request)
-		return nil
+		templ.Handler(regattaleitung.Pausen()).ServeHTTP(w, r)
 	}
 }
 
-func PausenDelete(c *handler.Context) error {
-	idStr := c.Param("id")
+func PausenDelete(w http.ResponseWriter, r *http.Request) {
+	idStr := webfw.Param(r, "id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		slog.Error(fmt.Sprintf("ID: %s - Error: %s", idStr, err.Error()))
-		return handler.NotAcceptable("Invalid ID")
+		webfw.ErrorToast(w, r, "Invalid ID")
+		return
 	}
 
-	err = crud.DeletePause(c.Request.Context(), int32(id))
+	err = crud.DeletePause(r.Context(), int32(id))
 	if err != nil {
-		return handler.InternalError("Error while deleting pause")
+		webfw.ErrorToast(w, r, "Error while deleting pause")
+		return
 	}
 
-	templ.Handler(regattaleitung.Pausen()).ServeHTTP(c.Writer, c.Request)
-	return nil
+	templ.Handler(regattaleitung.Pausen()).ServeHTTP(w, r)
 }
 
-func ZeitplanPost(c *handler.Context) error {
-	startzeit_saStr := c.FormValue("startzeit_sa")
-	startzeit_soStr := c.FormValue("startzeit_so")
+func ZeitplanPost(w http.ResponseWriter, r *http.Request) {
+	startzeit_saStr := r.FormValue("startzeit_sa")
+	startzeit_soStr := r.FormValue("startzeit_so")
 
 	fieldErrors := make(map[string]string)
 
@@ -725,7 +752,8 @@ func ZeitplanPost(c *handler.Context) error {
 	}
 
 	if len(fieldErrors) > 0 {
-		return handler.BadRequest("Ungültige Startzeit").WithForm(regattaleitung.Zeitplan("", fieldErrors))
+		webfw.ErrorWithForm(w, r, regattaleitung.Zeitplan("", fieldErrors), "Ungültige Startzeit")
+		return
 	}
 
 	zeitplan := service.SetZeitplanParams{
@@ -733,33 +761,36 @@ func ZeitplanPost(c *handler.Context) error {
 		SoStartStunde: startzeit_so,
 	}
 
-	err = service.SetZeitplan(c.Request.Context(), zeitplan)
+	err = service.SetZeitplan(r.Context(), zeitplan)
 	if err != nil {
-		return handler.InternalError("Error while creating zeitplan")
+		webfw.ErrorToast(w, r, "Error while creating zeitplan")
+		return
 	}
 
-	return handler.OK("Zeitplan erstellt")
+	webfw.SuccessToast(w, r, "Zeitplan erstellt")
 }
 
-func StartnummernVerteilenPost(c *handler.Context) error {
-	err := service.SetStartnummern(c.Request.Context())
+func StartnummernVerteilenPost(w http.ResponseWriter, r *http.Request) {
+	err := service.SetStartnummern(r.Context())
 	if err != nil {
-		return handler.InternalError(fmt.Sprintf("Error while setting startnummern: %s", err.Error()))
+		webfw.ErrorToast(w, r, fmt.Sprintf("Error while setting startnummern: %s", err.Error()))
+		return
 	}
 
-	return handler.OK("Startnummern erfolgreich verteilt!")
+	webfw.SuccessToast(w, r, "Startnummern erfolgreich verteilt!")
 }
 
-func StartnummernVerteilenDelete(c *handler.Context) error {
-	err := service.ResetStartnummern(c.Request.Context())
+func StartnummernVerteilenDelete(w http.ResponseWriter, r *http.Request) {
+	err := service.ResetStartnummern(r.Context())
 	if err != nil {
-		return handler.InternalError("Error while resetting startnummern")
+		webfw.ErrorToast(w, r, "Error while resetting startnummern")
+		return
 	}
 
-	return handler.OK("Startnummern erfolgreich zurückgesetzt!")
+	webfw.SuccessToast(w, r, "Startnummern erfolgreich zurückgesetzt!")
 }
 
-func PdfMeldeergebnisPost(c *handler.Context) error {
+func PdfMeldeergebnisPost(w http.ResponseWriter, r *http.Request) {
 	fileName := fmt.Sprintf("Meldeergebnis_%s", time.Now().Format("2006-01-02_15-04-05"))
 	_, err := utils.SavePDFfromHTML(
 		"leitung/meldeergebnis",
@@ -771,85 +802,97 @@ func PdfMeldeergebnisPost(c *handler.Context) error {
 		if rmErr := os.Remove(fmt.Sprintf("%smeldeergebnis/%s", config.C.Paths.FilesDir, fileName)); rmErr != nil {
 			slog.Error("Error removing failed PDF file", "err", rmErr)
 		}
-		return handler.InternalError(fmt.Sprintf("Fehler während PDF Erstellung: %s", err.Error()))
+		webfw.ErrorToast(w, r, fmt.Sprintf("Fehler während PDF Erstellung: %s", err.Error()))
+		return
 	}
 
-	templ.Handler(regattaleitung.PdfMeldeergebnis(true)).ServeHTTP(c.Writer, c.Request)
-	return nil
+	templ.Handler(regattaleitung.PdfMeldeergebnis(true)).ServeHTTP(w, r)
 }
 
-func AbmeldungDelete(c *handler.Context) error {
-	vereinUuidStr := c.Param("v_uuid")
+func AbmeldungDelete(w http.ResponseWriter, r *http.Request) {
+	vereinUuidStr := webfw.Param(r, "v_uuid")
 	vereinUuid, err := uuid.Parse(vereinUuidStr)
 	if err != nil {
-		return handler.NotAcceptable("Invalid UUID")
+		webfw.ErrorToast(w, r, "Invalid UUID")
+		return
 	}
-	meldungUuidStr := c.Param("m_uuid")
+	meldungUuidStr := webfw.Param(r, "m_uuid")
 	meldungUuid, err := uuid.Parse(meldungUuidStr)
 	if err != nil {
-		return handler.NotAcceptable("Invalid UUID")
+		webfw.ErrorToast(w, r, "Invalid UUID")
+		return
 	}
 
-	verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
+	_, err = crud.GetVerein(r.Context(), vereinUuid)
 	if err != nil {
-		return handler.InternalError("Error while loading verein")
+		webfw.ErrorToast(w, r, "Error while loading verein")
+		return
 	}
-	meldung, err := crud.GetMeldung(c.Request.Context(), meldungUuid)
+	meldung, err := crud.GetMeldung(r.Context(), meldungUuid)
 	if err != nil {
-		return handler.InternalError("Error while loading meldung")
+		webfw.ErrorToast(w, r, "Error while loading meldung")
+		return
+	}
+
+	if meldung.VereinUuid != vereinUuid {
+		webfw.ErrorToast(w, r, "Invalid UUID")
+		return
+	}
+
+	err = crud.Abmeldung(r.Context(), meldungUuid)
+	if err != nil {
+		webfw.ErrorToast(w, r, "Error while deleting meldung")
+		return
+	}
+
+	webfw.SetRedirect(w, fmt.Sprintf("/internal/regattabuero/%s/abmeldung", vereinUuid))
+	w.WriteHeader(http.StatusOK)
+}
+
+func UmmeldungPost(w http.ResponseWriter, r *http.Request) {
+	vereinUuidStr := webfw.Param(r, "v_uuid")
+	vereinUuid, err := uuid.Parse(vereinUuidStr)
+	if err != nil {
+		webfw.ErrorToast(w, r, "Invalid UUID")
+		return
+	}
+	meldungUuidStr := webfw.Param(r, "m_uuid")
+	meldungUuid, err := uuid.Parse(meldungUuidStr)
+	if err != nil {
+		webfw.ErrorToast(w, r, "Invalid UUID")
+		return
+	}
+
+	verein, err := crud.GetVerein(r.Context(), vereinUuid)
+	if err != nil {
+		webfw.ErrorToast(w, r, "Error while loading verein")
+		return
+	}
+	meldung, err := crud.GetMeldung(r.Context(), meldungUuid)
+	if err != nil {
+		webfw.ErrorToast(w, r, "Error while loading meldung")
+		return
 	}
 
 	if meldung.VereinUuid != verein.Uuid {
-		return handler.NotAcceptable("Invalid UUID")
+		webfw.ErrorToast(w, r, "Invalid UUID")
+		return
 	}
 
-	err = crud.Abmeldung(c.Request.Context(), meldungUuid)
+	athleten, err := crud.GetAllAthletenForVerein(r.Context(), vereinUuid)
 	if err != nil {
-		return handler.InternalError("Error while deleting meldung")
+		webfw.ErrorToast(w, r, "Error while loading athleten")
+		return
 	}
 
-	c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("/internal/regattabuero/%s/abmeldung", verein.Uuid))
-	c.Writer.WriteHeader(http.StatusOK)
-	return nil
-}
-
-func UmmeldungPost(c *handler.Context) error {
-	vereinUuidStr := c.Param("v_uuid")
-	vereinUuid, err := uuid.Parse(vereinUuidStr)
-	if err != nil {
-		return handler.NotAcceptable("Invalid UUID")
-	}
-	meldungUuidStr := c.Param("m_uuid")
-	meldungUuid, err := uuid.Parse(meldungUuidStr)
-	if err != nil {
-		return handler.NotAcceptable("Invalid UUID")
-	}
-
-	verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
-	if err != nil {
-		return handler.InternalError("Error while loading verein")
-	}
-	meldung, err := crud.GetMeldung(c.Request.Context(), meldungUuid)
-	if err != nil {
-		return handler.InternalError("Error while loading meldung")
-	}
-
-	if meldung.VereinUuid != verein.Uuid {
-		return handler.NotAcceptable("Invalid UUID")
-	}
-
-	athleten, err := crud.GetAllAthletenForVerein(c.Request.Context(), vereinUuid)
-	if err != nil {
-		return handler.InternalError("Error while loading athleten")
-	}
-
-	if err := c.Request.ParseForm(); err != nil {
-		return handler.BadRequest("Error parsing form")
+	if err := r.ParseForm(); err != nil {
+		webfw.ErrorToast(w, r, "Error parsing form")
+		return
 	}
 
 	fieldErrors := make(map[string]string)
 	for i := range meldung.Athleten {
-		athUuidStr := c.Request.FormValue(fmt.Sprintf("athleten_%d", i))
+		athUuidStr := r.FormValue(fmt.Sprintf("athleten_%d", i))
 		if athUuidStr == "" {
 			continue
 		}
@@ -861,7 +904,7 @@ func UmmeldungPost(c *handler.Context) error {
 		if athUuid == meldung.Athleten[i].Uuid {
 			continue
 		}
-		err = crud.Ummeldung(c.Request.Context(), sqlc.UmmeldungParams{
+		err = crud.Ummeldung(r.Context(), sqlc.UmmeldungParams{
 			MeldungUuid: meldungUuid,
 			Rolle:       *meldung.Athleten[i].Rolle,
 			Position:    int32(*meldung.Athleten[i].Position),
@@ -873,63 +916,73 @@ func UmmeldungPost(c *handler.Context) error {
 	}
 
 	if len(fieldErrors) > 0 {
-		return handler.BadRequest("Fehler bei der Ummeldung").WithForm(regattabuero.UmmeldungMeldung(verein, meldung, athleten, "", fieldErrors))
+		webfw.ErrorWithForm(w, r, regattabuero.UmmeldungMeldung(verein, meldung, athleten, "", fieldErrors), "Fehler bei der Ummeldung")
+		return
 	}
 
-	meldungen, err := crud.GetAllMeldungForVerein(c.Request.Context(), verein.Uuid)
+	meldungen, err := crud.GetAllMeldungForVerein(r.Context(), verein.Uuid)
 	if err != nil {
-		return handler.InternalError("Error while loading meldungen")
+		webfw.ErrorToast(w, r, "Error while loading meldungen")
+		return
 	}
 
-	c.Writer.Header().Set("HX-Push-Url", fmt.Sprintf("/internal/regattabuero/%s/ummeldung", verein.Uuid))
-	c.Writer.WriteHeader(http.StatusOK)
-	return regattabuero.Ummeldung(verein, meldungen).Render(context.Background(), c.Writer)
+	webfw.SetPushUrl(w, fmt.Sprintf("/internal/regattabuero/%s/ummeldung", verein.Uuid))
+	w.WriteHeader(http.StatusOK)
+	if err := regattabuero.Ummeldung(verein, meldungen).Render(context.Background(), w); err != nil {
+		slog.Warn("Ummeldung render error", "err", err)
+	}
 }
 
-func NachmeldungPost(c *handler.Context) error {
-	vereinUuidStr := c.Param("v_uuid")
-	rennenUuidStr := c.Param("r_uuid")
+func NachmeldungPost(w http.ResponseWriter, r *http.Request) {
+	vereinUuidStr := webfw.Param(r, "v_uuid")
+	rennenUuidStr := webfw.Param(r, "r_uuid")
 	rennenUuid, err := uuid.Parse(rennenUuidStr)
 	if err != nil {
-		return handler.NotAcceptable("Invalid UUID")
+		webfw.ErrorToast(w, r, "Invalid UUID")
+		return
 	}
 
-	rennen, err := crud.GetRennen(c.Request.Context(), rennenUuid)
+	rennen, err := crud.GetRennen(r.Context(), rennenUuid)
 	if err != nil {
-		return handler.InternalError("Error while loading rennen")
+		webfw.ErrorToast(w, r, "Error while loading rennen")
+		return
 	}
 
-	if err := c.Request.ParseForm(); err != nil {
-		return handler.BadRequest("Error parsing form")
+	if err := r.ParseForm(); err != nil {
+		webfw.ErrorToast(w, r, "Error parsing form")
+		return
 	}
 
-	vereinUuid, err := uuid.Parse(c.Request.FormValue("verein_uuid"))
+	vereinUuid, err := uuid.Parse(r.FormValue("verein_uuid"))
 	if err != nil {
-		return handler.NotAcceptable("Invalid UUID")
+		webfw.ErrorToast(w, r, "Invalid UUID")
+		return
 	}
-	verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
+	verein, err := crud.GetVerein(r.Context(), vereinUuid)
 	if err != nil {
-		return handler.InternalError("Error while loading verein")
+		webfw.ErrorToast(w, r, "Error while loading verein")
+		return
 	}
 
-	athleten, err := crud.GetAllAthletenForVerein(c.Request.Context(), vereinUuid)
+	athleten, err := crud.GetAllAthletenForVerein(r.Context(), vereinUuid)
 	if err != nil {
-		return handler.InternalError("Error while loading athleten")
+		webfw.ErrorToast(w, r, "Error while loading athleten")
+		return
 	}
 
 	numAthletes, stmRequired := rennen.GetTeilnehmerMeldeParams()
 
 	params := api_v1.PostNachmeldungParams{
-		VereinUuid:                    c.Request.FormValue("verein_uuid"),
-		RennenUuid:                    c.Request.FormValue("rennen_uuid"),
-		DoppeltesMeldentgeldBefreiung: c.Request.FormValue("doppeltes_meldentgeld_befreiung") != "",
+		VereinUuid:                    r.FormValue("verein_uuid"),
+		RennenUuid:                    r.FormValue("rennen_uuid"),
+		DoppeltesMeldentgeldBefreiung: r.FormValue("doppeltes_meldentgeld_befreiung") != "",
 		Athleten:                      []api_v1.PostNachmeldungAthletParams{},
 	}
 
 	fieldErrors := make(map[string]string)
 	hasAthlete := false
 	for i := range numAthletes {
-		athVal := c.Request.FormValue(fmt.Sprintf("athleten_%d", i))
+		athVal := r.FormValue(fmt.Sprintf("athleten_%d", i))
 		if athVal == "" || athVal == "---" {
 			continue
 		}
@@ -941,7 +994,7 @@ func NachmeldungPost(c *handler.Context) error {
 	}
 
 	if stmRequired {
-		stmVal := c.Request.FormValue("stm")
+		stmVal := r.FormValue("stm")
 		if stmVal != "" && stmVal != "---" {
 			hasAthlete = true
 			params.Athleten = append(params.Athleten, api_v1.PostNachmeldungAthletParams{
@@ -956,55 +1009,62 @@ func NachmeldungPost(c *handler.Context) error {
 	}
 
 	if len(fieldErrors) > 0 {
-		return handler.BadRequest("Bitte wähle mindestens einen Teilnehmer aus").WithForm(regattabuero.NachmeldungMeldung(verein, rennen, athleten, "", fieldErrors))
+		webfw.ErrorWithForm(w, r, regattabuero.NachmeldungMeldung(verein, rennen, athleten, "", fieldErrors), "Bitte wähle mindestens einen Teilnehmer aus")
+		return
 	}
 
-	m, err := api_v1.CreateNachmeldung(c.Request.Context(), params)
+	m, err := api_v1.CreateNachmeldung(r.Context(), params)
 	if err != nil {
-		return handler.InternalError("Error creating nachmeldung: " + err.Error())
+		webfw.ErrorToast(w, r, "Error creating nachmeldung: "+err.Error())
+		return
 	}
-	meldung, err := crud.GetMeldung(c.Request.Context(), m.Uuid)
+	meldung, err := crud.GetMeldung(r.Context(), m.Uuid)
 	if err != nil {
-		return handler.InternalError("Error while loading meldung")
+		webfw.ErrorToast(w, r, "Error while loading meldung")
+		return
 	}
 
-	c.Writer.Header().Set("HX-Push-Url", fmt.Sprintf("/internal/regattabuero/%s/nachmeldung/success/%s", vereinUuidStr, m.Uuid.String()))
-	c.Writer.WriteHeader(http.StatusOK)
-	return regattabuero.NachmeldungSuccess(meldung).Render(context.Background(), c.Writer)
+	webfw.SetPushUrl(w, fmt.Sprintf("/internal/regattabuero/%s/nachmeldung/success/%s", vereinUuidStr, m.Uuid.String()))
+	w.WriteHeader(http.StatusOK)
+	if err := regattabuero.NachmeldungSuccess(meldung).Render(context.Background(), w); err != nil {
+		slog.Warn("NachmeldungSuccess render error", "err", err)
+	}
 }
 
-func RennenTab(c *handler.Context) error {
-	wettkampfStr := c.Param("wettkampf")
+func RennenTab(w http.ResponseWriter, r *http.Request) {
+	wettkampfStr := webfw.Param(r, "wettkampf")
 	wettkampf, err := crud.WettkampfFromString(wettkampfStr)
 	if err != nil {
-		return handler.NotAcceptable("Invalid UUID")
+		webfw.ErrorToast(w, r, "Invalid UUID")
+		return
 	}
 
-	showEmpty := c.GetQueryParam("show_empty") == "true"
-	showStarted := c.GetQueryParam("show_started") == "true"
-	urlFormatStr := c.GetQueryParam("url_format_str")
+	showEmpty := webfw.Query(r, "show_empty") == "true"
+	showStarted := webfw.Query(r, "show_started") == "true"
+	urlFormatStr := webfw.Query(r, "url_format_str")
 
-	templ.Handler(ui_components.RennenTab(wettkampf, urlFormatStr, showEmpty, showStarted)).ServeHTTP(c.Writer, c.Request)
-	return nil
+	templ.Handler(ui_components.RennenTab(wettkampf, urlFormatStr, showEmpty, showStarted)).ServeHTTP(w, r)
 }
 
-func NewAthletPost(c *handler.Context) error {
-	vereinUuidStr := c.Param("v_uuid")
+func NewAthletPost(w http.ResponseWriter, r *http.Request) {
+	vereinUuidStr := webfw.Param(r, "v_uuid")
 	vereinUuid, err := uuid.Parse(vereinUuidStr)
 	if err != nil {
-		return handler.NotAcceptable("Invalid UUID")
+		webfw.ErrorToast(w, r, "Invalid UUID")
+		return
 	}
 
-	verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
+	verein, err := crud.GetVerein(r.Context(), vereinUuid)
 	if err != nil {
-		return handler.InternalError("Error while loading verein")
+		webfw.ErrorToast(w, r, "Error while loading verein")
+		return
 	}
 
-	vorname := c.FormValue("vorname")
-	name := c.FormValue("name")
-	jahrgang := c.FormValue("jahrgang")
-	geschlecht := c.FormValue("geschlecht")
-	startberechtigt := c.FormValue("startberechtigt") == "on"
+	vorname := r.FormValue("vorname")
+	name := r.FormValue("name")
+	jahrgang := r.FormValue("jahrgang")
+	geschlecht := r.FormValue("geschlecht")
+	startberechtigt := r.FormValue("startberechtigt") == "on"
 
 	fieldErrors := make(map[string]string)
 	if vorname == "" {
@@ -1021,17 +1081,17 @@ func NewAthletPost(c *handler.Context) error {
 	}
 
 	if len(fieldErrors) > 0 {
-		return handler.BadRequest("Bitte alle Pflichtfelder ausfüllen").WithForm(
-			regattabuero.NewAthlet(verein, "", fieldErrors),
-		)
+		webfw.ErrorWithForm(w, r, regattabuero.NewAthlet(verein, "", fieldErrors), "Bitte alle Pflichtfelder ausfüllen")
+		return
 	}
 
 	athletUuid, err := uuid.NewV7()
 	if err != nil {
-		return handler.InternalError("Error generating UUID")
+		webfw.ErrorToast(w, r, "Error generating UUID")
+		return
 	}
 
-	a, err := crud.CreateAthlet(c.Request.Context(), sqlc.CreateAthletParams{
+	a, err := crud.CreateAthlet(r.Context(), sqlc.CreateAthletParams{
 		Uuid:            athletUuid,
 		VereinUuid:      vereinUuid,
 		Name:            name,
@@ -1041,35 +1101,39 @@ func NewAthletPost(c *handler.Context) error {
 		Geschlecht:      sqlc.Geschlecht(geschlecht),
 	})
 	if err != nil {
-		return handler.InternalError("Fehler beim Anlegen des Athleten").WithForm(
-			regattabuero.NewAthlet(verein, "", nil),
-		)
+		webfw.ErrorWithForm(w, r, regattabuero.NewAthlet(verein, "", nil), "Fehler beim Anlegen des Athleten")
+		return
 	}
 
 	a.Verein = &verein
-	return regattabuero.NewAthletSuccess(a).Render(context.Background(), c.Writer)
+	if err := regattabuero.NewAthletSuccess(a).Render(context.Background(), w); err != nil {
+		slog.Warn("NewAthletSuccess render error", "err", err)
+	}
 }
 
-func WaagePost(c *handler.Context) error {
-	err := c.Request.ParseForm()
+func WaagePost(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
 	if err != nil {
 		slog.Error("ParseForm error", "err", err)
-		return handler.BadRequest("Fehler beim Verarbeiten der Anfrage")
+		webfw.ErrorToast(w, r, "Fehler beim Verarbeiten der Anfrage")
+		return
 	}
 
-	idStr := c.Request.FormValue("uuid")
-	gewichtStr := c.Request.FormValue("gewicht")
+	idStr := r.FormValue("uuid")
+	gewichtStr := r.FormValue("gewicht")
 
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		slog.Error("Parse UUID error", "err", err)
-		return handler.NotAcceptable("Ungültige UUID")
+		webfw.ErrorToast(w, r, "Ungültige UUID")
+		return
 	}
 
-	ath, err := crud.GetAthletMinimal(c.Request.Context(), id)
+	ath, err := crud.GetAthletMinimal(r.Context(), id)
 	if err != nil {
 		slog.Error("GetAthletMinimal error", "err", err)
-		return err
+		webfw.ErrorToast(w, r, err.Error())
+		return
 	}
 
 	fieldErrors := make(map[string]string)
@@ -1080,114 +1144,124 @@ func WaagePost(c *handler.Context) error {
 	gewicht := int(gewichtFloat * 10)
 
 	if len(fieldErrors) > 0 {
-		return handler.BadRequest("Ungültiges Gewicht").WithForm(regattabuero.Waage(ath, "", fieldErrors))
+		webfw.ErrorWithForm(w, r, regattabuero.Waage(ath, "", fieldErrors), "Ungültiges Gewicht")
+		return
 	}
 
-	err = ath.UpdateGewicht(c.Request.Context(), gewicht)
+	err = ath.UpdateGewicht(r.Context(), gewicht)
 	if err != nil {
 		slog.Error("UpdateGewicht error", "err", err)
-		return handler.InternalError("Fehler beim Aktualisieren des Gewichts")
+		webfw.ErrorToast(w, r, "Fehler beim Aktualisieren des Gewichts")
+		return
 	}
 
-	vereinUuidStr := c.Param("v_uuid")
+	vereinUuidStr := webfw.Param(r, "v_uuid")
 	vereinUuid, err := uuid.Parse(vereinUuidStr)
 	if err != nil {
-		return handler.NotAcceptable("Invalid UUID")
+		webfw.ErrorToast(w, r, "Invalid UUID")
+		return
 	}
-	verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
+	verein, err := crud.GetVerein(r.Context(), vereinUuid)
 	if err != nil {
-		return handler.NotFound("Verein nicht gefunden")
+		webfw.ErrorToast(w, r, "Verein nicht gefunden")
+		return
 	}
-	athleten, err := crud.GetAllAthletenForVereinWaage(c.Request.Context(), verein.Uuid)
+	athleten, err := crud.GetAllAthletenForVereinWaage(r.Context(), verein.Uuid)
 	if err != nil {
-		return handler.InternalError("Error while loading athleten")
+		webfw.ErrorToast(w, r, "Error while loading athleten")
+		return
 	}
 
 	for i := range athleten {
 		athleten[i].Verein = &verein
 	}
 
-	c.Writer.Header().Set("HX-Push-Url", fmt.Sprintf("/internal/regattabuero/%s/waage", vereinUuidStr))
-	c.Writer.WriteHeader(http.StatusOK)
-	return regattabuero.WaageWahl(verein, athleten).Render(context.Background(), c.Writer)
+	webfw.SetPushUrl(w, fmt.Sprintf("/internal/regattabuero/%s/waage", vereinUuidStr))
+	w.WriteHeader(http.StatusOK)
+	if err := regattabuero.WaageWahl(verein, athleten).Render(context.Background(), w); err != nil {
+		slog.Warn("WaageWahl render error", "err", err)
+	}
 }
 
-func StartberechtigungPost(c *handler.Context) error {
-	slog.Debug("StartberechtigungPost", "formVal", c.FormValue("startberechtigt"))
+func StartberechtigungPost(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("StartberechtigungPost", "formVal", r.FormValue("startberechtigt"))
 
-	vereinUuidStr := c.Param("v_uuid")
+	vereinUuidStr := webfw.Param(r, "v_uuid")
 	vereinUuid, err := uuid.Parse(vereinUuidStr)
 	if err != nil {
-		return handler.NotAcceptable("Invalid UUID")
+		webfw.ErrorToast(w, r, "Invalid UUID")
+		return
 	}
-	athletUuidStr := c.Param("a_uuid")
-	if athletUuidStr != c.FormValue("uuid") {
-		return handler.BadRequest("UUIDs stimmen nicht überein")
+	athletUuidStr := webfw.Param(r, "a_uuid")
+	if athletUuidStr != r.FormValue("uuid") {
+		webfw.ErrorToast(w, r, "UUIDs stimmen nicht überein")
+		return
 	}
 	athletUuid, err := uuid.Parse(athletUuidStr)
 	if err != nil {
-		return handler.NotAcceptable("Invalid UUID")
+		webfw.ErrorToast(w, r, "Invalid UUID")
+		return
 	}
 
-	verein, err := crud.GetVerein(c.Request.Context(), vereinUuid)
+	_, err = crud.GetVerein(r.Context(), vereinUuid)
 	if err != nil {
-		return handler.InternalError("Error while loading verein")
+		webfw.ErrorToast(w, r, "Error while loading verein")
+		return
 	}
-	athlet, err := crud.GetAthlet(c.Request.Context(), athletUuid)
+	athlet, err := crud.GetAthlet(r.Context(), athletUuid)
 	if err != nil {
-		return handler.InternalError("Error while loading athlet")
+		webfw.ErrorToast(w, r, "Error while loading athlet")
+		return
 	}
 
-	if athlet.VereinUuid != verein.Uuid {
-		return handler.NotAcceptable("Invalid UUID")
+	if athlet.VereinUuid != vereinUuid {
+		webfw.ErrorToast(w, r, "Invalid UUID")
+		return
 	}
-	formVal := c.FormValue("startberechtigt")
+	formVal := r.FormValue("startberechtigt")
 	formVal = strings.ToLower(formVal)
 	if formVal != "on" && formVal != "true" {
-		return handler.BadRequest("Bitte aktivieren Sie die Ärztliche Bescheinigung")
+		webfw.ErrorToast(w, r, "Bitte aktivieren Sie die Ärztliche Bescheinigung")
+		return
 	}
 
-	err = athlet.UpdateStartberechtigung(c.Request.Context(), true)
+	err = athlet.UpdateStartberechtigung(r.Context(), true)
 	if err != nil {
 		slog.Error("UpdateStartberechtigung error", "err", err)
-		return handler.InternalError("Error while updating startberechtigung")
+		webfw.ErrorToast(w, r, "Error while updating startberechtigung")
+		return
 	}
 
-	c.Writer.Header().Set("HX-Redirect", fmt.Sprintf("/internal/regattabuero/%s/startberechtigung", vereinUuidStr))
-	c.Writer.WriteHeader(http.StatusOK)
-	return nil
+	webfw.SetRedirect(w, fmt.Sprintf("/internal/regattabuero/%s/startberechtigung", vereinUuidStr))
+	w.WriteHeader(http.StatusOK)
 }
 
-func ZeitplanCollapseBody(c *handler.Context) error {
-	wettkampfStr := c.Param("wettkampf")
+func ZeitplanCollapseBody(w http.ResponseWriter, r *http.Request) {
+	wettkampfStr := webfw.Param(r, "wettkampf")
 	wettkampf, err := crud.WettkampfFromString(wettkampfStr)
 	if err != nil {
-		return handler.NotFound("Wettkampf not found")
+		webfw.ErrorToast(w, r, "Wettkampf not found")
+		return
 	}
-	templ.Handler(ui_components.ZeitplanCollapseBody(wettkampf)).ServeHTTP(c.Writer, c.Request)
-	return nil
+	templ.Handler(ui_components.ZeitplanCollapseBody(wettkampf)).ServeHTTP(w, r)
 }
 
-func AusschreibungRennenCollapseBody(c *handler.Context) error {
-	wettkampfStr := c.Param("wettkampf")
+func AusschreibungRennenCollapseBody(w http.ResponseWriter, r *http.Request) {
+	wettkampfStr := webfw.Param(r, "wettkampf")
 	wettkampf, err := crud.WettkampfFromString(wettkampfStr)
 	if err != nil {
-		return handler.NotFound("Wettkampf not found")
+		webfw.ErrorToast(w, r, "Wettkampf not found")
+		return
 	}
-	templ.Handler(ui_pages.AusschreibungRennenCollapseBody(wettkampf)).ServeHTTP(c.Writer, c.Request)
-	return nil
+	templ.Handler(ui_pages.AusschreibungRennenCollapseBody(wettkampf)).ServeHTTP(w, r)
 }
 
-func MeldeergebnisCollapseBody(c *handler.Context) error {
-	wettkampfStr := c.Param("wettkampf")
+func MeldeergebnisCollapseBody(w http.ResponseWriter, r *http.Request) {
+	wettkampfStr := webfw.Param(r, "wettkampf")
 	wettkampf, err := crud.WettkampfFromString(wettkampfStr)
 	if err != nil {
-		return handler.NotFound("Wettkampf not found")
+		webfw.ErrorToast(w, r, "Wettkampf not found")
+		return
 	}
-	templ.Handler(ui_pages.MeldeergebnisCollapseBody(wettkampf)).ServeHTTP(c.Writer, c.Request)
-	return nil
-}
-
-func MetricsAPIHandler(c *handler.Context) error {
-	return api_v1.MetricsApi(c)
+	templ.Handler(ui_pages.MeldeergebnisCollapseBody(wettkampf)).ServeHTTP(w, r)
 }

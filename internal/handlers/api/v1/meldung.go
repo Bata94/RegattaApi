@@ -3,58 +3,65 @@ package api_v1
 import (
 	"context"
 	"log/slog"
+	"net/http"
 	"strconv"
 
 	"github.com/bata94/RegattaApi/internal/crud"
-	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/bata94/RegattaApi/internal/sqlc"
+	"github.com/bata94/RegattaApi/pkg/webfw"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-func GetAllMeldung(c *handler.Context) error {
-	mLs, err := crud.GetAllMeldungen(c.Request.Context())
+func GetAllMeldung(w http.ResponseWriter, r *http.Request) {
+	mLs, err := crud.GetAllMeldungen(r.Context())
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 	if mLs == nil {
 		mLs = []crud.Meldung{}
 	}
 
-	return c.JSON(mLs)
+	webfw.JSON(w, r, mLs)
 }
 
-func GetMeldung(c *handler.Context) error {
-	meldungUUID, err := c.GetUUID("uuid")
+func GetMeldung(w http.ResponseWriter, r *http.Request) {
+	meldungUUID, err := webfw.GetUUID(r, "uuid")
 	if err != nil {
-		return handler.BadRequest(err.Error())
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
-	m, err := crud.GetMeldung(c.Request.Context(), meldungUUID)
+	m, err := crud.GetMeldung(r.Context(), meldungUUID)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON(m)
+	webfw.JSON(w, r, m)
 }
 
-func PostAbmeldung(c *handler.Context) error {
+func PostAbmeldung(w http.ResponseWriter, r *http.Request) {
 	params := new(AbmeldungsParams)
-	if err := c.BodyParser(params); err != nil {
-		return handler.BadRequest("Invalid request body")
+	if err := webfw.ParseBody(r, params); err != nil {
+		webfw.APIError(w, webfw.BadRequest("Invalid request body"))
+		return
 	}
 
 	meldungUUID, err := uuid.Parse(params.Uuid)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
-	err = crud.Abmeldung(c.Request.Context(), meldungUUID)
+	err = crud.Abmeldung(r.Context(), meldungUUID)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON("Meldung erfolgreich abgemeldet!")
+	webfw.JSON(w, r, "Meldung erfolgreich abgemeldet!")
 }
 
 type PostUmmeldungsParams struct {
@@ -62,20 +69,23 @@ type PostUmmeldungsParams struct {
 	Athleten    []PostNachmeldungAthletParams `json:"athleten"`
 }
 
-func PostUmmeldung(c *handler.Context) error {
+func PostUmmeldung(w http.ResponseWriter, r *http.Request) {
 	params := new(PostUmmeldungsParams)
-	if err := c.BodyParser(params); err != nil {
-		return handler.BadRequest("Invalid request body")
+	if err := webfw.ParseBody(r, params); err != nil {
+		webfw.APIError(w, webfw.BadRequest("Invalid request body"))
+		return
 	}
 	meldungUuid, err := uuid.Parse(params.MeldungUuid)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
 	for _, a := range params.Athleten {
 		athUuid, err := uuid.Parse(a.AthletUuid)
 		if err != nil {
-			return err
+			webfw.APIError(w, webfw.BadRequest(err.Error()))
+			return
 		}
 
 		var (
@@ -90,28 +100,31 @@ func PostUmmeldung(c *handler.Context) error {
 			rolle = sqlc.RolleRuderer
 			positionI64, err := strconv.ParseInt(a.Position, 10, 32)
 			if err != nil {
-				return err
+				webfw.APIError(w, webfw.BadRequest(err.Error()))
+				return
 			}
 			position = int32(positionI64)
 		}
 
-		err = crud.Ummeldung(c.Request.Context(), sqlc.UmmeldungParams{
+		err = crud.Ummeldung(r.Context(), sqlc.UmmeldungParams{
 			MeldungUuid: meldungUuid,
 			Rolle:       rolle,
 			Position:    position,
 			AthletUuid:  athUuid,
 		})
 		if err != nil {
-			return err
+			webfw.APIError(w, webfw.InternalError(err.Error()))
+			return
 		}
 	}
 
-	m, err := crud.GetMeldung(c.Request.Context(), meldungUuid)
+	m, err := crud.GetMeldung(r.Context(), meldungUuid)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON(m)
+	webfw.JSON(w, r, m)
 }
 
 type PostNachmeldungParams struct {
@@ -236,47 +249,53 @@ func CreateNachmeldung(ctx context.Context, params PostNachmeldungParams) (*crud
 	return &m, nil
 }
 
-func PostNachmeldung(c *handler.Context) error {
+func PostNachmeldung(w http.ResponseWriter, r *http.Request) {
 	params := new(PostNachmeldungParams)
-	err := c.BodyParser(params)
+	err := webfw.ParseBody(r, params)
 	if err != nil {
 		slog.Error("Param parse Error", "params", params)
-		return err
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
-	m, err := CreateNachmeldung(c.Request.Context(), *params)
+	m, err := CreateNachmeldung(r.Context(), *params)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON(m)
+	webfw.JSON(w, r, m)
 }
 
-func UpdateSetzungBatch(c *handler.Context) error {
+func UpdateSetzungBatch(w http.ResponseWriter, r *http.Request) {
 	params := new(crud.UpdateSetzungBatchParams)
-	err := c.BodyParser(params)
+	err := webfw.ParseBody(r, params)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
-	err = crud.UpdateSetzungBatch(c.Request.Context(), *params)
+	err = crud.UpdateSetzungBatch(r.Context(), *params)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON("Setzung erfolgreich aktualisiert!")
+	webfw.JSON(w, r, "Setzung erfolgreich aktualisiert!")
 }
 
-func GetAllMeldungForVerein(c *handler.Context) error {
-	vereinUuid, err := c.GetUUID("uuid")
+func GetAllMeldungForVerein(w http.ResponseWriter, r *http.Request) {
+	vereinUuid, err := webfw.GetUUID(r, "uuid")
 	if err != nil {
-		return handler.BadRequest(err.Error())
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
-	meldungen, err := crud.GetAllMeldungForVerein(c.Request.Context(), vereinUuid)
+	meldungen, err := crud.GetAllMeldungForVerein(r.Context(), vereinUuid)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON(meldungen)
+	webfw.JSON(w, r, meldungen)
 }

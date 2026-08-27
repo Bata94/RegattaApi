@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/bata94/RegattaApi/internal/crud"
-	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/bata94/RegattaApi/internal/sqlc"
+	"github.com/bata94/RegattaApi/pkg/webfw"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -102,7 +102,7 @@ func SetStartnummern(ctx context.Context) error {
 		return err
 	}
 	if !check {
-		return handler.BadRequest("Setzung not done!")
+		return webfw.BadRequest("Setzung not done!")
 	}
 
 	check2, err := crud.CheckMeldungStartnummern(ctx)
@@ -110,7 +110,7 @@ func SetStartnummern(ctx context.Context) error {
 		return err
 	}
 	if check2 {
-		return handler.BadRequest("Startnummern not done!")
+		return webfw.BadRequest("Startnummern not done!")
 	}
 
 	rLs, err := crud.GetAllRennen(ctx, crud.GetAllRennenParams{
@@ -135,7 +135,7 @@ func SetStartnummern(ctx context.Context) error {
 	nextStartNummer := func(tag crud.Tag) (int32, error) {
 		for {
 			if startNummerMap[tag] > bereich.MaxNummer {
-				return 0, handler.BadRequest("Nicht genügend Startnummern im konfigurierten Bereich")
+				return 0, webfw.BadRequest("Nicht genügend Startnummern im konfigurierten Bereich")
 			}
 			if !bereich.IsFehlend(startNummerMap[tag]) {
 				nummer := startNummerMap[tag]

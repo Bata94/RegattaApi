@@ -2,21 +2,23 @@ package api_v1
 
 import (
 	"log/slog"
+	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/bata94/RegattaApi/internal/crud"
-	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/bata94/RegattaApi/internal/handlers"
+	"github.com/bata94/RegattaApi/pkg/webfw"
 	"github.com/google/uuid"
 )
 
-func GetOpenZeitnahmeZiel(c *handler.Context) error {
-	q, err := crud.GetOpenZeitnahmeZiel(c.Request.Context())
+func GetOpenZeitnahmeZiel(w http.ResponseWriter, r *http.Request) {
+	q, err := crud.GetOpenZeitnahmeZiel(r.Context())
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
-	return c.JSON(map[string]any{"list": q})
+	webfw.JSON(w, r, map[string]any{"list": q})
 }
 
 type PostStartParams struct {
@@ -26,16 +28,18 @@ type PostStartParams struct {
 	MeasuredLatency *int      `json:"measured_latency"`
 }
 
-func PostZeitnahmeStart(c *handler.Context) error {
+func PostZeitnahmeStart(w http.ResponseWriter, r *http.Request) {
 	p := new(PostStartParams)
-	err := c.BodyParser(p)
+	err := webfw.ParseBody(r, p)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
-	q, err := crud.CreateZeitnahmeStart(c.Request.Context(), p.RennenNummer, p.StartNummern, p.TimeClient, *p.MeasuredLatency, uuid.New().String(), uuid.New().String())
+	q, err := crud.CreateZeitnahmeStart(r.Context(), p.RennenNummer, p.StartNummern, p.TimeClient, *p.MeasuredLatency, uuid.New().String(), uuid.New().String())
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
 	handlers.GetHub().BroadcastJSON(map[string]any{
@@ -43,38 +47,43 @@ func PostZeitnahmeStart(c *handler.Context) error {
 		"data": q,
 	})
 
-	return c.JSON(q)
+	webfw.JSON(w, r, q)
 }
 
-func GetOpenStarts(c *handler.Context) error {
-	q, err := crud.GetOpenZeitnahmeStart(c.Request.Context())
+func GetOpenStarts(w http.ResponseWriter, r *http.Request) {
+	q, err := crud.GetOpenZeitnahmeStart(r.Context())
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON(q)
+	webfw.JSON(w, r, q)
 }
 
-func GenerateEndZeit(c *handler.Context) error {
-	starts, err := crud.GetOpenZeitnahmeStart(c.Request.Context())
+func GenerateEndZeit(w http.ResponseWriter, r *http.Request) {
+	starts, err := crud.GetOpenZeitnahmeStart(r.Context())
 	if err != nil {
 		slog.Debug("GetOpenZeitnahmeStart")
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	ziels, err := crud.GetOpenZeitnahmeZiel(c.Request.Context())
+	ziels, err := crud.GetOpenZeitnahmeZiel(r.Context())
 	if err != nil {
 		slog.Debug("GetOpenZeitnahmeZiel")
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
 	if len(ziels) == 0 {
 		slog.Debug("0 Ziels")
-		return handler.BadRequest("No ziels")
+		webfw.APIError(w, webfw.BadRequest("No ziels"))
+		return
 	}
 	if len(starts) == 0 {
 		slog.Debug("0 Starts")
-		return handler.BadRequest("No starts")
+		webfw.APIError(w, webfw.BadRequest("No starts"))
+		return
 	}
 
 	for _, z := range ziels {
@@ -86,22 +95,26 @@ func GenerateEndZeit(c *handler.Context) error {
 				startNummerInt, err := strconv.Atoi(*s.StartNummer)
 				if err != nil {
 					slog.Error("Error StartNummerStr to int")
-					return err
+					webfw.APIError(w, webfw.InternalError(err.Error()))
+					return
 				}
-				meld, err := crud.GetMeldungByStartNrUndTag(c.Request.Context(), startNummerInt, crud.TagSa)
+				meld, err := crud.GetMeldungByStartNrUndTag(r.Context(), startNummerInt, crud.TagSa)
 				if err != nil {
 					slog.Debug("GetMeldungByStartNrUndTag")
-					return err
+					webfw.APIError(w, webfw.InternalError(err.Error()))
+					return
 				}
 				if meld.Uuid == uuid.Nil {
 					slog.Warn("GetMeldungByStartNrUndTag meld.Uuid is nil")
-					return handler.BadRequest("Meldung not found")
+					webfw.APIError(w, webfw.BadRequest("Meldung not found"))
+					return
 				}
 
-				err = crud.CreateZeitnahmeErgebnis(c.Request.Context(), s, z, meld)
+				err = crud.CreateZeitnahmeErgebnis(r.Context(), s, z, meld)
 				if err != nil {
 					slog.Debug("CreateZeitnahmeErgebnis")
-					return err
+					webfw.APIError(w, webfw.InternalError(err.Error()))
+					return
 				}
 
 				handlers.GetHub().BroadcastJSON(map[string]any{
@@ -116,5 +129,5 @@ func GenerateEndZeit(c *handler.Context) error {
 		}
 	}
 
-	return c.JSON("success")
+	webfw.JSON(w, r, "success")
 }

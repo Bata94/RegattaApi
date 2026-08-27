@@ -1,12 +1,14 @@
 package api_v1
 
 import (
-	"github.com/bata94/RegattaApi/internal/handler"
+	"net/http"
+
 	"github.com/bata94/RegattaApi/internal/mailer"
+	"github.com/bata94/RegattaApi/pkg/webfw"
 )
 
-func TestHandler(c *handler.Context) error {
-	err := mailer.Enqueue(c.Request.Context(), mailer.Params{
+func TestHandler(w http.ResponseWriter, r *http.Request) {
+	err := mailer.Enqueue(r.Context(), mailer.Params{
 		To: []string{
 			"bastian.sievers@gmail.com",
 			"bastian.sievers+test@gmail.com",
@@ -18,8 +20,9 @@ func TestHandler(c *handler.Context) error {
 	})
 
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON("success")
+	webfw.JSON(w, r, "success")
 }

@@ -6,67 +6,50 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
-
-	"github.com/bata94/RegattaApi/internal/handler"
 )
 
 var excludedExtensions = []string{
-	".pdf",
-	".zip",
-	".tar",
-	".gz",
-	".jpg",
-	".jpeg",
-	".png",
-	".gif",
-	".webp",
-	".mp4",
-	".webm",
-	".mp3",
-	".wasm",
-	".woff2",
-	".woff",
-	".ttf",
-	".ico",
-	".svg",
-	".avi",
-	".mov",
+	".pdf", ".zip", ".tar", ".gz", ".jpg", ".jpeg", ".png", ".gif", ".webp",
+	".mp4", ".webm", ".mp3", ".wasm", ".woff2", ".woff", ".ttf", ".ico",
+	".svg", ".avi", ".mov",
 }
 
 var excludedPaths = []string{
-	"/ws",
-	"/stream",
-	"/events",
-	"/comp/image",
+	"/ws", "/stream", "/events", "/comp/image",
 }
 
-func Compression() Middleware {
-	return func(next handler.Handler) handler.Handler {
-		return func(c *handler.Context) error {
-			if c.Request.Header.Get("Upgrade") != "" {
-				return next(c)
+func Compression() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Upgrade") != "" {
+				next.ServeHTTP(w, r)
+				return
 			}
 
-			if c.Request.Header.Get("Content-Encoding") != "" {
-				return next(c)
+			if r.Header.Get("Content-Encoding") != "" {
+				next.ServeHTTP(w, r)
+				return
 			}
 
-			path := c.Path()
+			path := r.URL.Path
 			for _, excluded := range excludedPaths {
 				if strings.HasPrefix(path, excluded) {
-					return next(c)
+					next.ServeHTTP(w, r)
+					return
 				}
 			}
 
 			for _, ext := range excludedExtensions {
 				if strings.HasSuffix(path, ext) {
-					return next(c)
+					next.ServeHTTP(w, r)
+					return
 				}
 			}
 
-			acceptEncoding := c.Request.Header.Get("Accept-Encoding")
+			acceptEncoding := r.Header.Get("Accept-Encoding")
 			if acceptEncoding == "" {
-				return next(c)
+				next.ServeHTTP(w, r)
+				return
 			}
 
 			encoding := ""
@@ -80,10 +63,11 @@ func Compression() Middleware {
 			}
 
 			if encoding == "" {
-				return next(c)
+				next.ServeHTTP(w, r)
+				return
 			}
 
-			gw := gzip.NewWriter(c.Writer)
+			gw := gzip.NewWriter(w)
 			gwClosed := false
 			defer func() {
 				if !gwClosed {
@@ -93,42 +77,26 @@ func Compression() Middleware {
 				}
 			}()
 
-			c.Writer.Header().Set("Content-Encoding", "gzip")
-			c.Writer.Header().Set("Vary", "Accept-Encoding")
+			w.Header().Set("Content-Encoding", "gzip")
+			w.Header().Set("Vary", "Accept-Encoding")
 
-			originalWriter := c.Writer
 			wrapped := &gzipResponseWriter{
-				ResponseWriter: c.Writer,
+				ResponseWriter: w,
 				gw:             gw,
 				written:        false,
 			}
-			c.Writer = wrapped
 
-			err := next(c)
+			gwClosed = true
+			next.ServeHTTP(wrapped, r)
 
-			if err != nil {
-				c.Writer = originalWriter
-				c.Writer.Header().Del("Content-Encoding")
-				gwClosed = true
-				return err
+			if err := gw.Close(); err != nil {
+				slog.Error("Error closing gzip writer", "err", err)
 			}
 
 			if err := gw.Flush(); err != nil {
 				slog.Error("Error flushing gzip writer", "err", err)
 			}
-			if err := gw.Close(); err != nil {
-				slog.Error("Error closing gzip writer", "err", err)
-			}
-			gwClosed = true
-
-			c.Writer = originalWriter
-
-			if !wrapped.written {
-				return nil
-			}
-
-			return nil
-		}
+		})
 	}
 }
 
@@ -151,10 +119,6 @@ func (g *gzipResponseWriter) WriteHeader(statusCode int) {
 	g.ResponseWriter.WriteHeader(statusCode)
 }
 
-func (g *gzipResponseWriter) HeadersWritten() bool {
-	return g.written
-}
-
 func (g *gzipResponseWriter) Flush() {
 	if err := g.gw.Flush(); err != nil {
 		slog.Error("Error flushing gzip writer", "err", err)
@@ -167,4 +131,8 @@ func (g *gzipResponseWriter) Flush() {
 func (g *gzipResponseWriter) ReadFrom(r io.Reader) (int64, error) {
 	g.written = true
 	return io.Copy(g.gw, r)
+}
+
+func (g *gzipResponseWriter) HeadersWritten() bool {
+	return g.written
 }

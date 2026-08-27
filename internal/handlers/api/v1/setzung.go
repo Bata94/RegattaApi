@@ -3,11 +3,12 @@ package api_v1
 import (
 	"fmt"
 	"math/rand/v2"
+	"net/http"
 
 	"github.com/bata94/RegattaApi/internal/crud"
-	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/bata94/RegattaApi/internal/service"
 	"github.com/bata94/RegattaApi/internal/sqlc"
+	"github.com/bata94/RegattaApi/pkg/webfw"
 )
 
 func shuffle(array []crud.Meldung) []crud.Meldung {
@@ -18,29 +19,32 @@ func shuffle(array []crud.Meldung) []crud.Meldung {
 	return array
 }
 
-func SetzungsLosung(c *handler.Context) error {
-	check, err := crud.CheckMeldungSetzung(c.Request.Context())
+func SetzungsLosung(w http.ResponseWriter, r *http.Request) {
+	check, err := crud.CheckMeldungSetzung(r.Context())
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 	if check {
-		return handler.BadRequest("Setzung bereits erledigt! Vorher reseten um zu wiederholen!")
+		webfw.APIError(w, webfw.BadRequest("Setzung bereits erledigt! Vorher reseten um zu wiederholen!"))
+		return
 	}
 
-	allRennen, err := crud.GetAllRennen(c.Request.Context(), crud.GetAllRennenParams{
+	allRennen, err := crud.GetAllRennen(r.Context(), crud.GetAllRennenParams{
 		GetMeldungen:  true,
 		ShowEmpty:     true,
 		ShowStarted:   true,
 		ShowWettkampf: sqlc.NullWettkampf{},
 	})
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	for _, r := range allRennen {
+	for _, rennen := range allRennen {
 		maxBahnen := 1
 
-		switch r.Wettkampf {
+		switch rennen.Wettkampf {
 		case sqlc.WettkampfKurzstrecke:
 			maxBahnen = 4
 		case sqlc.WettkampfSlalom:
@@ -52,7 +56,7 @@ func SetzungsLosung(c *handler.Context) error {
 		}
 
 		numMeld := 0
-		for _, m := range r.Meldungen {
+		for _, m := range rennen.Meldungen {
 			if !m.Abgemeldet {
 				numMeld++
 			}
@@ -79,22 +83,23 @@ func SetzungsLosung(c *handler.Context) error {
 			sizes[numAbteilungen-1]++
 		}
 
-		r.Meldungen = shuffle(r.Meldungen)
+		rennen.Meldungen = shuffle(rennen.Meldungen)
 
 		abteilungIdx := 0
 		bahn := int32(1)
 		count := 0
 
-		for _, m := range r.Meldungen {
+		for _, m := range rennen.Meldungen {
 			if m.Abgemeldet {
 				continue
 			}
-			if err := crud.UpdateMeldungSetzung(c.Request.Context(), sqlc.UpdateMeldungSetzungParams{
+			if err := crud.UpdateMeldungSetzung(r.Context(), sqlc.UpdateMeldungSetzungParams{
 				Uuid:      m.Uuid,
 				Abteilung: int32(abteilungIdx + 1),
 				Bahn:      bahn,
 			}); err != nil {
-				return err
+				webfw.APIError(w, webfw.InternalError(err.Error()))
+				return
 			}
 			bahn++
 			count++
@@ -106,56 +111,61 @@ func SetzungsLosung(c *handler.Context) error {
 		}
 	}
 
-	if c.IsHtmxRequest() {
-		return nil
+	if webfw.IsHtmxRequest(r) {
+		return
 	} else {
-		return c.JSON("Setzung erfolgreich!")
+		webfw.JSON(w, r, "Setzung erfolgreich!")
 	}
 }
 
-func ResetSetzung(c *handler.Context) error {
-	mLs, err := crud.GetAllMeldungen(c.Request.Context())
+func ResetSetzung(w http.ResponseWriter, r *http.Request) {
+	mLs, err := crud.GetAllMeldungen(r.Context())
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
 	for _, m := range mLs {
-		err = crud.UpdateMeldungSetzung(c.Request.Context(), sqlc.UpdateMeldungSetzungParams{
+		err = crud.UpdateMeldungSetzung(r.Context(), sqlc.UpdateMeldungSetzungParams{
 			Uuid:      m.Uuid,
 			Abteilung: 0,
 			Bahn:      0,
 		})
 		if err != nil {
-			return err
+			webfw.APIError(w, webfw.InternalError(err.Error()))
+			return
 		}
 	}
 
-	if c.IsHtmxRequest() {
-		return nil
+	if webfw.IsHtmxRequest(r) {
+		return
 	} else {
-		return c.JSON("Losung erfolgreich!")
+		webfw.JSON(w, r, "Losung erfolgreich!")
 	}
 }
 
-func SetStartnummern(c *handler.Context) error {
-	if err := service.SetStartnummern(c.Request.Context()); err != nil {
-		return handler.InternalError(fmt.Sprintf("Error while setting startnummern: %s", err.Error()))
+func SetStartnummern(w http.ResponseWriter, r *http.Request) {
+	if err := service.SetStartnummern(r.Context()); err != nil {
+		webfw.APIError(w, webfw.InternalError(fmt.Sprintf("Error while setting startnummern: %s", err.Error())))
+		return
 	}
 
-	return c.JSON("Startnummern vergeben!")
+	webfw.JSON(w, r, "Startnummern vergeben!")
 }
 
-func SetZeitplan(c *handler.Context) error {
+func SetZeitplan(w http.ResponseWriter, r *http.Request) {
 	param := new(service.SetZeitplanParams)
-	err := c.BodyParser(param)
+	err := webfw.ParseBody(r, param)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
-	err = service.SetZeitplan(c.Request.Context(), *param)
+	err = service.SetZeitplan(r.Context(), *param)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON("Zeitplan gesetzt!")
+	webfw.JSON(w, r, "Zeitplan gesetzt!")
 }

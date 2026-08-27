@@ -1,33 +1,37 @@
 package api_v1
 
 import (
+	"net/http"
+
 	"github.com/bata94/RegattaApi/internal/crud"
-	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/bata94/RegattaApi/internal/sqlc"
+	"github.com/bata94/RegattaApi/pkg/webfw"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
 
-func GetRennen(c *handler.Context) error {
-	uuid, err := c.GetUUID("uuid")
+func GetRennen(w http.ResponseWriter, r *http.Request) {
+	uuid, err := webfw.GetUUID(r, "uuid")
 	if err != nil {
-		return handler.BadRequest(err.Error())
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
-	r, err := crud.GetRennen(c.Request.Context(), uuid)
+	rennen, err := crud.GetRennen(r.Context(), uuid)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON(r)
+	webfw.JSON(w, r, rennen)
 }
 
-func GetAllRennen(c *handler.Context) error {
-	getMeld := c.Query("getMeld") == "true"
-	getAthleten := c.Query("getAthleten") == "true"
-	showEmpty := c.Query("showEmpty") != "false"
-	showStarted := c.Query("showStarted") != "false"
-	showWettkampfStr := c.Query("wettkampf")
+func GetAllRennen(w http.ResponseWriter, r *http.Request) {
+	getMeld := webfw.Query(r, "getMeld") == "true"
+	getAthleten := webfw.Query(r, "getAthleten") == "true"
+	showEmpty := webfw.Query(r, "showEmpty") != "false"
+	showStarted := webfw.Query(r, "showStarted") != "false"
+	showWettkampfStr := webfw.Query(r, "wettkampf")
 	showWettkampf := sqlc.NullWettkampf{}
 	if showWettkampfStr != "" {
 		caser := cases.Title(language.German)
@@ -39,7 +43,8 @@ func GetAllRennen(c *handler.Context) error {
 	}
 
 	if getAthleten && !getMeld {
-		return handler.BadRequest("Query param getAthleten requires getMeldungen to be true")
+		webfw.APIError(w, webfw.BadRequest("Query param getAthleten requires getMeldungen to be true"))
+		return
 	}
 
 	searchParams := crud.GetAllRennenParams{
@@ -51,18 +56,21 @@ func GetAllRennen(c *handler.Context) error {
 	}
 
 	if getAthleten {
-		retLs, err := crud.GetAllRennenWithAthlet(c.Request.Context(), searchParams)
+		retLs, err := crud.GetAllRennenWithAthlet(r.Context(), searchParams)
 		if err != nil {
-			return err
+			webfw.APIError(w, webfw.InternalError(err.Error()))
+			return
 		}
 
-		return c.JSON(retLs)
+		webfw.JSON(w, r, retLs)
+		return
 	}
 
-	rLs, err := crud.GetAllRennen(c.Request.Context(), searchParams)
+	rLs, err := crud.GetAllRennen(r.Context(), searchParams)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON(rLs)
+	webfw.JSON(w, r, rLs)
 }

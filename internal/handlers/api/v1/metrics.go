@@ -1,11 +1,13 @@
 package api_v1
 
 import (
-	"github.com/bata94/RegattaApi/internal/handler"
+	"net/http"
+
 	"github.com/bata94/RegattaApi/internal/utils/metrics"
+	"github.com/bata94/RegattaApi/pkg/webfw"
 )
 
-func MetricsApi(c *handler.Context) error {
+func MetricsApi(w http.ResponseWriter, r *http.Request) {
 	m := metrics.Collect()
-	return c.JSON(m)
+	webfw.JSON(w, r, m)
 }

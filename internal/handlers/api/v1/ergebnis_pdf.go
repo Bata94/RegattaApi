@@ -1,7 +1,9 @@
 package api_v1
 
 import (
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"path/filepath"
 	"sort"
@@ -9,38 +11,42 @@ import (
 
 	"github.com/bata94/RegattaApi/internal/config"
 	"github.com/bata94/RegattaApi/internal/crud"
-	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/bata94/RegattaApi/internal/handlers"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	pdf_templates "github.com/bata94/RegattaApi/internal/templates/pdf"
 	"github.com/bata94/RegattaApi/internal/utils"
+	"github.com/bata94/RegattaApi/pkg/webfw"
 )
 
-func GetPdfFooter(c *handler.Context) error {
-	return c.JSON("footer placeholder")
+func GetPdfFooter(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode("footer placeholder"); err != nil {
+		slog.Error("failed to encode PDF footer", "error", err)
+	}
 }
 
-func GetMeldeergebnisList(c *handler.Context) error {
+func GetMeldeergebnisList(w http.ResponseWriter, r *http.Request) {
 	files, err := utils.GetFilenames("meldeergebnis")
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
-	return c.JSON(files)
+	webfw.JSON(w, r, files)
 }
 
-func GetMeldeergebnisFilename(c *handler.Context) error {
-	filename := c.Param("filename")
+func GetMeldeergebnisFilename(w http.ResponseWriter, r *http.Request) {
+	filename := webfw.Param(r, "filename")
 	filePath := filepath.Join(config.C.Paths.FilesDir, "meldeergebnis", filename)
-	http.ServeFile(c.Writer, c.Request, filePath)
-	return nil
+	http.ServeFile(w, r, filePath)
 }
 
-func GetMeldeergebnisHtml(c *handler.Context) error {
-	pLs, err := crud.GetAllPausen(c.Request.Context())
+func GetMeldeergebnisHtml(w http.ResponseWriter, r *http.Request) {
+	pLs, err := crud.GetAllPausen(r.Context())
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
-	rLs, err := crud.GetAllRennenWithAthlet(c.Request.Context(), crud.GetAllRennenParams{
+	rLs, err := crud.GetAllRennenWithAthlet(r.Context(), crud.GetAllRennenParams{
 		GetMeldungen:  true,
 		GetAthleten:   true,
 		ShowEmpty:     true,
@@ -48,7 +54,8 @@ func GetMeldeergebnisHtml(c *handler.Context) error {
 		ShowWettkampf: sqlc.NullWettkampf{},
 	})
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
 	pLsParsed := []pdf_templates.PausenMeldeergebnisPDF{}
@@ -61,32 +68,32 @@ func GetMeldeergebnisHtml(c *handler.Context) error {
 	}
 
 	rLsParsed := []pdf_templates.RennenMeldeergebnisPDF{}
-	for _, r := range rLs {
+	for _, race := range rLs {
 		zusatz := ""
-		if v := r.GetZusatz(); v != nil {
+		if v := race.GetZusatz(); v != nil {
 			zusatz = *v
 		}
 		startzeit := ""
-		if v := r.GetStartzeit(); v != nil {
+		if v := race.GetStartzeit(); v != nil {
 			startzeit = *v
 		}
 		rennabstand := 0
-		if v := r.GetRennabstand(); v != nil {
+		if v := race.GetRennabstand(); v != nil {
 			rennabstand = *v
 		}
 
 		rParsed := pdf_templates.RennenMeldeergebnisPDF{
-			Uuid:              r.Uuid.String(),
-			RennNr:            r.Nummer,
-			Bezeichnung:       r.Bezeichnung,
+			Uuid:              race.Uuid.String(),
+			RennNr:            race.Nummer,
+			Bezeichnung:       race.Bezeichnung,
 			BezeichnungZusatz: zusatz,
 			Startzeit:         startzeit,
 			Rennabstand:       rennabstand,
-			Tag:               string(r.Tag),
-			NumMeldungen:      *r.NumMeldungen,
-			NumAbteilungen:    *r.NumAbteilungen,
-			Wettkampf:         r.Wettkampf,
-			Abteilungen:       make([]pdf_templates.AbteilungenMeldeergebnisPDF, *r.NumAbteilungen),
+			Tag:               string(race.Tag),
+			NumMeldungen:      *race.NumMeldungen,
+			NumAbteilungen:    *race.NumAbteilungen,
+			Wettkampf:         race.Wettkampf,
+			Abteilungen:       make([]pdf_templates.AbteilungenMeldeergebnisPDF, *race.NumAbteilungen),
 			Abmeldungen:       []pdf_templates.MeldungMeldeergebnisPDF{},
 		}
 
@@ -94,9 +101,10 @@ func GetMeldeergebnisHtml(c *handler.Context) error {
 			rParsed.Abteilungen[i].Nummer = i + 1
 		}
 
-		meldungen, err := r.GetMeldungen(c.Request.Context())
+		meldungen, err := race.GetMeldungen(r.Context())
 		if err != nil {
-			return err
+			webfw.APIError(w, webfw.InternalError(err.Error()))
+			return
 		}
 		if len(meldungen) == 0 {
 			rLsParsed = append(rLsParsed, rParsed)
@@ -123,14 +131,16 @@ func GetMeldeergebnisHtml(c *handler.Context) error {
 		rLsParsed = append(rLsParsed, rParsed)
 	}
 
-	return handlers.RenderPdf(
-		c,
+	if err := handlers.RenderPdf(
+		w,
 		fmt.Sprintf("Meldeergebnis_%s", time.Now().Format("2006-01-02_15-04-05")),
 		pdf_templates.MeldeErgebnis(rLsParsed, pLsParsed),
-	)
+	); err != nil {
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+	}
 }
 
-func GenerateMeldeergebnis(c *handler.Context) error {
+func GenerateMeldeergebnis(w http.ResponseWriter, r *http.Request) {
 	fp, err := utils.SavePDFfromHTML(
 		"leitung/meldeergebnis",
 		"meldeergebnis",
@@ -138,15 +148,15 @@ func GenerateMeldeergebnis(c *handler.Context) error {
 		true,
 	)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
-	http.ServeFile(c.Writer, c.Request, fp)
-	return nil
+	http.ServeFile(w, r, fp)
 }
 
-func GenerateErgebnisHtml(c *handler.Context) error {
+func GenerateErgebnisHtml(w http.ResponseWriter, r *http.Request) {
 	rLsParsed := []ErgebnisRennenPDF{}
-	rennen, err := crud.GetAllRennenWithAthlet(c.Request.Context(), crud.GetAllRennenParams{
+	rennen, err := crud.GetAllRennenWithAthlet(r.Context(), crud.GetAllRennenParams{
 		GetMeldungen:  true,
 		GetAthleten:   true,
 		ShowEmpty:     false,
@@ -154,39 +164,40 @@ func GenerateErgebnisHtml(c *handler.Context) error {
 		ShowWettkampf: sqlc.NullWettkampf{},
 	})
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	for _, r := range rennen {
-		if r.Wettkampf != sqlc.WettkampfLangstrecke {
+	for _, race := range rennen {
+		if race.Wettkampf != sqlc.WettkampfLangstrecke {
 			break
 		}
-		if *r.NumMeldungen != 0 {
+		if *race.NumMeldungen != 0 {
 			zusatz := ""
-			if v := r.GetZusatz(); v != nil {
+			if v := race.GetZusatz(); v != nil {
 				zusatz = *v
 			}
 			startzeit := ""
-			if v := r.GetStartzeit(); v != nil {
+			if v := race.GetStartzeit(); v != nil {
 				startzeit = *v
 			}
 			rennabstand := 0
-			if v := r.GetRennabstand(); v != nil {
+			if v := race.GetRennabstand(); v != nil {
 				rennabstand = *v
 			}
 
 			rParsed := ErgebnisRennenPDF{
-				Uuid:              r.Uuid.String(),
-				RennNr:            r.Nummer,
-				Bezeichnung:       r.Bezeichnung,
+				Uuid:              race.Uuid.String(),
+				RennNr:            race.Nummer,
+				Bezeichnung:       race.Bezeichnung,
 				BezeichnungZusatz: zusatz,
 				Startzeit:         startzeit,
 				Rennabstand:       rennabstand,
-				Tag:               string(r.Tag),
-				NumMeldungen:      *r.NumMeldungen,
-				NumAbteilungen:    *r.NumAbteilungen,
-				Wettkampf:         r.Wettkampf,
-				Abteilungen:       make([]ErgebnisAbteilungPDF, *r.NumAbteilungen),
+				Tag:               string(race.Tag),
+				NumMeldungen:      *race.NumMeldungen,
+				NumAbteilungen:    *race.NumAbteilungen,
+				Wettkampf:         race.Wettkampf,
+				Abteilungen:       make([]ErgebnisAbteilungPDF, *race.NumAbteilungen),
 				Dns:               []MeldungMeldeergebnisPDF{},
 			}
 
@@ -194,9 +205,10 @@ func GenerateErgebnisHtml(c *handler.Context) error {
 				rParsed.Abteilungen[i].Nummer = i + 1
 			}
 
-			meldungen, err := r.GetMeldungen(c.Request.Context())
+			meldungen, err := race.GetMeldungen(r.Context())
 			if err != nil {
-				return err
+				webfw.APIError(w, webfw.InternalError(err.Error()))
+				return
 			}
 			for _, m := range meldungen {
 				if m.Abgemeldet {
@@ -220,7 +232,7 @@ func GenerateErgebnisHtml(c *handler.Context) error {
 					}
 				}
 
-				ergebnis, err := crud.GetZeitnahmeErgebnisByMeld(c.Request.Context(), m.Uuid)
+				ergebnis, err := crud.GetZeitnahmeErgebnisByMeld(r.Context(), m.Uuid)
 				if err != nil {
 					rParsed.Dns = append(rParsed.Dns, MeldungMeldeergebnisPDF{
 						StartNummer: int(m.StartNummer),
@@ -268,10 +280,10 @@ func GenerateErgebnisHtml(c *handler.Context) error {
 		}
 	}
 
-	return c.JSON(rLsParsed)
+	webfw.JSON(w, r, rLsParsed)
 }
 
-func GenerateErgebnis(c *handler.Context) error {
+func GenerateErgebnis(w http.ResponseWriter, r *http.Request) {
 	fp, err := utils.SavePDFfromHTML(
 		"leitung/ergebnis",
 		"ergebnis",
@@ -279,10 +291,10 @@ func GenerateErgebnis(c *handler.Context) error {
 		true,
 	)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
-	http.ServeFile(c.Writer, c.Request, fp)
-	return nil
+	http.ServeFile(w, r, fp)
 }
 
 type MeldungMeldeergebnisPDF struct {

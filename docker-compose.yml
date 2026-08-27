@@ -73,6 +73,7 @@ services:
       - ./cmd:/opt/app/cmd
       - ./docs:/opt/app/docs
       - ./internal:/opt/app/internal
+      - ./pkg:/opt/app/pkg
       - ./sqlc:/opt/app/sqlc
       - api-dev-files:/opt/app/files
       - ./main.go:/opt/app/main.go

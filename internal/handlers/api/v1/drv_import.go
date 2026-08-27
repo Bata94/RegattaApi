@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -16,18 +17,19 @@ import (
 	"github.com/bata94/RegattaApi/internal/crud"
 	DB "github.com/bata94/RegattaApi/internal/db"
 	apierr "github.com/bata94/RegattaApi/internal/errors"
-	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/bata94/RegattaApi/internal/sqlc"
+	"github.com/bata94/RegattaApi/pkg/webfw"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const writeFilePerms os.FileMode = 0o666
 
-func DrvMeldungUpload(c *handler.Context) error {
-	filename, content, err := c.FormFile("file")
+func DrvMeldungUpload(w http.ResponseWriter, r *http.Request) {
+	filename, content, err := webfw.FormFile(r, "file")
 	if err != nil {
-		return handler.BadRequest(err.Error())
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
 	slog.Info("Uploaded", "filename", filename)
@@ -35,24 +37,29 @@ func DrvMeldungUpload(c *handler.Context) error {
 
 	err = os.MkdirAll(uploadsDir, os.ModePerm)
 	if err != nil {
-		return handler.InternalError("Error while creating uploads directory")
+		webfw.APIError(w, webfw.InternalError("Error while creating uploads directory"))
+		return
 	}
 
 	dest := fmt.Sprintf("%s%s_%s.json", uploadsDir, "DrvMeldung", time.Now().Format("2006-01-02_15-04-05"))
-	err = c.SaveFile(dest, content)
+	err = webfw.SaveFile(dest, content)
 	if err != nil {
-		return handler.InternalError(err.Error())
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	err = ImportDrvJson(c.Request.Context(), dest)
+	err = ImportDrvJson(r.Context(), dest)
 	if err != nil {
-		return handler.InternalError("An Error occurred while importing the JSON File! If you directly downloaded the File from DRV and uploaded it, without modifying it, please contact the Admin! Details: " + err.Error())
+		webfw.APIError(w, webfw.InternalError("An Error occurred while importing the JSON File! If you directly downloaded the File from DRV and uploaded it, without modifying it, please contact the Admin! Details: "+err.Error()))
+		return
 	}
 
-	if c.IsHtmxRequest() {
-		return nil
-	} else {
-		return c.JSON("File uploaded successfully!")
+	if webfw.IsHtmxRequest(r) {
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(map[string]string{"message": "File uploaded successfully!"}); err != nil {
+		slog.Warn("JSON encode error", "err", err)
 	}
 }
 
@@ -425,7 +432,7 @@ func importDrvJsonCore(ctx context.Context, drvMeldung DrvMeldungJson) error {
 				}
 				if aUuid == uuid.Nil {
 					slog.Warn("uuid is still nil", "uuid", aUuid)
-					return handler.InternalError("Failed to find athlete UUID")
+					return webfw.InternalError("Failed to find athlete UUID")
 				}
 			}
 			var rolle sqlc.Rolle

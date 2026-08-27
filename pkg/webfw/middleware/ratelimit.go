@@ -2,12 +2,13 @@ package middleware
 
 import (
 	"fmt"
+	"log/slog"
+	"net/http"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/bata94/RegattaApi/internal/config"
-	"github.com/bata94/RegattaApi/internal/handler"
 	"golang.org/x/time/rate"
 )
 
@@ -37,14 +38,14 @@ func InitRateLimiter() {
 	})
 }
 
-func RateLimit() Middleware {
+func RateLimit() func(http.Handler) http.Handler {
 	if globalLimiter == nil {
 		InitRateLimiter()
 	}
 
-	return func(next handler.Handler) handler.Handler {
-		return func(c *handler.Context) error {
-			key := getRateLimitKey(c)
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			key := getRateLimitKey(r)
 			limiter := globalLimiter.getLimiter(key)
 
 			if !limiter.Allow() {
@@ -55,37 +56,39 @@ func RateLimit() Middleware {
 					remaining = int(limiter.Tokens())
 				}
 
-				c.Writer.Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", burst))
-				c.Writer.Header().Set("X-RateLimit-Remaining", strconv.Itoa(remaining))
-				c.Writer.Header().Set("X-RateLimit-Reset", fmt.Sprintf("%d", time.Now().Add(time.Second).Unix()))
+				w.Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", burst))
+				w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(remaining))
+				w.Header().Set("X-RateLimit-Reset", fmt.Sprintf("%d", time.Now().Add(time.Second).Unix()))
+				w.Header().Set("Retry-After", "1")
 
-				retryAfter := 1
-				c.Writer.Header().Set("Retry-After", strconv.Itoa(retryAfter))
-
-				return handler.InternalError("Too many requests")
+				w.WriteHeader(http.StatusTooManyRequests)
+				if _, err := w.Write([]byte("Too many requests")); err != nil {
+					slog.Error("failed to write rate limit response", "error", err)
+				}
+				return
 			}
 
-			c.Writer.Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", globalLimiter.burst))
+			w.Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", globalLimiter.burst))
 			remaining := int(limiter.Tokens())
 			if remaining < 0 {
 				remaining = 0
 			}
-			c.Writer.Header().Set("X-RateLimit-Remaining", strconv.Itoa(remaining))
-			c.Writer.Header().Set("X-RateLimit-Reset", fmt.Sprintf("%d", time.Now().Add(time.Second).Unix()))
+			w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(remaining))
+			w.Header().Set("X-RateLimit-Reset", fmt.Sprintf("%d", time.Now().Add(time.Second).Unix()))
 
-			return next(c)
-		}
+			next.ServeHTTP(w, r)
+		})
 	}
 }
 
-func getRateLimitKey(c *handler.Context) string {
-	if userID := c.GetLocals("user_id"); userID != nil {
+func getRateLimitKey(r *http.Request) string {
+	if userID := r.Context().Value("user_id"); userID != nil {
 		if uid, ok := userID.(string); ok && uid != "" {
 			return "user:" + uid
 		}
 	}
 
-	ip := c.IP()
+	ip := IP(r)
 	if ip == "" {
 		ip = "unknown"
 	}
@@ -128,8 +131,3 @@ func (rl *RateLimiter) cleanupLoop() {
 		rl.mu.Unlock()
 	}
 }
-
-// TODO: Implement distributed rate limiting with Redis for multi-instance deployments.
-// Current in-memory implementation works for single-server deployments.
-// For distributed setups, use Redis with sliding window or token bucket algorithms.
-// Reference: https://github.com/redis/go-redis rate limiting or Redis Cell (SETNX + EXPIRE).

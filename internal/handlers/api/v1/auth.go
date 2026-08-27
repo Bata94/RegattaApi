@@ -1,49 +1,60 @@
 package api_v1
 
 import (
+	"net/http"
+
 	"github.com/bata94/RegattaApi/internal/crud"
-	"github.com/bata94/RegattaApi/internal/handler"
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/bata94/RegattaApi/pkg/webfw"
 )
 
-func Login(c *handler.Context) error {
+func Login(w http.ResponseWriter, r *http.Request) {
 	loginParams := new(crud.LoginParams)
-	if err := c.BodyParser(loginParams); err != nil {
-		return handler.BadRequest(err.Error())
+	if err := webfw.ParseBody(r, loginParams); err != nil {
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
-	u, err := crud.AuthLogin(c.Request.Context(), *loginParams)
+	u, err := crud.AuthLogin(r.Context(), *loginParams)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.Unauthorized("Invalid credentials"))
+		return
 	}
 
-	c.SetCookie("auth_token", u.Jwt.Token, 72*60*60)
-	c.Writer.Header().Set("HX-Redirect", "/internal")
-	return c.JSON(u)
+	webfw.SetCookie(w, r, "auth_token", u.Jwt.Token, 72*60*60)
+	w.Header().Set("HX-Redirect", "/internal")
+	webfw.JSON(w, r, u)
 }
 
-func Logout(c *handler.Context) error {
-	return c.JSON("Logout successful!")
+func Logout(w http.ResponseWriter, r *http.Request) {
+	webfw.DeleteCookie(w, r, "auth_token")
+	webfw.JSON(w, r, "Logout successful!")
 }
 
-func AuthValidate(c *handler.Context) error {
-	return c.JSON("Auth successful!")
+func AuthValidate(w http.ResponseWriter, r *http.Request) {
+	webfw.JSON(w, r, "Auth successful!")
 }
 
-func AuthMe(c *handler.Context) error {
-	user := c.GetLocals("user").(*jwt.Token)
-	claims := user.Claims.(jwt.MapClaims)
+func AuthMe(w http.ResponseWriter, r *http.Request) {
+	user := webfw.GetUser(r)
+	if user == nil {
+		webfw.APIError(w, webfw.Unauthorized("Not authenticated"))
+		return
+	}
+
+	claims := webfw.GetUserClaims(r)
 	uuidStr := claims["user_id"].(string)
 
 	userID, err := crud.ParseUUID(uuidStr)
 	if err != nil {
-		return handler.Unauthorized("Invalid token")
+		webfw.APIError(w, webfw.Unauthorized("Invalid token"))
+		return
 	}
 
-	u, err := crud.GetUser(c.Request.Context(), userID)
+	u, err := crud.GetUser(r.Context(), userID)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON(*u)
+	webfw.JSON(w, r, *u)
 }

@@ -1,17 +1,18 @@
 package api_v1
 
 import (
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
+	"net/http"
 	"strconv"
 
 	"github.com/bata94/RegattaApi/internal/crud"
-	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/bata94/RegattaApi/internal/sqlc"
+	"github.com/bata94/RegattaApi/pkg/webfw"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
-func GetAllPausen(c *handler.Context) error {
-	showWettkampfStr := c.Query("wettkampf")
+func GetAllPausen(w http.ResponseWriter, r *http.Request) {
+	showWettkampfStr := webfw.Query(r, "wettkampf")
 	showWettkampf := sqlc.NullWettkampf{}
 	if showWettkampfStr != "" {
 		caser := cases.Title(language.German)
@@ -28,70 +29,79 @@ func GetAllPausen(c *handler.Context) error {
 	} else {
 		wettLs = []sqlc.Wettkampf{showWettkampf.Wettkampf}
 	}
-	pLs, err := crud.GetPausenByWettkampf(c.Request.Context(), wettLs)
+	pLs, err := crud.GetPausenByWettkampf(r.Context(), wettLs)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 	if pLs == nil {
 		pLs = []crud.Pause{}
 	}
-	return c.JSON(pLs)
+	webfw.JSON(w, r, pLs)
 }
 
-func GetPause(c *handler.Context) error {
-	idStr := c.Param("id")
+func GetPause(w http.ResponseWriter, r *http.Request) {
+	idStr := webfw.Param(r, "id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		return handler.BadRequest("invalid id")
+		webfw.APIError(w, webfw.BadRequest("invalid id"))
+		return
 	}
 
-	p, err := crud.GetPause(c.Request.Context(), id)
+	p, err := crud.GetPause(r.Context(), id)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
-	return c.JSON(p)
+	webfw.JSON(w, r, p)
 }
 
-func DeletePause(c *handler.Context) error {
-	idStr := c.Param("id")
+func DeletePause(w http.ResponseWriter, r *http.Request) {
+	idStr := webfw.Param(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
-		return handler.BadRequest("invalid id")
+		webfw.APIError(w, webfw.BadRequest("invalid id"))
+		return
 	}
 
-	err = crud.DeletePause(c.Request.Context(), int32(id))
+	err = crud.DeletePause(r.Context(), int32(id))
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
-	return c.JSON("Pause erfolgreich gelöscht!")
+	webfw.JSON(w, r, "Pause erfolgreich gelöscht!")
 }
 
-func CreatePause(c *handler.Context) error {
+func CreatePause(w http.ResponseWriter, r *http.Request) {
 	params := new(sqlc.CreatePauseParams)
-	err := c.BodyParser(params)
+	err := webfw.ParseBody(r, params)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
-	p, err := crud.CreatePause(c.Request.Context(), *params)
+	p, err := crud.CreatePause(r.Context(), *params)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON(p)
+	webfw.JSON(w, r, p)
 }
 
-func UpdatePause(c *handler.Context) error {
+func UpdatePause(w http.ResponseWriter, r *http.Request) {
 	params := new(sqlc.UpdatePauseParams)
-	err := c.BodyParser(params)
+	err := webfw.ParseBody(r, params)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
-	p, err := crud.UpdatePause(c.Request.Context(), *params)
+	p, err := crud.UpdatePause(r.Context(), *params)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON(p)
+	webfw.JSON(w, r, p)
 }

@@ -2,43 +2,47 @@ package api_v1
 
 import (
 	"log/slog"
+	"net/http"
 
 	"github.com/bata94/RegattaApi/internal/crud"
-	"github.com/bata94/RegattaApi/internal/handler"
 	"github.com/bata94/RegattaApi/internal/mailer"
 	"github.com/bata94/RegattaApi/internal/utils"
+	"github.com/bata94/RegattaApi/pkg/webfw"
 )
 
 type AbmeldungsParams struct {
 	Uuid string `json:"uuid"`
 }
 
-func StartnummernAusgabe(c *handler.Context) error {
-	return handler.NotFound("Not found")
+func StartnummernAusgabe(w http.ResponseWriter, r *http.Request) {
+	webfw.APIError(w, webfw.NotFound("Not found"))
 }
 
-func StartnummernWechsel(c *handler.Context) error {
-	return handler.NotFound("Not found")
+func StartnummernWechsel(w http.ResponseWriter, r *http.Request) {
+	webfw.APIError(w, webfw.NotFound("Not found"))
 }
 
-func KasseEinzahlung(c *handler.Context) error {
-	return handler.NotFound("Not found")
+func KasseEinzahlung(w http.ResponseWriter, r *http.Request) {
+	webfw.APIError(w, webfw.NotFound("Not found"))
 }
 
-func KasseCreateRechnungPDF(c *handler.Context) error {
-	uuid, err := c.GetUUID("uuid")
+func KasseCreateRechnungPDF(w http.ResponseWriter, r *http.Request) {
+	uuid, err := webfw.GetUUID(r, "uuid")
 	if err != nil {
-		return handler.BadRequest(err.Error())
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
-	v, err := crud.GetVereinMinimal(c.Request.Context(), uuid)
+	v, err := crud.GetVereinMinimal(r.Context(), uuid)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	reNr, err := v.GetNextRechnungsnummer(c.Request.Context())
+	reNr, err := v.GetNextRechnungsnummer(r.Context())
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
 	filePath, err := utils.SavePDFfromHTML(
@@ -48,14 +52,16 @@ func KasseCreateRechnungPDF(c *handler.Context) error {
 		true,
 	)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 	slog.Info("Generated", "file", filePath)
 
 	toMail := []string{}
-	obleute, err := crud.GetAllObmannForVerein(c.Request.Context(), v.Uuid)
+	obleute, err := crud.GetAllObmannForVerein(r.Context(), v.Uuid)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
 	for _, o := range obleute {
@@ -64,7 +70,7 @@ func KasseCreateRechnungPDF(c *handler.Context) error {
 		}
 	}
 
-	err = mailer.Enqueue(c.Request.Context(), mailer.Params{
+	err = mailer.Enqueue(r.Context(), mailer.Params{
 		To:      toMail,
 		CC:      []string{},
 		Subject: "MRG Regatta 24 - Rechnung " + reNr,
@@ -73,21 +79,23 @@ func KasseCreateRechnungPDF(c *handler.Context) error {
 	})
 
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON("success")
+	webfw.JSON(w, r, "success")
 }
 
-func KasseCreateRechnungAllVereine(c *handler.Context) error {
-	vereine, err := crud.GetAllVerein(c.Request.Context())
+func KasseCreateRechnungAllVereine(w http.ResponseWriter, r *http.Request) {
+	vereine, err := crud.GetAllVerein(r.Context())
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
 	errLs := []error{}
 	for _, v := range vereine {
-		reNr, err := v.GetNextRechnungsnummer(c.Request.Context())
+		reNr, err := v.GetNextRechnungsnummer(r.Context())
 		if err != nil {
 			errLs = append(errLs, err)
 			continue
@@ -107,30 +115,35 @@ func KasseCreateRechnungAllVereine(c *handler.Context) error {
 	}
 
 	if len(errLs) > 0 {
-		return c.JSON(errLs)
+		webfw.JSON(w, r, errLs)
+		return
 	}
-	return c.JSON("success")
+	webfw.JSON(w, r, "success")
 }
 
-func KasseCreateRechnungHTML(c *handler.Context) error {
-	uuid, err := c.GetUUID("uuid")
+func KasseCreateRechnungHTML(w http.ResponseWriter, r *http.Request) {
+	uuid, err := webfw.GetUUID(r, "uuid")
 	if err != nil {
-		return handler.BadRequest(err.Error())
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
-	v, err := crud.GetVereinMinimal(c.Request.Context(), uuid)
+	v, err := crud.GetVereinMinimal(r.Context(), uuid)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	meld, err := crud.GetAllMeldungForVerein(c.Request.Context(), v.Uuid)
+	meld, err := crud.GetAllMeldungForVerein(r.Context(), v.Uuid)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	reNr, err := v.GetNextRechnungsnummer(c.Request.Context())
+	reNr, err := v.GetNextRechnungsnummer(r.Context())
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
 	type RechnungEntry struct {
@@ -156,20 +169,22 @@ func KasseCreateRechnungHTML(c *handler.Context) error {
 		})
 		sumPreis += int(m.Kosten)
 
-		err := crud.SetMeldungRechnungsNummer(c.Request.Context(), m.Uuid, reNr)
+		err := crud.SetMeldungRechnungsNummer(r.Context(), m.Uuid, reNr)
 		if err != nil {
 			slog.Error("Error", "err", err)
 		}
 	}
 
 	if len(entries) == 0 {
-		return handler.NotFound("Keine Meldungen gefunden!")
+		webfw.APIError(w, webfw.NotFound("Keine Meldungen gefunden!"))
+		return
 	}
 
-	err = crud.CreateRechnung(c.Request.Context(), reNr, v.Uuid, sumPreis)
+	err = crud.CreateRechnung(r.Context(), reNr, v.Uuid, sumPreis)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON("Rechnung generated")
+	webfw.JSON(w, r, "Rechnung generated")
 }

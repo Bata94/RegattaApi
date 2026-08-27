@@ -127,7 +127,7 @@ clean:
 	rm -rf tmp/*
 
 # Live Reload
-watch: sqlc-gen db-up build
+watch: sqlc-gen build
   @echo "Watching..."
   air
 

@@ -1,95 +1,109 @@
 package api_v1
 
 import (
+	"net/http"
+
 	"github.com/bata94/RegattaApi/internal/crud"
-	"github.com/bata94/RegattaApi/internal/handler"
+	"github.com/bata94/RegattaApi/pkg/webfw"
 )
 
-func GetAllUsers(c *handler.Context) error {
-	uLs, err := crud.GetAllUsers(c.Request.Context())
+func GetAllUsers(w http.ResponseWriter, r *http.Request) {
+	uLs, err := crud.GetAllUsers(r.Context())
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON(uLs)
+	webfw.JSON(w, r, uLs)
 }
 
-func GetUser(c *handler.Context) error {
-	uuid, err := c.GetUUID("uuid")
+func GetUser(w http.ResponseWriter, r *http.Request) {
+	uuid, err := webfw.GetUUID(r, "uuid")
 	if err != nil {
-		return handler.BadRequest(err.Error())
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
-	u, err := crud.GetUser(c.Request.Context(), uuid)
+	u, err := crud.GetUser(r.Context(), uuid)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON(*u)
+	webfw.JSON(w, r, *u)
 }
 
-func GetUserByName(c *handler.Context) error {
-	name := c.Param("name")
+func GetUserByName(w http.ResponseWriter, r *http.Request) {
+	name := webfw.Param(r, "name")
 	if name == "" {
-		return handler.BadRequest("name parameter required")
+		webfw.APIError(w, webfw.BadRequest("name parameter required"))
+		return
 	}
 
-	u, err := crud.GetUserByUsername(c.Request.Context(), name)
+	u, err := crud.GetUserByUsername(r.Context(), name)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON(*u)
+	webfw.JSON(w, r, *u)
 }
 
-func CreateUser(c *handler.Context) error {
+func CreateUser(w http.ResponseWriter, r *http.Request) {
 	uParams := new(crud.CreateUserParams)
-	err := c.BodyParser(&uParams)
+	err := webfw.ParseBody(r, &uParams)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
-	u, err := crud.CreateUser(c.Request.Context(), *uParams)
+	u, err := crud.CreateUser(r.Context(), *uParams)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON(u)
+	webfw.JSON(w, r, u)
 }
 
-func GetAllUsersGroups(c *handler.Context) error {
-	ugLs, err := crud.GetAllUsersGroups(c.Request.Context())
+func GetAllUsersGroups(w http.ResponseWriter, r *http.Request) {
+	ugLs, err := crud.GetAllUsersGroups(r.Context())
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON(ugLs)
+	webfw.JSON(w, r, ugLs)
 }
 
-func GetUsersGroup(c *handler.Context) error {
-	uuid, err := c.GetUUID("uuid")
+func GetUsersGroup(w http.ResponseWriter, r *http.Request) {
+	uuid, err := webfw.GetUUID(r, "uuid")
 	if err != nil {
-		return handler.BadRequest(err.Error())
+		webfw.APIError(w, webfw.BadRequest(err.Error()))
+		return
 	}
 
-	ug, err := crud.GetUsersGroup(c.Request.Context(), uuid)
+	ug, err := crud.GetUsersGroup(r.Context(), uuid)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON(ug)
+	webfw.JSON(w, r, ug)
 }
 
-func GetUsersGroupByName(c *handler.Context) error {
-	name := c.Param("name")
+func GetUsersGroupByName(w http.ResponseWriter, r *http.Request) {
+	name := webfw.Param(r, "name")
 	if name == "" {
-		return handler.BadRequest("name parameter required")
+		webfw.APIError(w, webfw.BadRequest("name parameter required"))
+		return
 	}
 
-	ug, err := crud.GetUsersGroupByName(c.Request.Context(), name)
+	ug, err := crud.GetUsersGroupByName(r.Context(), name)
 	if err != nil {
-		return err
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
-	return c.JSON(ug)
+	webfw.JSON(w, r, ug)
 }
