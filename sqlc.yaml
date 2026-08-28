@@ -23,3 +23,9 @@ sql:
             go_type:
               import: "github.com/google/uuid"
               type: "UUID"
+          - column: "verin.ges_kosten"
+            go_type:
+              type: "int64"
+          - column: "verin.ges_zahlungen"
+            go_type:
+              type: "int64"

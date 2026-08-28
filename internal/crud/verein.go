@@ -177,16 +177,8 @@ func GetVerein(ctx context.Context, uuid uuid.UUID) (Verein, error) {
 		return Verein{}, err
 	}
 
-	gesKostenI64, ok := q.GesKosten.(int64)
-	if !ok {
-		return Verein{}, errors.New("error while converting gesamt kosten to int")
-	}
-	gesZahlungenI64, ok := q.GesZahlungen.(int64)
-	if !ok {
-		return Verein{}, errors.New("error while converting gesamt zahlung to int")
-	}
-	gesKosten := int(gesKostenI64)
-	gesZahlungen := int(gesZahlungenI64)
+	gesKosten := int(q.GesKosten)
+	gesZahlungen := int(q.GesZahlungen)
 	saldo := gesZahlungen - gesKosten
 
 	return Verein{

@@ -142,8 +142,8 @@ func (q *Queries) GetRechnungungenByVerein(ctx context.Context, vereinUuid uuid.
 const getVerein = `-- name: GetVerein :one
 SELECT
   verein.uuid, verein.name, verein.kurzform, verein.kuerzel,
-  (SELECT COALESCE(SUM(meldung.kosten), 0) FROM meldung WHERE verein.uuid = meldung.verein_uuid) as ges_kosten,
-  (SELECT COALESCE(SUM(zahlung.amount), 0) FROM zahlung WHERE verein.uuid = zahlung.verein_uuid) as ges_zahlungen
+  (SELECT SUM(meldung.kosten) FROM meldung WHERE verein.uuid = meldung.verein_uuid) as ges_kosten,
+  (SELECT SUM(zahlung.amount) FROM zahlung WHERE verein.uuid = zahlung.verein_uuid) as ges_zahlungen
 FROM
   verein
 WHERE
@@ -151,9 +151,9 @@ WHERE
 `
 
 type GetVereinRow struct {
-	Verein       Verein      `json:"verein"`
-	GesKosten    interface{} `json:"ges_kosten"`
-	GesZahlungen interface{} `json:"ges_zahlungen"`
+	Verein       Verein `json:"verein"`
+	GesKosten    int64  `json:"ges_kosten"`
+	GesZahlungen int64  `json:"ges_zahlungen"`
 }
 
 func (q *Queries) GetVerein(ctx context.Context, argUuid uuid.UUID) (GetVereinRow, error) {

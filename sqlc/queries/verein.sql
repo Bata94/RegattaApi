@@ -9,8 +9,8 @@ ORDER BY name ASC;
 -- name: GetVerein :one
 SELECT
   sqlc.embed(verein),
-  (SELECT COALESCE(SUM(meldung.kosten), 0) FROM meldung WHERE verein.uuid = meldung.verein_uuid) as ges_kosten,
-  (SELECT COALESCE(SUM(zahlung.amount), 0) FROM zahlung WHERE verein.uuid = zahlung.verein_uuid) as ges_zahlungen
+  (SELECT SUM(meldung.kosten) FROM meldung WHERE verein.uuid = meldung.verein_uuid) as ges_kosten,
+  (SELECT SUM(zahlung.amount) FROM zahlung WHERE verein.uuid = zahlung.verein_uuid) as ges_zahlungen
 FROM
   verein
 WHERE

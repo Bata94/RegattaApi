@@ -27,14 +27,6 @@
 
 ---
 
-### `GetVerein` returns untyped fields
-
-- [ ] **`GetVerein` returns `interface{}` for `GesKosten`/`GesZahlungen`**
-  - `internal/sqlc/verein.sql.go` (queried by `internal/crud/verein.go:162`) returns a custom row type where `GesKosten`/`GesZahlungen` are typed `interface{}` and must be type-asserted to `int64` (`verein.go:174-184`).
-  - sqlc/pgx limitation. Consider a dedicated SQL view/function returning typed aggregates, or cast explicitly in SQL.
-
----
-
 ## Config & Documentation
 
 - [ ] **Swagger docs are empty stubs**
