@@ -328,18 +328,19 @@ func UpdateSetzungBatch(ctx context.Context, p UpdateSetzungBatchParams) error {
 		return apierr.ErrBadRequest
 	}
 
-	for _, m := range p.Meldungen {
-		err := UpdateMeldungSetzung(ctx, sqlc.UpdateMeldungSetzungParams{
-			Uuid:      m.Uuid,
-			Abteilung: m.Abteilung,
-			Bahn:      m.Bahn,
-		})
-		if err != nil {
-			return err
+	return DB.WithTx(ctx, func(txCtx context.Context) error {
+		for _, m := range p.Meldungen {
+			err := UpdateMeldungSetzung(txCtx, sqlc.UpdateMeldungSetzungParams{
+				Uuid:      m.Uuid,
+				Abteilung: m.Abteilung,
+				Bahn:      m.Bahn,
+			})
+			if err != nil {
+				return err
+			}
 		}
-	}
-
-	return nil
+		return nil
+	})
 }
 
 func UpdateStartNummer(ctx context.Context, p sqlc.UpdateStartNummerParams) error {

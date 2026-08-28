@@ -1,10 +1,15 @@
 package api_v1
 
 import (
+	"context"
+	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/bata94/RegattaApi/internal/crud"
+	DB "github.com/bata94/RegattaApi/internal/db"
+	apierr "github.com/bata94/RegattaApi/internal/errors"
 	"github.com/bata94/RegattaApi/internal/mailer"
 	"github.com/bata94/RegattaApi/internal/utils"
 	"github.com/bata94/RegattaApi/pkg/webfw"
@@ -122,18 +127,6 @@ func KasseCreateRechnungHTML(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	meld, err := crud.GetAllMeldungForVerein(r.Context(), v.Uuid)
-	if err != nil {
-		webfw.APIError(w, webfw.InternalError(err.Error()))
-		return
-	}
-
-	reNr, err := v.GetNextRechnungsnummer(r.Context())
-	if err != nil {
-		webfw.APIError(w, webfw.InternalError(err.Error()))
-		return
-	}
-
 	type RechnungEntry struct {
 		Tag         string
 		Startnummer string
@@ -141,35 +134,61 @@ func KasseCreateRechnungHTML(w http.ResponseWriter, r *http.Request) {
 		Preis       string
 	}
 
-	entries := []RechnungEntry{}
-	sumPreis := 0
+	var entries []RechnungEntry
+	var reNr string
+	var sumPreis int
 
-	for _, m := range meld {
-		if m.RechnungsNummer.String != "" {
-			continue
-		}
-
-		entries = append(entries, RechnungEntry{
-			Tag:         string(m.Rennen.Tag),
-			Startnummer: string(rune(int(m.StartNummer) + '0')),
-			Rennen:      m.Rennen.Bezeichnung,
-			Preis:       string(rune(int(m.Kosten)+'0')) + ",00 €",
-		})
-		sumPreis += int(m.Kosten)
-
-		err := crud.SetMeldungRechnungsNummer(r.Context(), m.Uuid, reNr)
+	err = DB.WithTx(r.Context(), func(txCtx context.Context) error {
+		meld, err := crud.GetAllMeldungForVerein(txCtx, v.Uuid)
 		if err != nil {
-			slog.Error("Error", "err", err)
+			return err
 		}
-	}
 
-	if len(entries) == 0 {
-		webfw.APIError(w, webfw.NotFound("Keine Meldungen gefunden!"))
-		return
-	}
+		reNr, err = v.GetNextRechnungsnummer(txCtx)
+		if err != nil {
+			return err
+		}
 
-	err = crud.CreateRechnung(r.Context(), reNr, v.Uuid, sumPreis)
+		entries = nil
+		sumPreis = 0
+
+		for _, m := range meld {
+			if m.RechnungsNummer.String != "" {
+				continue
+			}
+
+			entries = append(entries, RechnungEntry{
+				Tag:         string(m.Rennen.Tag),
+				Startnummer: strconv.Itoa(int(m.StartNummer)),
+				Rennen:      m.Rennen.Bezeichnung,
+				Preis:       strconv.Itoa(int(m.Kosten)) + ",00 €",
+			})
+			sumPreis += int(m.Kosten)
+
+			err := crud.SetMeldungRechnungsNummer(txCtx, m.Uuid, reNr)
+			if err != nil {
+				slog.Error("Error", "err", err)
+				return err
+			}
+		}
+
+		if len(entries) == 0 {
+			return apierr.ErrNotFound
+		}
+
+		err = crud.CreateRechnung(txCtx, reNr, v.Uuid, sumPreis)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
 	if err != nil {
+		if errors.Is(err, apierr.ErrNotFound) {
+			webfw.APIError(w, webfw.NotFound("Keine Meldungen gefunden!"))
+			return
+		}
 		webfw.APIError(w, webfw.InternalError(err.Error()))
 		return
 	}

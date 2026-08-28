@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"time"
 
 	"github.com/bata94/RegattaApi/internal/db"
 	apierr "github.com/bata94/RegattaApi/internal/errors"
@@ -105,6 +106,10 @@ func (verein *Verein) GetNextRechnungsnummer(ctx context.Context) (string, error
 	if len(rechnungsNummern) != 0 {
 		for _, r := range rechnungsNummern {
 			l := len(r)
+			if l < 3 {
+				slog.Warn("skipping malformed rechnungsnummer", "value", r)
+				continue
+			}
 			rNrStr := r[l-3 : l]
 			slog.Debug(fmt.Sprintf("rechnungsNummer: %s", rNrStr))
 
@@ -133,7 +138,8 @@ func (verein *Verein) GetNextRechnungsnummer(ctx context.Context) (string, error
 		fwdNrStr = "0" + fwdNrStr
 	}
 
-	reNr := "2024-" + verein.Kuerzel + "-" + fwdNrStr
+	year := time.Now().Year()
+	reNr := fmt.Sprintf("%d-%s-%s", year, verein.Kuerzel, fwdNrStr)
 	return reNr, nil
 }
 

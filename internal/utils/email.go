@@ -44,7 +44,8 @@ func InitEmail() {
 		mail.WithPassword(emailOptions.PW),
 	)
 	if err != nil {
-		slog.Error("Mail Init Failed, at client creation", "err", err, "options", emailOptions)
+		slog.Error("Mail Init Failed, at client creation", "err", err,
+			"smtp_host", emailOptions.SmtpHost, "smtp_port", emailOptions.SmtpPort, "sender", emailOptions.Sender)
 		emailOptions = nil
 		return
 	}

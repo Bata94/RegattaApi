@@ -19,18 +19,28 @@ func CORS() func(http.Handler) http.Handler {
 		allowedOrigins[i] = strings.TrimSpace(allowedOrigins[i])
 	}
 
+	hasWildcard := false
+	for _, allowed := range allowedOrigins {
+		if allowed == "*" {
+			hasWildcard = true
+			break
+		}
+	}
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			origin := r.Header.Get("Origin")
 			slog.Debug(fmt.Sprintf("CORS DEBUG: Origin=%q Allowed=%v Method=%s", origin, allowedOrigins, r.Method))
-			matchedOrigin := matchOrigin(origin, allowedOrigins)
-			slog.Debug(fmt.Sprintf("CORS DEBUG: Matched=%q", matchedOrigin))
 
-			if matchedOrigin != "" {
-				w.Header().Set("Access-Control-Allow-Origin", matchedOrigin)
-				w.Header().Set("Access-Control-Allow-Credentials", "true")
-			} else if len(allowedOrigins) > 0 && allowedOrigins[0] == "*" {
+			if hasWildcard {
 				w.Header().Set("Access-Control-Allow-Origin", "*")
+			} else {
+				matchedOrigin := matchOrigin(origin, allowedOrigins)
+				slog.Debug(fmt.Sprintf("CORS DEBUG: Matched=%q", matchedOrigin))
+				if matchedOrigin != "" {
+					w.Header().Set("Access-Control-Allow-Origin", matchedOrigin)
+					w.Header().Set("Access-Control-Allow-Credentials", "true")
+				}
 			}
 
 			w.Header().Set("Access-Control-Allow-Methods", methods)
@@ -51,9 +61,6 @@ func matchOrigin(origin string, allowedOrigins []string) string {
 	}
 
 	for _, allowed := range allowedOrigins {
-		if allowed == "*" {
-			return origin
-		}
 		if strings.HasPrefix(allowed, "*.") {
 			prefix := strings.TrimPrefix(allowed, "*")
 			if strings.HasSuffix(origin, prefix) {

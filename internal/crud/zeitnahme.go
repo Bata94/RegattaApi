@@ -304,42 +304,40 @@ func UpdateZeitnahmeZiel(ctx context.Context, id int32, rennNr, startNr *string)
 }
 
 func CreateZeitnahmeErgebnis(ctx context.Context, s, z Zeitnahme, meld Meldung) error {
-	ctx, cancel := getCtx(ctx)
-	defer cancel()
-
 	endZeit := z.TimeClient.Sub(*s.TimeClient)
 
-	params := sqlc.CreateZeitnahmeErgebnisParams{
-		Endzeit:          endZeit.Seconds(),
-		ZeitnahmeStartID: s.ID,
-		ZeitnahmeZielID:  z.ID,
-		MeldungUuid:      meld.Uuid,
-	}
+	err := DB.WithTx(ctx, func(txCtx context.Context) error {
+		params := sqlc.CreateZeitnahmeErgebnisParams{
+			Endzeit:          endZeit.Seconds(),
+			ZeitnahmeStartID: s.ID,
+			ZeitnahmeZielID:  z.ID,
+			MeldungUuid:      meld.Uuid,
+		}
 
-	q, err := DB.QueriesFromCtx(ctx).CreateZeitnahmeErgebnis(ctx, params)
-	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			slog.Debug("create zeitnahme ergebnis: already exists", "start_id", s.ID, "ziel_id", z.ID)
-		} else {
+		q, err := DB.QueriesFromCtx(txCtx).CreateZeitnahmeErgebnis(txCtx, params)
+		if err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+				slog.Debug("create zeitnahme ergebnis: already exists", "start_id", s.ID, "ziel_id", z.ID)
+			} else {
+				return err
+			}
+		}
+
+		err = DB.QueriesFromCtx(txCtx).SetZeitnahmeStartVerarbeitet(txCtx, s.ID)
+		if err != nil {
 			return err
 		}
-	}
+		err = DB.QueriesFromCtx(txCtx).SetZeitnahmeZielVerarbeitet(txCtx, z.ID)
+		if err != nil {
+			return err
+		}
 
-	err = DB.QueriesFromCtx(ctx).SetZeitnahmeStartVerarbeitet(ctx, s.ID)
-	if err != nil {
-		return err
-	}
-	err = DB.QueriesFromCtx(ctx).SetZeitnahmeZielVerarbeitet(ctx, z.ID)
-	if err != nil {
-		return err
-	}
-
-	if err == nil {
 		slog.Debug("create zeitnahme ergebnis", "start_id", s.ID, "ziel_id", z.ID, "result", q)
-	}
+		return nil
+	})
 
-	return nil
+	return err
 }
 
 func GetZeitnahmeErgebnisByMeld(ctx context.Context, meldUuid uuid.UUID) (sqlc.ZeitnahmeErgebni, error) {

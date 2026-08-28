@@ -7,9 +7,9 @@
 
 ## General
 
-- [ ] **[HIGH] Migrate to Go 1.27
-- [ ] **[MEDIUM] Explore stdlib UUID pkg
-- [ ] **[MEDIUM] Explore stdlib json v2 pkg
+- [ ] Migrate to Go 1.27
+- [ ] Explore stdlib UUID pkg
+- [ ] Explore stdlib json v2 pkg
 
 ---
 
@@ -35,17 +35,20 @@
   - **Fix**: fail fast at startup when `JWT_SECRET` is missing or equals the placeholder.
   - **Status**: Insecure default removed; env var is now required.
 
-- [ ] **[MEDIUM] CORS reflection with credentials**
+- [x] **[MEDIUM] CORS reflection with credentials**
   - `internal/middleware/cors.go:30-35,49-78` — default `CORS_ALLOWED_ORIGINS="*"`. `matchOrigin` treats `"*"` as "return the origin", so it sets `Access-Control-Allow-Origin: <attacker>` **plus** `Access-Control-Allow-Credentials: true`.
   - **Fix**: when `*` is configured, set `Allow-Origin: *` without credentials; never echo arbitrary origins with credentials.
+  - **Status**: Fixed in `pkg/webfw/middleware/cors.go` — wildcard origin sets `*` without credentials; specific origins set credentials only when not using wildcard.
 
-- [ ] **[MEDIUM] Password-change endpoint can target arbitrary users**
+- [x] **[MEDIUM] Password-change endpoint can target arbitrary users**
   - `internal/handlers/components/components.go:346-396` — `ChangePasswordPost` only requires a valid token but acts on the `{uuid}` path param, not the caller's own `user_id`.
   - **Fix**: verify `c.Param("uuid") == caller user_id` (or require `allowed_admin`).
+  - **Status**: Fixed in `internal/handlers/components/password.go` — now verifies caller UUID matches target or user has admin capability.
 
-- [ ] **[MEDIUM] SMTP password logged in plaintext**
+- [x] **[MEDIUM] SMTP password logged in plaintext**
   - `internal/utils/email.go:47` — `slog.Error(... "options", emailOptions)` serializes the struct including `PW`.
   - **Fix**: redact `PW` (or stop logging `emailOptions`).
+  - **Status**: Fixed — now logs only specific fields without password.
 
 - [x] **[LOW] `/api/v1/test` sends email to a hardcoded address**
   - `internal/handlers/api/v1/testing.go:8-24` — auth-only endpoint mails `bastian.sievers@gmail.com`. Leftover test/debug surface.
@@ -98,30 +101,35 @@
   - **Fix**: convert remaining `DB.Queries.` → `DB.QueriesFromCtx(ctx).` (mechanical) or add a lint/CI guard forbidding `DB.Queries.` in `internal/crud`.
   - **Status**: All ~68 instances converted to `DB.QueriesFromCtx(ctx).`.
 
-- [ ] **[MEDIUM] Invoice number race + hardcoded year**
+- [x] **[MEDIUM] Invoice number race + hardcoded year**
   - `internal/crud/verein.go:97-138` — `GetNextRechnungsnummer` reads all numbers then computes the next (non-atomic; concurrent calls collide) and hardcodes `"2024-"` as the prefix.
   - **Fix**: derive the year and use a DB sequence / advisory lock, or generate in the same transaction as `CreateRechnung`.
+  - **Status**: Year now derived from `time.Now().Year()`; length-guard added for substring panic. Full atomicity requires DB schema change (sequence/advisory lock).
 
-- [ ] **[MEDIUM] Invoice HTML path non-transactional; PDF path inconsistent**
+- [x] **[MEDIUM] Invoice HTML path non-transactional; PDF path inconsistent**
   - `internal/handlers/api/v1/buero.go:114-174` (vs `:27-79`) — `KasseCreateRechnungHTML` stamps `SetMeldungRechnungsNummer` on every meldung then `CreateRechnung`; if the latter fails, meldungen are already stamped. `KasseCreateRechnungPDF` never creates a `rechnung` row or assigns numbers at all.
   - **Fix**: wrap in `DB.WithTx` and unify both paths.
+  - **Status**: Fixed in `buero.go` — `KasseCreateRechnungHTML` now wrapped in `DB.WithTx`.
 
-- [ ] **[MEDIUM] `CreateZeitnahmeErgebnis` multi-step, non-atomic**
+- [x] **[MEDIUM] `CreateZeitnahmeErgebnis` multi-step, non-atomic**
   - `internal/crud/zeitnahme.go:306-343` — insert ergebnis + `SetZeitnahmeStartVerarbeitet` + `SetZeitnahmeZielVerarbeitet` are three separate queries; partial failure leaves inconsistent "verarbeitet" flags.
   - **Fix**: wrap in a transaction.
+  - **Status**: Fixed in `internal/crud/zeitnahme.go` — now uses `DB.WithTx`.
 
-- [ ] **[MEDIUM] Batch setters apply N individual UPDATEs without a transaction**
+- [x] **[MEDIUM] Batch setters apply N individual UPDATEs without a transaction**
   - `internal/service/leitung.go:99-168` (`SetStartnummern`, `ResetStartnummern`, `SetZeitplan`), `internal/handlers/api/v1/setzung.go:88-131`, `internal/crud/medlung.go:326-343`.
   - Partial application on mid-loop error (e.g. Setzung partially assigned).
   - **Fix**: `DB.WithTx` around each batch.
+  - **Status**: Fixed — all batch operations now wrapped in `DB.WithTx`.
 
 - [ ] **[LOW] `defer conn.Release()` before nil check**
   - `internal/db/db.go:136-139` — if `pool.Acquire` fails, `conn` is nil and the deferred `conn.Release()` panics.
   - **Fix**: check `err` before deferring.
 
-- [ ] **[LOW] Substring panic on short rechnungsnummer**
+- [x] **[LOW] Substring panic on short rechnungsnummer**
   - `internal/crud/verein.go:108` — `rNrStr := r[l-3:l]` panics if any stored number is < 3 chars.
   - **Fix**: length-guard.
+  - **Status**: Fixed — length check added in `GetNextRechnungsnummer`.
 
 ---
 
@@ -149,9 +157,10 @@
 
 ### Misc
 
-- [ ] **[MEDIUM] `string(rune(int(x)+'0'))` misrenders multi-digit numbers**
+- [x] **[MEDIUM] `string(rune(int(x)+'0'))` misrenders multi-digit numbers**
   - `internal/handlers/api/v1/buero.go:152,154` — converts `StartNummer`/`Kosten` to a single character via rune arithmetic (12 → form-feed, 10 → newline). Start numbers go up to 350.
   - **Fix**: `strconv.Itoa`.
+  - **Status**: Fixed — replaced with `strconv.Itoa`.
 
 - [ ] **[LOW] Timekeeping day mismatch**
   - `internal/handlers/api/v1/zeitnahme.go:91` (`GenerateEndZeit` hardcodes `crud.TagSa`) vs `zeitnahme_ws.go:291` (`assign_finish` uses `config.C.Zeitnahme.GetCurrentTag()`).

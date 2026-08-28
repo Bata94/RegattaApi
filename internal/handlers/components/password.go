@@ -27,13 +27,27 @@ func ChangePasswordGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func ChangePasswordPost(w http.ResponseWriter, r *http.Request) {
-	userUuidStr := webfw.Param(r, "uuid")
-	userUuid, err := uuid.Parse(userUuidStr)
+	targetUuidStr := webfw.Param(r, "uuid")
+	targetUuid, err := uuid.Parse(targetUuidStr)
 	if err != nil {
 		webfw.ErrorToast(w, r, "Invalid UUID")
 		return
 	}
-	user, err := crud.GetUser(r.Context(), userUuid)
+
+	callerUuidStr := webfw.GetUserIDString(r)
+	callerUuid, err := uuid.Parse(callerUuidStr)
+	if err != nil {
+		webfw.ErrorToast(w, r, "Unauthorized")
+		return
+	}
+
+	isAdmin := webfw.HasCapability(r, "allowed_admin")
+	if !isAdmin && callerUuid != targetUuid {
+		webfw.ErrorToast(w, r, "You can only change your own password")
+		return
+	}
+
+	user, err := crud.GetUser(r.Context(), targetUuid)
 	if err != nil {
 		webfw.ErrorToast(w, r, "User not found")
 		return
@@ -45,10 +59,7 @@ func ChangePasswordPost(w http.ResponseWriter, r *http.Request) {
 
 	fieldErrors := make(map[string]string)
 	topMsg := ""
-	if currentPassword == "" {
-		fieldErrors["current_password"] = "Aktuelles Passwort erforderlich"
-		topMsg = "Bitte alle Felder ausfüllen"
-	}
+	isSelf := callerUuid == targetUuid
 	if newPassword1 == "" {
 		fieldErrors["new_password_1"] = "Neues Passwort erforderlich"
 		topMsg = "Bitte alle Felder ausfüllen"
@@ -62,7 +73,11 @@ func ChangePasswordPost(w http.ResponseWriter, r *http.Request) {
 		fieldErrors["new_password_2"] = "Passwörter stimmen nicht überein"
 		topMsg = "Passwörter stimmen nicht überein"
 	}
-	if currentPassword != "" && !crud.CheckPasswordHash(currentPassword, user.HashedPassword) {
+	if isSelf && currentPassword == "" {
+		fieldErrors["current_password"] = "Aktuelles Passwort erforderlich"
+		topMsg = "Bitte alle Felder ausfüllen"
+	}
+	if isSelf && currentPassword != "" && !crud.CheckPasswordHash(currentPassword, user.HashedPassword) {
 		fieldErrors["current_password"] = "Aktuelles Passwort ist falsch"
 		topMsg = "Aktuelles Passwort ist falsch"
 	}
@@ -71,7 +86,7 @@ func ChangePasswordPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = crud.UpdatePassword(r.Context(), userUuid, newPassword1)
+	err = crud.UpdatePassword(r.Context(), targetUuid, newPassword1)
 	if err != nil {
 		webfw.ErrorToast(w, r, "Error while updating password")
 		return

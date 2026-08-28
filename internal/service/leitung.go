@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/bata94/RegattaApi/internal/crud"
+	DB "github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/bata94/RegattaApi/pkg/webfw"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -45,55 +46,57 @@ func SetZeitplan(ctx context.Context, param SetZeitplanParams) error {
 
 	slog.Debug("Zeitplan start time", "sa", curStartTimeSa, "so", curStartTimeSo)
 
-	for _, r := range rLs {
-		rennAbstand := 10
-		if v := r.GetRennabstand(); v != nil {
-			rennAbstand = *v
-		}
-
-		switch r.Tag {
-		case crud.TagSa:
-			saTimeStr := curStartTimeSa.Format("15:04")
-			slog.Debug("Setting rennen start time", "nummer", r.Nummer, "time", saTimeStr)
-			err := crud.UpdateStartZeit(ctx, sqlc.UpdateStartZeitParams{
-				Uuid:      r.Uuid,
-				Startzeit: pgtype.Text{String: saTimeStr, Valid: true},
-			})
-			if err != nil {
-				return err
-			}
-			if r.Wettkampf == sqlc.WettkampfLangstrecke {
-				curStartTimeSa = curStartTimeSa.Add(time.Minute * time.Duration(rennAbstand**r.NumMeldungen))
-			} else {
-				curStartTimeSa = curStartTimeSa.Add(time.Minute * time.Duration(rennAbstand**r.NumAbteilungen))
+	return DB.WithTx(ctx, func(txCtx context.Context) error {
+		for _, r := range rLs {
+			rennAbstand := 10
+			if v := r.GetRennabstand(); v != nil {
+				rennAbstand = *v
 			}
 
-			for _, p := range pLs {
-				if p.NachRennenUuid == r.Uuid {
-					curStartTimeSa = curStartTimeSa.Add(time.Minute * time.Duration(p.Laenge))
+			switch r.Tag {
+			case crud.TagSa:
+				saTimeStr := curStartTimeSa.Format("15:04")
+				slog.Debug("Setting rennen start time", "nummer", r.Nummer, "time", saTimeStr)
+				err := crud.UpdateStartZeit(txCtx, sqlc.UpdateStartZeitParams{
+					Uuid:      r.Uuid,
+					Startzeit: pgtype.Text{String: saTimeStr, Valid: true},
+				})
+				if err != nil {
+					return err
+				}
+				if r.Wettkampf == sqlc.WettkampfLangstrecke {
+					curStartTimeSa = curStartTimeSa.Add(time.Minute * time.Duration(rennAbstand**r.NumMeldungen))
+				} else {
+					curStartTimeSa = curStartTimeSa.Add(time.Minute * time.Duration(rennAbstand**r.NumAbteilungen))
+				}
+
+				for _, p := range pLs {
+					if p.NachRennenUuid == r.Uuid {
+						curStartTimeSa = curStartTimeSa.Add(time.Minute * time.Duration(p.Laenge))
+					}
+				}
+			case crud.TagSo:
+				soTimeStr := curStartTimeSo.Format("15:04")
+				slog.Debug("Setting rennen start time", "nummer", r.Nummer, "time", soTimeStr)
+				err := crud.UpdateStartZeit(txCtx, sqlc.UpdateStartZeitParams{
+					Uuid:      r.Uuid,
+					Startzeit: pgtype.Text{String: soTimeStr, Valid: true},
+				})
+				if err != nil {
+					return err
+				}
+				curStartTimeSo = curStartTimeSo.Add(time.Minute * time.Duration(rennAbstand**r.NumAbteilungen))
+
+				for _, p := range pLs {
+					if p.NachRennenUuid == r.Uuid {
+						curStartTimeSo = curStartTimeSo.Add(time.Minute * time.Duration(p.Laenge))
+					}
 				}
 			}
-		case crud.TagSo:
-			soTimeStr := curStartTimeSo.Format("15:04")
-			slog.Debug("Setting rennen start time", "nummer", r.Nummer, "time", soTimeStr)
-			err := crud.UpdateStartZeit(ctx, sqlc.UpdateStartZeitParams{
-				Uuid:      r.Uuid,
-				Startzeit: pgtype.Text{String: soTimeStr, Valid: true},
-			})
-			if err != nil {
-				return err
-			}
-			curStartTimeSo = curStartTimeSo.Add(time.Minute * time.Duration(rennAbstand**r.NumAbteilungen))
-
-			for _, p := range pLs {
-				if p.NachRennenUuid == r.Uuid {
-					curStartTimeSo = curStartTimeSo.Add(time.Minute * time.Duration(p.Laenge))
-				}
-			}
 		}
-	}
 
-	return nil
+		return nil
+	})
 }
 
 func SetStartnummern(ctx context.Context) error {
@@ -146,30 +149,32 @@ func SetStartnummern(ctx context.Context) error {
 		}
 	}
 
-	for _, r := range rLs {
-		meldungen, err := r.GetMeldungen(ctx)
-		if err != nil {
-			return err
-		}
-		for _, m := range meldungen {
-			if m.Abgemeldet {
-				continue
-			}
-			nummer, err := nextStartNummer(r.Tag)
+	return DB.WithTx(ctx, func(txCtx context.Context) error {
+		for _, r := range rLs {
+			meldungen, err := r.GetMeldungen(txCtx)
 			if err != nil {
 				return err
 			}
-			err = crud.UpdateStartNummer(ctx, sqlc.UpdateStartNummerParams{
-				Uuid:        m.Uuid,
-				StartNummer: nummer,
-			})
-			if err != nil {
-				return err
+			for _, m := range meldungen {
+				if m.Abgemeldet {
+					continue
+				}
+				nummer, err := nextStartNummer(r.Tag)
+				if err != nil {
+					return err
+				}
+				err = crud.UpdateStartNummer(txCtx, sqlc.UpdateStartNummerParams{
+					Uuid:        m.Uuid,
+					StartNummer: nummer,
+				})
+				if err != nil {
+					return err
+				}
 			}
 		}
-	}
 
-	return nil
+		return nil
+	})
 }
 
 func ResetStartnummern(ctx context.Context) error {
@@ -178,14 +183,16 @@ func ResetStartnummern(ctx context.Context) error {
 		return err
 	}
 
-	for _, m := range mLs {
-		err = crud.UpdateStartNummer(ctx, sqlc.UpdateStartNummerParams{
-			Uuid:        m.Uuid,
-			StartNummer: 0,
-		})
-		if err != nil {
-			return err
+	return DB.WithTx(ctx, func(txCtx context.Context) error {
+		for _, m := range mLs {
+			err = crud.UpdateStartNummer(txCtx, sqlc.UpdateStartNummerParams{
+				Uuid:        m.Uuid,
+				StartNummer: 0,
+			})
+			if err != nil {
+				return err
+			}
 		}
-	}
-	return nil
+		return nil
+	})
 }

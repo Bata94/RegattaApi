@@ -1,14 +1,17 @@
 package api_v1
 
 import (
+	"context"
 	"fmt"
 	"math/rand/v2"
 	"net/http"
 
 	"github.com/bata94/RegattaApi/internal/crud"
+	DB "github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/service"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/bata94/RegattaApi/pkg/webfw"
+	"github.com/google/uuid"
 )
 
 func shuffle(array []crud.Meldung) []crud.Meldung {
@@ -40,6 +43,13 @@ func SetzungsLosung(w http.ResponseWriter, r *http.Request) {
 		webfw.APIError(w, webfw.InternalError(err.Error()))
 		return
 	}
+
+	type setzungUpdate struct {
+		Uuid      uuid.UUID
+		Abteilung int32
+		Bahn      int32
+	}
+	var updates []setzungUpdate
 
 	for _, rennen := range allRennen {
 		maxBahnen := 1
@@ -93,14 +103,11 @@ func SetzungsLosung(w http.ResponseWriter, r *http.Request) {
 			if m.Abgemeldet {
 				continue
 			}
-			if err := crud.UpdateMeldungSetzung(r.Context(), sqlc.UpdateMeldungSetzungParams{
+			updates = append(updates, setzungUpdate{
 				Uuid:      m.Uuid,
 				Abteilung: int32(abteilungIdx + 1),
 				Bahn:      bahn,
-			}); err != nil {
-				webfw.APIError(w, webfw.InternalError(err.Error()))
-				return
-			}
+			})
 			bahn++
 			count++
 			if count >= sizes[abteilungIdx] {
@@ -109,6 +116,23 @@ func SetzungsLosung(w http.ResponseWriter, r *http.Request) {
 				count = 0
 			}
 		}
+	}
+
+	err = DB.WithTx(r.Context(), func(txCtx context.Context) error {
+		for _, u := range updates {
+			if err := crud.UpdateMeldungSetzung(txCtx, sqlc.UpdateMeldungSetzungParams{
+				Uuid:      u.Uuid,
+				Abteilung: u.Abteilung,
+				Bahn:      u.Bahn,
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
 	if webfw.IsHtmxRequest(r) {
@@ -125,16 +149,22 @@ func ResetSetzung(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, m := range mLs {
-		err = crud.UpdateMeldungSetzung(r.Context(), sqlc.UpdateMeldungSetzungParams{
-			Uuid:      m.Uuid,
-			Abteilung: 0,
-			Bahn:      0,
-		})
-		if err != nil {
-			webfw.APIError(w, webfw.InternalError(err.Error()))
-			return
+	err = DB.WithTx(r.Context(), func(txCtx context.Context) error {
+		for _, m := range mLs {
+			err = crud.UpdateMeldungSetzung(txCtx, sqlc.UpdateMeldungSetzungParams{
+				Uuid:      m.Uuid,
+				Abteilung: 0,
+				Bahn:      0,
+			})
+			if err != nil {
+				return err
+			}
 		}
+		return nil
+	})
+	if err != nil {
+		webfw.APIError(w, webfw.InternalError(err.Error()))
+		return
 	}
 
 	if webfw.IsHtmxRequest(r) {
