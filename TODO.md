@@ -5,14 +5,6 @@
 
 ---
 
-## General
-
-- [X] Migrate to Go 1.27
-- [ ] Explore stdlib UUID pkg
-- [ ] Explore stdlib json v2 pkg
-
----
-
 ## UX and response System
 
 - [ ] **Better System Error Handling — mask errors with a correlation UUID**
@@ -24,6 +16,8 @@
   - Current raw `err.Error()` leaks (overlaps this item): `internal/handlers/components/components.go:198,218,227,410,418,661,688,878`, `internal/handlers/api/v1/drv_import.go:49`, `internal/handlers/api/v1/setzung.go:142`, and several `api/v1/*.go` returning `handler.BadRequest(err.Error())`.
 
 - [ ] On UI always return at least a Success or Error Toast on POST, PUT, DELETE, etc.
+
+- [ ] Analyze and Fix different ways of handling things and enforce clear separation of abstraction layers
 
 ---
 

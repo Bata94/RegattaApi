@@ -6,7 +6,7 @@ Regatta management web application — athlete registration, race planning, time
 
 | Layer | Technology |
 |---|---|
-| Language | Go 1.26 |
+| Language | Go 1.27 |
 | Database | PostgreSQL via pgx v5 |
 | DB Layer | sqlc (codegen from SQL queries) |
 | UI | Templ (Go-native templates) + HTMX |
@@ -40,6 +40,7 @@ RegattaApi/
 ├── public/                  # Static output (compiled CSS, WASM binaries, uploaded files)
 ├── sqlc/                    # Source SQL: queries/ and schemas/ (goose migrations)
 ├── cmd/wasm/zeitnahme/      # Go WASM timekeeping client (builds to public/wasm/)
+├── pkg/uuid/                # UUID shim: wraps stdlib uuid with pgx codec interfaces
 ├── files/                   # User-uploaded files (DRV imports, PDFs)
 ├── docs/                    # Swagger docs (stub)
 ├── caddy/                   # Caddy data/certs volumes
@@ -83,6 +84,7 @@ File changes in `internal/` and `main.go` auto-reload via Air inside the contain
 | `just templ` | Regenerate Go from .templ files |
 | `just tailwind-gen` | Rebuild CSS from Tailwind source |
 | `just wasm-build` | Build Go WASM timekeeping client |
+| `just smoke-test` | Run smoke test against live dev DB (all GET routes, assert status < 500) |
 | `just lint` | `golangci-lint run` |
 | `just test` | `go test ./... -v` |
 
@@ -116,6 +118,8 @@ The age private key is expected at `~/.config/sops/age/keys.txt` (the SOPS defau
 - **AppError system** — all errors flow through `handleAppError` which routes to toasts, JSON, or page errors depending on context.
 - **Compression middleware caveat** — gzip footer commits HTTP 200 before error handlers can react; fix errors upstream.
 - **pgx v5 NULL handling** — scanning SQL NULL into non-nullable Go types panics. Use split queries or nullable sqlc types for JOINs.
+- **UUID shim** — `pkg/uuid` wraps the stdlib `uuid.UUID` and implements `pgx.UUIDValuer`/`pgx.UUIDScanner` (binary codec) plus `driver.Valuer`/`sql.Scanner` so pgx v5.6.0 can encode/decode UUIDs natively. Use `uuid.NewV7()` for time-ordered UUIDs.
+- **JSON v2** — all JSON serialization uses `encoding/json/v2` (imported as `jsonv2`). `NewEncoder.Encode` → `MarshalWrite`, `MarshalIndent` → `Marshal` + `jsontext.WithIndent`, `json.RawMessage` → `jsontext.Value`. DRV external JSON parsing uses `MatchCaseInsensitiveNames(true)`.
 
 ## Known Issues & Roadmap
 

@@ -92,6 +92,7 @@ When JS is needed, prefer in this order:
 - `goose` — migrations via `just` commands
 - `just tailwind-gen` — rebuild CSS (also run by air on CSS changes)
 - `just wasm-build` — build Go WASM timekeeping client (`cmd/wasm/zeitnahme/` → `public/wasm/zeitnahme.wasm`)
+- `just smoke-test` — run the smoke test against the test DB (`docker compose exec api-dev go test ./internal/server/ -run TestSmokeAllGetRoutes -count=1 -v`)
 
 ## CRUD Layer Architecture
 
@@ -263,6 +264,7 @@ For boolean toggles (e.g., `isActive`), the form uses a hidden primary input sto
 ## Code Quality & Verification
 
 - **Always run `just check` after significant changes** — this runs `go fmt ./...` → `golangci-lint run` → `go test ./... -v` → full build.
+- **Run `just smoke-test` after schema/route/handler changes** — it walks all chi GET routes, logs in as admin, resolves path params from the dev DB, and asserts `status < 500`. Self-skips when the DB is unreachable or login fails.
 - **No `_ = err` drops** — every error must be handled. The `errcheck` linter catches violations.
 - **Template changes** require regeneration: `just templ` (included in `just build`).
 - **SQL query changes** require regeneration: `just sqlc-gen`.
@@ -274,13 +276,16 @@ For boolean toggles (e.g., `isActive`), the form uses a hidden primary input sto
 |---|---|
 | `apierr` | `github.com/bata94/RegattaApi/internal/errors` |
 | `DB` | `github.com/bata94/RegattaApi/internal/db` |
+| `jsonv2` | `encoding/json/v2` |
+| `uuid` | `github.com/bata94/RegattaApi/pkg/uuid` |
 | `ui_pages` | `github.com/bata94/RegattaApi/internal/templates/pages` |
 | `ui_components` | `github.com/bata94/RegattaApi/internal/templates/components` |
 | `ui_layouts` | `github.com/bata94/RegattaApi/internal/templates/layout` |
 
 ## Key Conventions
 
-- **UUID generation** — use `uuid.NewV7()` for time-ordered UUIDs (sqlc maps all `uuid` columns to `github.com/google/uuid.UUID`).
+- **UUID generation** — use `uuid.NewV7()` for time-ordered UUIDs. Avoid stdlib `github.com/google/uuid`; use the `pkg/uuid` shim (`uuid` import alias). The shim wraps stdlib `uuid.UUID` and implements `pgx.UUIDValuer`/`pgx.UUIDScanner` (binary codec) plus `driver.Valuer`/`sql.Scanner`, so pgx v5.6.0 can encode/decode UUIDs natively. sqlc maps all `uuid` columns to `pkg/uuid.UUID`. Decode v7 timestamps via `UUID.Time()` / `UUID.UnixTime()`.
+- **JSON (de)serialization** — use `encoding/json/v2` (`jsonv2` alias). Common renames: `NewEncoder.Encode` → `jsonv2.MarshalWrite`, `MarshalIndent` → `Marshal` + `jsontext.WithIndent`, `json.RawMessage` → `jsontext.Value`. For external JSON (e.g., DRV), enable `MatchCaseInsensitiveNames(true)` to tolerate case differences.
 - **Context key type** — use `handler.CtxKey` string type for `context.WithValue` keys (not bare strings), to prevent collisions.
 - **Config** — global singleton `config.C` loaded from env vars (`.env` + system env) in `main.go` before anything else. See `internal/config/config.go`.
 - **Logging** — Go 1.21+ `log/slog` throughout. No third-party logger.
