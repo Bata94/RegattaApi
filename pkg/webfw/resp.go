@@ -42,11 +42,15 @@ func SetCookie(w http.ResponseWriter, r *http.Request, name, value string, maxAg
 }
 
 func DeleteCookie(w http.ResponseWriter, r *http.Request, name string) {
+	secure := r.TLS != nil
 	http.SetCookie(w, &http.Cookie{
-		Name:   name,
-		Value:  "",
-		MaxAge: -1,
-		Path:   "/",
+		Name:     name,
+		Value:    "",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
+		Path:     "/",
 	})
 }
 

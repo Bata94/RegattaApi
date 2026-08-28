@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/bata94/RegattaApi/internal/config"
 )
 
 func Logging() func(http.Handler) http.Handler {
@@ -39,11 +41,13 @@ func (s *statusWriter) WriteHeader(code int) {
 }
 
 func IP(r *http.Request) string {
-	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
-		if idx := strings.Index(forwarded, ","); idx > 0 {
-			return strings.TrimSpace(forwarded[:idx])
+	if len(config.C.Server.TrustedProxies) > 0 {
+		if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+			if idx := strings.Index(forwarded, ","); idx > 0 {
+				return strings.TrimSpace(forwarded[:idx])
+			}
+			return strings.TrimSpace(forwarded)
 		}
-		return strings.TrimSpace(forwarded)
 	}
 	return r.RemoteAddr
 }

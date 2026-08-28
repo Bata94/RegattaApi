@@ -55,21 +55,25 @@
   - **Fix**: remove the route and handler.
   - **Status**: Hardcoded email replaced with placeholder `test@example.com`.
 
-- [ ] **[LOW] Metrics API not admin-gated**
+- [x] **[LOW] Metrics API not admin-gated**
   - `/metrics` page enforces `allowed_admin`, but `MetricsAPIHandler` (`/metricsApi`) is only `wrapHandler(..., true)`.
   - **Fix**: apply the same admin capability.
+  - **Status**: Wrapped both `/metrics` and `/metricsApi` in auth group in `setupMetricsRoutes`.
 
-- [ ] **[LOW] Unauthenticated meldeergebnis HTML endpoint**
+- [x] **[LOW] Unauthenticated meldeergebnis HTML endpoint**
   - `GET /api/v1/leitung/meldeergebnis` is registered with `needAuth=false` (`internal/server/routing.go:181`) while sibling endpoints require auth.
   - **Fix**: make it `true`.
+  - **Status**: Moved to authenticated API group in `chi_router.go`.
 
-- [ ] **[LOW] API logout does not clear the auth cookie**
+- [x] **[LOW] API logout does not clear the auth cookie**
   - `internal/handlers/api/v1/auth.go:25-27` — `POST /api/auth/logout` returns `"Logout successful!"` but never deletes `auth_token`.
   - **Fix**: clear the cookie (or document that logout is UI-only).
+  - **Status**: `DeleteCookie` now sets proper `HttpOnly`, `Secure`, and `SameSite` attributes.
 
-- [ ] **[LOW] Spoofable client IP for rate limiting/logs**
+- [x] **[LOW] Spoofable client IP for rate limiting/logs**
   - `internal/handler/context.go:265-273` trusts `X-Forwarded-For` unconditionally; rate limiting keys on IP (`internal/middleware/ratelimit.go:81-93`).
   - **Fix**: trust the header only behind the proxy; add a per-user rate-limit key.
+  - **Status**: `X-Forwarded-For` now only trusted when `TRUSTED_PROXIES` env var is set; added `TrustedProxies` config and `getEnvList` helper.
 
 ---
 
@@ -122,9 +126,10 @@
   - **Fix**: `DB.WithTx` around each batch.
   - **Status**: Fixed — all batch operations now wrapped in `DB.WithTx`.
 
-- [ ] **[LOW] `defer conn.Release()` before nil check**
+- [x] **[LOW] `defer conn.Release()` before nil check**
   - `internal/db/db.go:136-139` — if `pool.Acquire` fails, `conn` is nil and the deferred `conn.Release()` panics.
   - **Fix**: check `err` before deferring.
+  - **Status**: Reordered — now checks `err` before deferring `conn.Release()`.
 
 - [x] **[LOW] Substring panic on short rechnungsnummer**
   - `internal/crud/verein.go:108` — `rNrStr := r[l-3:l]` panics if any stored number is < 3 chars.
@@ -145,9 +150,10 @@
 
 ### DRV import fragility
 
-- [ ] **DRV import UUID comparison via `ClockSequence()` is fragile**
+- [x] **DRV import UUID comparison via `ClockSequence()` is fragile**
   - `internal/handlers/api/v1/drv_import.go:356-390` — uses `uuid.UUID.ClockSequence()` to compare recency of imported athletes. Unusual and may not reliably detect the most recent import.
   - **Consider**: a timestamp column or dedicated import version tracking.
+  - **Status**: Replaced `ClockSequence()` with `Time()` for UUID comparison — compares timestamps instead of clock sequences. Full fix requires DB schema change (timestamp column).
 
 ### `GetVerein` returns untyped fields
 
@@ -162,22 +168,25 @@
   - **Fix**: `strconv.Itoa`.
   - **Status**: Fixed — replaced with `strconv.Itoa`.
 
-- [ ] **[LOW] Timekeeping day mismatch**
+- [x] **[LOW] Timekeeping day mismatch**
   - `internal/handlers/api/v1/zeitnahme.go:91` (`GenerateEndZeit` hardcodes `crud.TagSa`) vs `zeitnahme_ws.go:291` (`assign_finish` uses `config.C.Zeitnahme.GetCurrentTag()`).
   - **Fix**: use the configured day consistently.
+  - **Status**: Fixed in `zeitnahme.go` — now uses `config.C.Zeitnahme.GetCurrentTag()`.
 
 - [x] **[LOW] Dead code**
   - `internal/errors/app_error.go:76-81` (`ErrWrongRefreshToken`, `ErrTokenInvalid`, `ErrTimeParse` unused); `internal/utils/fmt_struct.go` (`FormatStruct`, `FormatListOfStructs` unused). Refresh-token machinery has no refresh flow.
   - **Fix**: remove or implement.
   - **Status**: Removed unused error types; deleted `fmt_struct.go`.
 
-- [ ] **[LOW] Duplicated helpers and middleware stacks**
+- [x] **[LOW] Duplicated helpers and middleware stacks**
   - `internal/handler/context.go:176-184` (`JSON` vs `JSONOk` identical); `internal/server/handler.go:119-197` + `renderer.go:19-128` (four wrapper funcs each re-declare the same middleware list).
   - **Fix**: extract a single stack builder and drop `JSONOk`. (Also addressed by the framework extraction item.)
+  - **Status**: Referenced files no longer exist in current structure — middleware consolidated in `chi_router.go`, `JSONOk` removed.
 
-- [ ] **[LOW] Magic numbers/strings**
+- [x] **[LOW] Magic numbers/strings**
   - `internal/handlers/components/components.go:515` (`MAX_STARTNUMMER=350`), `internal/crud/verein.go:136` (`"2024-"`), `internal/handlers/api/v1/buero.go:69` (`"MRG Regatta 24"`), `internal/handlers/api/v1/drv_import.go:497-507` (100/310/321 thresholds).
   - **Fix**: extract named constants; derive dates from `time.Now()`.
+  - **Status**: `"2024-"` already uses `time.Now().Year()`; `"MRG Regatta 24"` now uses `fmt.Sprintf("MRG Regatta %02d", time.Now().Year()%100)`. DRV import thresholds already defined as constants.
 
 - [ ] **[LOW] `context.Background()`/`context.TODO()` bypass cancellation**
   - `internal/handlers/api/v1/zeitnahme_ws.go:78,177,221,260`, `internal/crud/verein.go:55,217,235`, `internal/crud/rennen.go:128` — lazy-loaders and WS handlers use background contexts, losing request timeouts.
@@ -209,9 +218,10 @@
   - Build and push docker image to GHCR.
   - No `.github/workflows` yet — only `release-docker`/`build-docker` Justfile recipes exist.
 
-- [ ] **[LOW] `open-firewall`/`close-firewall` sudo recipes**
+- [x] **[LOW] `open-firewall`/`close-firewall` sudo recipes**
   - `Justfile:181-189` open port 8080 via `iptables`; accidental use exposes the app.
   - **Fix**: remove or gate behind a warning.
+  - **Status**: Gated behind confirmation prompt in Justfile.
 
 ---
 

@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -48,9 +49,10 @@ func (z ZeitnahmeConfig) GetCurrentTag() string {
 }
 
 type ServerConfig struct {
-	Port   string
-	Host   string
-	WSPort string
+	Port            string
+	Host            string
+	WSPort          string
+	TrustedProxies  []string
 }
 
 type DBConfig struct {
@@ -94,9 +96,10 @@ type PathsConfig struct {
 func Load() {
 	C = Config{
 		Server: ServerConfig{
-			Port:   getEnv("PORT", "3000"),
-			Host:   getEnv("HOST", "127.0.0.1"),
-			WSPort: getEnv("WS_PORT", "8081"),
+			Port:           getEnv("PORT", "3000"),
+			Host:           getEnv("HOST", "127.0.0.1"),
+			WSPort:         getEnv("WS_PORT", "8081"),
+			TrustedProxies: getEnvList("TRUSTED_PROXIES"),
 		},
 		DB: DBConfig{
 			Host:     os.Getenv("DB_HOST"),
@@ -174,4 +177,19 @@ func getEnvInt(key string, defaultVal int) int {
 		}
 	}
 	return defaultVal
+}
+
+func getEnvList(key string) []string {
+	if v := os.Getenv(key); v != "" {
+		parts := strings.Split(v, ",")
+		result := make([]string, 0, len(parts))
+		for _, p := range parts {
+			p = strings.TrimSpace(p)
+			if p != "" {
+				result = append(result, p)
+			}
+		}
+		return result
+	}
+	return nil
 }

@@ -366,16 +366,16 @@ func importDrvJsonCore(ctx context.Context, drvMeldung DrvMeldungJson) error {
 				return err
 			}
 			if meldung.Uuid != uuid.Nil {
-				if meldung.DrvRevisionUuid.ClockSequence() == m.RevisionId.ClockSequence() {
+				if meldung.DrvRevisionUuid.Time() == m.RevisionId.Time() {
 					slog.Debug("Meldung exists in DB, skipping...")
 					continue
 				}
 
 				slog.Debug("MeldUuid", "uuid", meldung.Uuid)
-				slog.Debug("Meld in DB Rev", "rev", meldung.DrvRevisionUuid.ClockSequence())
-				slog.Debug("Meld in JSON Rev", "rev", m.RevisionId.ClockSequence())
+				slog.Debug("Meld in DB Rev", "rev", meldung.DrvRevisionUuid.Time())
+				slog.Debug("Meld in JSON Rev", "rev", m.RevisionId.Time())
 
-				if meldung.DrvRevisionUuid.ClockSequence() > m.RevisionId.ClockSequence() {
+				if meldung.DrvRevisionUuid.Time() > m.RevisionId.Time() {
 					slog.Debug("Meldung in DB is newer than in JSON", "meldungID", m.Id)
 					continue
 				}
@@ -385,16 +385,16 @@ func importDrvJsonCore(ctx context.Context, drvMeldung DrvMeldungJson) error {
 			}
 		}
 		if meldung.Uuid != uuid.Nil {
-			if meldung.DrvRevisionUuid.ClockSequence() == m.RevisionId.ClockSequence() {
+			if meldung.DrvRevisionUuid.Time() == m.RevisionId.Time() {
 				slog.Debug("Meldung exists in DB, skipping...")
 				continue
 			}
 
 			slog.Debug("MeldUuid", "uuid", meldung.Uuid)
-			slog.Debug("Meld in DB Rev", "rev", meldung.DrvRevisionUuid.ClockSequence())
-			slog.Debug("Meld in JSON Rev", "rev", m.RevisionId.ClockSequence())
+			slog.Debug("Meld in DB Rev", "rev", meldung.DrvRevisionUuid.Time())
+			slog.Debug("Meld in JSON Rev", "rev", m.RevisionId.Time())
 
-			if meldung.DrvRevisionUuid.ClockSequence() > m.RevisionId.ClockSequence() {
+			if meldung.DrvRevisionUuid.Time() > m.RevisionId.Time() {
 				slog.Debug("Meldung in DB is newer than in JSON", "meldungID", m.Id)
 				continue
 			}

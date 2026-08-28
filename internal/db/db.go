@@ -134,10 +134,10 @@ func WithTx(ctx context.Context, fn func(txCtx context.Context) error) error {
 func getCustomDataTypes(ctx context.Context, pool *pgxpool.Pool) ([]*pgtype.Type, error) {
 	// Get a single connection just to load type information.
 	conn, err := pool.Acquire(ctx)
-	defer conn.Release()
 	if err != nil {
 		return nil, err
 	}
+	defer conn.Release()
 
 	// TODO: Add missing custom types
 	dataTypeNames := []string{

@@ -3,9 +3,11 @@ package api_v1
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/bata94/RegattaApi/internal/crud"
 	DB "github.com/bata94/RegattaApi/internal/db"
@@ -66,7 +68,7 @@ func KasseCreateRechnungPDF(w http.ResponseWriter, r *http.Request) {
 	err = mailer.Enqueue(r.Context(), mailer.Params{
 		To:      toMail,
 		CC:      []string{},
-		Subject: "MRG Regatta 24 - Rechnung " + reNr,
+		Subject: fmt.Sprintf("MRG Regatta %02d - Rechnung %s", time.Now().Year()%100, reNr),
 		Body:    "Anbei finden Sie eine neu erstellte Rechnung für Ihren Verein.",
 		Files:   []string{filePath},
 	})

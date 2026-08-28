@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bata94/RegattaApi/internal/config"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
@@ -93,11 +94,13 @@ func JoinPath(elem ...string) string {
 }
 
 func IP(r *http.Request) string {
-	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
-		if idx := strings.Index(forwarded, ","); idx > 0 {
-			return strings.TrimSpace(forwarded[:idx])
+	if len(config.C.Server.TrustedProxies) > 0 {
+		if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+			if idx := strings.Index(forwarded, ","); idx > 0 {
+				return strings.TrimSpace(forwarded[:idx])
+			}
+			return strings.TrimSpace(forwarded)
 		}
-		return strings.TrimSpace(forwarded)
 	}
 	return r.RemoteAddr
 }

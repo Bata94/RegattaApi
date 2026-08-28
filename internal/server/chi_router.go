@@ -201,7 +201,6 @@ func setupAPIRoutes(r *chi.Mux) {
 		r.Post("/api/auth/login", api_v1.Login)
 		r.Post("/api/auth/logout", api_v1.Logout)
 		r.Get("/api/auth/valid", api_v1.AuthValidate)
-		r.Get("/api/v1/leitung/meldeergebnis", api_v1.GetMeldeergebnisHtml)
 	})
 
 	r.Group(func(r chi.Router) {
@@ -228,6 +227,7 @@ func setupAPIRoutes(r *chi.Mux) {
 		r.Post("/api/v1/buero/kasse/rechnung/{uuid}", api_v1.KasseCreateRechnungPDF)
 
 		r.Get("/api/v1/leitung/pdfFooter", api_v1.GetPdfFooter)
+		r.Get("/api/v1/leitung/meldeergebnis", api_v1.GetMeldeergebnisHtml)
 		r.Get("/api/v1/leitung/meldeergebnis/list", api_v1.GetMeldeergebnisList)
 		r.Get("/api/v1/leitung/meldeergebnis/{filename}", api_v1.GetMeldeergebnisFilename)
 		r.Post("/api/v1/leitung/meldeergebnis", api_v1.GenerateMeldeergebnis)
@@ -302,8 +302,11 @@ func requireHTMX(next http.Handler) http.Handler {
 }
 
 func setupMetricsRoutes(r *chi.Mux) {
-	r.Get("/metrics", adaptPageHandler(pages.MetricsPage))
-	r.Get("/metricsApi", api_v1.MetricsApi)
+	r.Group(func(r chi.Router) {
+		r.Use(webfw_middleware.Auth())
+		r.Get("/metrics", adaptPageHandler(pages.MetricsPage))
+		r.Get("/metricsApi", api_v1.MetricsApi)
+	})
 }
 
 func setupWSRoutes(r *chi.Mux) {

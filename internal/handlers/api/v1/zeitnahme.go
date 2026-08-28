@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/bata94/RegattaApi/internal/config"
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handlers"
 	"github.com/bata94/RegattaApi/pkg/webfw"
@@ -98,7 +99,7 @@ func GenerateEndZeit(w http.ResponseWriter, r *http.Request) {
 					webfw.APIError(w, webfw.InternalError(err.Error()))
 					return
 				}
-				meld, err := crud.GetMeldungByStartNrUndTag(r.Context(), startNummerInt, crud.TagSa)
+				meld, err := crud.GetMeldungByStartNrUndTag(r.Context(), startNummerInt, crud.Tag(config.C.Zeitnahme.GetCurrentTag()))
 				if err != nil {
 					slog.Debug("GetMeldungByStartNrUndTag")
 					webfw.APIError(w, webfw.InternalError(err.Error()))
