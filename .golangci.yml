@@ -1,0 +1,15 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - ineffassign
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true

@@ -122,7 +122,7 @@ func UpdateAthletStartberechtigung(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetAthletWaage(w http.ResponseWriter, r *http.Request) {
-	ls, err := crud.GetForAllVereineMissingAthlet(crud.Waage)
+	ls, err := crud.GetForAllVereineMissingAthlet(r.Context(), crud.Waage)
 	if err != nil {
 		webfw.APIError(w, webfw.InternalError(err.Error()))
 		return
@@ -131,7 +131,7 @@ func GetAthletWaage(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetAthletStartberechtigung(w http.ResponseWriter, r *http.Request) {
-	ls, err := crud.GetForAllVereineMissingAthlet(crud.Startberechtigt)
+	ls, err := crud.GetForAllVereineMissingAthlet(r.Context(), crud.Startberechtigt)
 	if err != nil {
 		webfw.APIError(w, webfw.InternalError(err.Error()))
 		return

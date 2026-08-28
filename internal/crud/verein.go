@@ -48,12 +48,12 @@ func (v Verein) MarshalJSON() ([]byte, error) {
 	return json.Marshal(j)
 }
 
-func (v *Verein) GetAthleten() ([]Athlet, error) {
+func (v *Verein) GetAthleten(ctx context.Context) ([]Athlet, error) {
 	if v.Athleten != nil {
 		return v.Athleten, nil
 	}
 	slog.Warn("lazy loading Athleten", "verein_uuid", v.Uuid.String())
-	return v.loadAthleten(context.Background())
+	return v.loadAthleten(ctx)
 }
 
 func (v *Verein) loadAthleten(ctx context.Context) ([]Athlet, error) {
@@ -219,8 +219,8 @@ const (
 	Startberechtigt MissingAthletType = 1
 )
 
-func GetForAllVereineMissingAthlet(athletType MissingAthletType) ([]Verein, error) {
-	vLs, err := GetAllVerein(context.Background())
+func GetForAllVereineMissingAthlet(ctx context.Context, athletType MissingAthletType) ([]Verein, error) {
+	vLs, err := GetAllVerein(ctx)
 	if err != nil {
 		return vLs, err
 	}
@@ -238,7 +238,7 @@ func GetForAllVereineMissingAthlet(athletType MissingAthletType) ([]Verein, erro
 	}
 
 	for _, v := range vLs {
-		missAthlet, err := queryFunc(context.Background(), v.Uuid)
+		missAthlet, err := queryFunc(ctx, v.Uuid)
 		if err != nil {
 			return vLs, err
 		}

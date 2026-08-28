@@ -25,9 +25,9 @@ func InternalVereinswahl(w http.ResponseWriter, r *http.Request) templ.Component
 
 	switch next {
 	case "waage":
-		vereine, err = crud.GetForAllVereineMissingAthlet(crud.Waage)
+		vereine, err = crud.GetForAllVereineMissingAthlet(r.Context(), crud.Waage)
 	case "startberechtigung":
-		vereine, err = crud.GetForAllVereineMissingAthlet(crud.Startberechtigt)
+		vereine, err = crud.GetForAllVereineMissingAthlet(r.Context(), crud.Startberechtigt)
 	default:
 		vereine, err = crud.GetAllVerein(r.Context())
 	}
