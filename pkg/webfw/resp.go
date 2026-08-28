@@ -1,14 +1,14 @@
 package webfw
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"log/slog"
 	"net/http"
 )
 
 func JSON(w http.ResponseWriter, r *http.Request, data any) {
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(data); err != nil {
+	if err := jsonv2.MarshalWrite(w, data); err != nil {
 		slog.Error("failed to encode JSON response", "error", err)
 	}
 }

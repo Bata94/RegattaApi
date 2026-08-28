@@ -8,7 +8,7 @@ package sqlc
 import (
 	"context"
 
-	"github.com/google/uuid"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -142,8 +142,8 @@ func (q *Queries) GetRechnungungenByVerein(ctx context.Context, vereinUuid uuid.
 const getVerein = `-- name: GetVerein :one
 SELECT
   verein.uuid, verein.name, verein.kurzform, verein.kuerzel,
-  (SELECT SUM(meldung.kosten) FROM meldung WHERE verein.uuid = meldung.verein_uuid) as ges_kosten,
-  (SELECT SUM(zahlung.amount) FROM zahlung WHERE verein.uuid = zahlung.verein_uuid) as ges_zahlungen
+  (SELECT COALESCE(SUM(meldung.kosten), 0) FROM meldung WHERE verein.uuid = meldung.verein_uuid)::bigint as ges_kosten,
+  (SELECT COALESCE(SUM(zahlung.amount), 0) FROM zahlung WHERE verein.uuid = zahlung.verein_uuid)::bigint as ges_zahlungen
 FROM
   verein
 WHERE

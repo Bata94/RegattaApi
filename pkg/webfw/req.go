@@ -1,7 +1,7 @@
 package webfw
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"io"
 	"net/http"
 	"net/url"
@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/bata94/RegattaApi/internal/config"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 )
 
 func Query(r *http.Request, key string) string {
@@ -40,7 +40,7 @@ func ParseBody(r *http.Request, v any) error {
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(body, v)
+	return jsonv2.Unmarshal(body, v)
 }
 
 func ParseMultipartForm(r *http.Request) error {

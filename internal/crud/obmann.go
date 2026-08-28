@@ -6,7 +6,7 @@ import (
 	DB "github.com/bata94/RegattaApi/internal/db"
 	apierr "github.com/bata94/RegattaApi/internal/errors"
 	"github.com/bata94/RegattaApi/internal/sqlc"
-	"github.com/google/uuid"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 )
 
 type Obmann struct {

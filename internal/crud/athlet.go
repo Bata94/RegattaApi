@@ -2,7 +2,7 @@ package crud
 
 import (
 	"context"
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -10,7 +10,7 @@ import (
 	"github.com/bata94/RegattaApi/internal/db"
 	apierr "github.com/bata94/RegattaApi/internal/errors"
 	"github.com/bata94/RegattaApi/internal/sqlc"
-	"github.com/google/uuid"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -88,7 +88,7 @@ func (a Athlet) MarshalJSON() ([]byte, error) {
 		g := int(a.Gewicht.Int32)
 		j.Gewicht = &g
 	}
-	return json.Marshal(j)
+	return jsonv2.Marshal(j)
 }
 
 func (ath *Athlet) AthletString() string {

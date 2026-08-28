@@ -7,8 +7,8 @@ import (
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	ui_components "github.com/bata94/RegattaApi/internal/templates/components"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 	"github.com/bata94/RegattaApi/pkg/webfw"
-	"github.com/google/uuid"
 )
 
 func UserEditNew(w http.ResponseWriter, r *http.Request) {
@@ -46,7 +46,7 @@ func UserEditNewPost(w http.ResponseWriter, r *http.Request) {
 
 	uuidStr := webfw.Param(r, "uuid")
 	if uuidStr == "new" {
-		userUuid, err = uuid.NewV7()
+		userUuid = uuid.NewV7()
 	} else {
 		userUuid, err = uuid.Parse(uuidStr)
 	}

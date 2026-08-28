@@ -5,7 +5,7 @@ import (
 
 	DB "github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/sqlc"
-	"github.com/google/uuid"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 

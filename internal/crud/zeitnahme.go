@@ -2,7 +2,7 @@ package crud
 
 import (
 	"context"
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -10,7 +10,7 @@ import (
 
 	DB "github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/sqlc"
-	"github.com/google/uuid"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -28,7 +28,7 @@ type Zeitnahme struct {
 
 func (z Zeitnahme) MarshalJSON() ([]byte, error) {
 	type alias Zeitnahme
-	return json.Marshal(alias(z))
+	return jsonv2.Marshal(alias(z))
 }
 
 func ZeitnahmeFromSqlcStart(z sqlc.ZeitnahmeStart) Zeitnahme {

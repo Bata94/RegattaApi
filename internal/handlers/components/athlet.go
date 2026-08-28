@@ -10,8 +10,8 @@ import (
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	regattabuero "github.com/bata94/RegattaApi/internal/templates/pages/regattabuero"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 	"github.com/bata94/RegattaApi/pkg/webfw"
-	"github.com/google/uuid"
 )
 
 func NewAthletPost(w http.ResponseWriter, r *http.Request) {
@@ -53,11 +53,7 @@ func NewAthletPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	athletUuid, err := uuid.NewV7()
-	if err != nil {
-		webfw.ErrorToast(w, r, "Error generating UUID")
-		return
-	}
+	athletUuid := uuid.NewV7()
 
 	a, err := crud.CreateAthlet(r.Context(), sqlc.CreateAthletParams{
 		Uuid:            athletUuid,

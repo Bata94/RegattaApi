@@ -15,8 +15,8 @@ import (
 	"github.com/bata94/RegattaApi/internal/mailer"
 	admin "github.com/bata94/RegattaApi/internal/templates/pages/admin"
 	regattaleitung "github.com/bata94/RegattaApi/internal/templates/pages/regattaleitung"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 	"github.com/bata94/RegattaApi/pkg/webfw"
-	"github.com/google/uuid"
 )
 
 func EmailQueueRetry(w http.ResponseWriter, r *http.Request) {
@@ -71,10 +71,7 @@ func saveEmailAttachment(r *http.Request, fh *multipart.FileHeader) (regattaleit
 		return regattaleitung.EmailAttachment{}, "", err
 	}
 
-	id, err := uuid.NewV7()
-	if err != nil {
-		return regattaleitung.EmailAttachment{}, "", err
-	}
+	id := uuid.NewV7()
 
 	base := filepath.Base(fh.Filename)
 	name := id.String() + "_" + base

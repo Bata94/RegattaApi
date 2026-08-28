@@ -7,8 +7,8 @@ import (
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	regattaleitung "github.com/bata94/RegattaApi/internal/templates/pages/regattaleitung"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 	"github.com/bata94/RegattaApi/pkg/webfw"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -42,12 +42,7 @@ func ObmannEditNewPost(w http.ResponseWriter, r *http.Request) {
 
 	var obmannUuid uuid.UUID
 	if isNew {
-		var err error
-		obmannUuid, err = uuid.NewV7()
-		if err != nil {
-			webfw.ErrorToast(w, r, "Bad Request")
-			return
-		}
+		obmannUuid = uuid.NewV7()
 	} else {
 		var err error
 		obmannUuid, err = uuid.Parse(uuidStr)

@@ -8,8 +8,8 @@ import (
 
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/sqlc"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 	"github.com/bata94/RegattaApi/pkg/webfw"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -226,10 +226,10 @@ func CreateNachmeldung(ctx context.Context, params PostNachmeldungParams) (*crud
 	}
 
 	m, err := crud.CreateMeldung(ctx, crud.CreateMeldungParams{
-		Uuid:            uuid.New(),
+		Uuid:            uuid.NewV7(),
 		VereinUuid:      vereinUuid,
 		RennenUuid:      rennen.Uuid,
-		DrvRevisionUuid: uuid.New(),
+		DrvRevisionUuid: uuid.NewV7(),
 		StartNummer:     lastStrtNr + 1,
 		Abteilung:       abteilung,
 		Bahn:            bahn,

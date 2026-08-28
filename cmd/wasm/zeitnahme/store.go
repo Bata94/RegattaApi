@@ -4,7 +4,7 @@ package main
 
 import (
 	"crypto/rand"
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -89,7 +89,7 @@ func (s *Store) getOpenStarts() []OpenStart {
 		return []OpenStart{}
 	}
 	var starts []OpenStart
-	if err := json.Unmarshal([]byte(raw), &starts); err != nil {
+	if err := jsonv2.Unmarshal([]byte(raw), &starts); err != nil {
 		slog.Error("unmarshal openStarts", "err", err)
 		return []OpenStart{}
 	}
@@ -101,7 +101,7 @@ func (s *Store) getOpenStarts() []OpenStart {
 
 func (s *Store) SetOpenStarts(starts []OpenStart) {
 	s.mu.Lock()
-	data, err := json.Marshal(starts)
+	data, err := jsonv2.Marshal(starts)
 	if err != nil {
 		s.mu.Unlock()
 		slog.Error("marshal openStarts", "err", err)
@@ -116,7 +116,7 @@ func (s *Store) AddOpenStart(start OpenStart) {
 	s.mu.Lock()
 	starts := s.getOpenStarts()
 	starts = append(starts, start)
-	data, _ := json.Marshal(starts)
+	data, _ := jsonv2.Marshal(starts)
 	setLS("openStarts", string(data))
 	s.mu.Unlock()
 	s.notify()
@@ -132,7 +132,7 @@ func (s *Store) RemoveOpenStart(startNummer string) {
 		}
 		filtered = append(filtered, st)
 	}
-	data, _ := json.Marshal(filtered)
+	data, _ := jsonv2.Marshal(filtered)
 	setLS("openStarts", string(data))
 	s.mu.Unlock()
 	s.notify()
@@ -159,12 +159,12 @@ func (s *Store) AddPendingFinish(timeClient time.Time, latencyMs int) PendingFin
 	var pending []PendingFinish
 	raw := getLS("pendingFinishes")
 	if raw != "" {
-		if err := json.Unmarshal([]byte(raw), &pending); err != nil {
+		if err := jsonv2.Unmarshal([]byte(raw), &pending); err != nil {
 			slog.Error("unmarshal pendingFinishes", "err", err)
 		}
 	}
 	pending = append(pending, pf)
-	data, _ := json.Marshal(pending)
+	data, _ := jsonv2.Marshal(pending)
 	setLS("pendingFinishes", string(data))
 	s.mu.Unlock()
 	s.notify()
@@ -183,7 +183,7 @@ func (s *Store) getPending() []PendingFinish {
 		return []PendingFinish{}
 	}
 	var pending []PendingFinish
-	if err := json.Unmarshal([]byte(raw), &pending); err != nil {
+	if err := jsonv2.Unmarshal([]byte(raw), &pending); err != nil {
 		slog.Error("unmarshal pendingFinishes", "err", err)
 		return []PendingFinish{}
 	}
@@ -205,7 +205,7 @@ func (s *Store) GetPending(clientID string, seq string) *PendingFinish {
 }
 
 func (s *Store) setPending(pending []PendingFinish) {
-	data, _ := json.Marshal(pending)
+	data, _ := jsonv2.Marshal(pending)
 	setLS("pendingFinishes", string(data))
 }
 
@@ -303,7 +303,7 @@ func (s *Store) AddPendingStart(rennenNummer string, startNummern []string, time
 	var pending []PendingStart
 	raw := getLS("pendingStarts")
 	if raw != "" {
-		if err := json.Unmarshal([]byte(raw), &pending); err != nil {
+		if err := jsonv2.Unmarshal([]byte(raw), &pending); err != nil {
 			slog.Error("unmarshal pendingStarts", "err", err)
 		}
 	}
@@ -326,7 +326,7 @@ func (s *Store) getPendingStartsLS() []PendingStart {
 		return []PendingStart{}
 	}
 	var pending []PendingStart
-	if err := json.Unmarshal([]byte(raw), &pending); err != nil {
+	if err := jsonv2.Unmarshal([]byte(raw), &pending); err != nil {
 		slog.Error("unmarshal pendingStarts", "err", err)
 		return []PendingStart{}
 	}
@@ -348,7 +348,7 @@ func (s *Store) GetPendingStart(clientID string, seq string) *PendingStart {
 }
 
 func (s *Store) setPendingStarts(pending []PendingStart) {
-	data, _ := json.Marshal(pending)
+	data, _ := jsonv2.Marshal(pending)
 	setLS("pendingStarts", string(data))
 }
 

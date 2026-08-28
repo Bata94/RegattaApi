@@ -2,7 +2,8 @@ package api_v1
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -18,8 +19,8 @@ import (
 	DB "github.com/bata94/RegattaApi/internal/db"
 	apierr "github.com/bata94/RegattaApi/internal/errors"
 	"github.com/bata94/RegattaApi/internal/sqlc"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 	"github.com/bata94/RegattaApi/pkg/webfw"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -58,7 +59,7 @@ func DrvMeldungUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(map[string]string{"message": "File uploaded successfully!"}); err != nil {
+	if err := jsonv2.MarshalWrite(w, map[string]string{"message": "File uploaded successfully!"}); err != nil {
 		slog.Warn("JSON encode error", "err", err)
 	}
 }
@@ -178,13 +179,13 @@ func ImportDrvJson(ctx context.Context, filePath string) error {
 	}
 
 	drvMeldung := DrvMeldungJson{}
-	err = json.Unmarshal(b, &drvMeldung)
+	err = jsonv2.Unmarshal(b, &drvMeldung, jsonv2.MatchCaseInsensitiveNames(true))
 	if err != nil {
 		slog.Error("Unmarshal Error", "err", err)
 		return err
 	}
 
-	o, err := json.MarshalIndent(drvMeldung, "", "  ")
+	o, err := jsonv2.Marshal(drvMeldung, jsontext.WithIndentPrefix(""), jsontext.WithIndent("  "))
 	if err != nil {
 		slog.Error("Marshal Error", "err", err)
 		return err
@@ -226,10 +227,7 @@ func importDrvJsonCore(ctx context.Context, drvMeldung DrvMeldungJson) error {
 			return err
 		}
 
-		nnUuid, err := uuid.NewV7()
-		if err != nil {
-			return err
-		}
+		nnUuid := uuid.NewV7()
 		nnAthletParams := sqlc.CreateAthletParams{
 			Uuid:            nnUuid,
 			VereinUuid:      newVerein.Uuid,

@@ -7,8 +7,8 @@ import (
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	ui_components "github.com/bata94/RegattaApi/internal/templates/components"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 	"github.com/bata94/RegattaApi/pkg/webfw"
-	"github.com/google/uuid"
 )
 
 func UserGroupEditNew(w http.ResponseWriter, r *http.Request) {
@@ -39,12 +39,7 @@ func UserGroupEditNewPost(w http.ResponseWriter, r *http.Request) {
 	var groupUuid uuid.UUID
 
 	if uuidStr == "new" {
-		var err error
-		groupUuid, err = uuid.NewV7()
-		if err != nil {
-			webfw.ErrorToast(w, r, "Bad Request")
-			return
-		}
+		groupUuid = uuid.NewV7()
 	} else {
 		var err error
 		groupUuid, err = uuid.Parse(uuidStr)

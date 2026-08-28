@@ -2,7 +2,7 @@ package crud
 
 import (
 	"context"
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"time"
 
@@ -10,7 +10,7 @@ import (
 	"github.com/bata94/RegattaApi/internal/db"
 	apierr "github.com/bata94/RegattaApi/internal/errors"
 	"github.com/bata94/RegattaApi/internal/sqlc"
-	"github.com/google/uuid"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -48,7 +48,7 @@ func (u User) MarshalJSON() ([]byte, error) {
 		IsActive:  u.IsActive,
 		UserGroup: u.UserGroup,
 	}
-	return json.Marshal(j)
+	return jsonv2.Marshal(j)
 }
 
 type JWT struct {

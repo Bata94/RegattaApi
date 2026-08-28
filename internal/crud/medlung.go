@@ -2,7 +2,7 @@ package crud
 
 import (
 	"context"
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -12,7 +12,7 @@ import (
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/google/uuid"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 )
 
 type Meldung struct {
@@ -108,7 +108,7 @@ func (m Meldung) MarshalJSON() ([]byte, error) {
 	if m.Athleten != nil {
 		j.Athleten = m.Athleten
 	}
-	return json.Marshal(j)
+	return jsonv2.Marshal(j)
 }
 
 func (m Meldung) TeilnehmerString() string {

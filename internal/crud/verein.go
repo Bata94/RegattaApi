@@ -2,7 +2,7 @@ package crud
 
 import (
 	"context"
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -12,7 +12,7 @@ import (
 	"github.com/bata94/RegattaApi/internal/db"
 	apierr "github.com/bata94/RegattaApi/internal/errors"
 	"github.com/bata94/RegattaApi/internal/sqlc"
-	"github.com/google/uuid"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 )
 
 type Verein struct {
@@ -45,7 +45,7 @@ func (v Verein) MarshalJSON() ([]byte, error) {
 		GesZahlungen: v.GesZahlungen,
 		Saldo:        v.Saldo,
 	}
-	return json.Marshal(j)
+	return jsonv2.Marshal(j)
 }
 
 func (v *Verein) GetAthleten(ctx context.Context) ([]Athlet, error) {

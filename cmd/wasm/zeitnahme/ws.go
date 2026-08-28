@@ -3,7 +3,8 @@
 package main
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
 	"log/slog"
 	"sync"
 	"syscall/js"
@@ -11,8 +12,8 @@ import (
 )
 
 type WSMessage struct {
-	Type string          `json:"type"`
-	Data json.RawMessage `json:"data,omitempty"`
+	Type string         `json:"type"`
+	Data jsontext.Value `json:"data,omitempty"`
 }
 
 type WSClient struct {
@@ -107,7 +108,7 @@ func (c *WSClient) sendPing() {
 	if ws.Get("readyState").Int() != 1 {
 		return
 	}
-	data, err := json.Marshal(map[string]any{
+	data, err := jsonv2.Marshal(map[string]any{
 		"type": "ping",
 		"data": map[string]any{
 			"t": now,
@@ -234,7 +235,7 @@ func (c *WSClient) reconnectLoop() {
 
 func (c *WSClient) handleMessage(raw string) {
 	var msg WSMessage
-	if err := json.Unmarshal([]byte(raw), &msg); err != nil {
+	if err := jsonv2.Unmarshal([]byte(raw), &msg); err != nil {
 		slog.Error("WS unmarshal message", "err", err)
 		return
 	}
@@ -244,7 +245,7 @@ func (c *WSClient) handleMessage(raw string) {
 		var data struct {
 			OpenStarts []OpenStart `json:"openStarts"`
 		}
-		if err := json.Unmarshal(msg.Data, &data); err != nil {
+		if err := jsonv2.Unmarshal(msg.Data, &data); err != nil {
 			slog.Error("unmarshal snapshot", "err", err)
 			return
 		}
@@ -253,7 +254,7 @@ func (c *WSClient) handleMessage(raw string) {
 
 	case "new_start":
 		var starts []OpenStart
-		if err := json.Unmarshal(msg.Data, &starts); err != nil {
+		if err := jsonv2.Unmarshal(msg.Data, &starts); err != nil {
 			slog.Error("unmarshal new_start", "err", err)
 			return
 		}
@@ -267,7 +268,7 @@ func (c *WSClient) handleMessage(raw string) {
 			Seq      string `json:"seq"`
 			ZielID   int32  `json:"zielId"`
 		}
-		if err := json.Unmarshal(msg.Data, &data); err != nil {
+		if err := jsonv2.Unmarshal(msg.Data, &data); err != nil {
 			slog.Error("unmarshal finish_recorded", "err", err)
 			return
 		}
@@ -283,7 +284,7 @@ func (c *WSClient) handleMessage(raw string) {
 			Seq      string      `json:"seq"`
 			Starts   []OpenStart `json:"starts"`
 		}
-		if err := json.Unmarshal(msg.Data, &data); err != nil {
+		if err := jsonv2.Unmarshal(msg.Data, &data); err != nil {
 			slog.Error("unmarshal start_recorded", "err", err)
 			return
 		}
@@ -301,7 +302,7 @@ func (c *WSClient) handleMessage(raw string) {
 			StartNummer string  `json:"startNummer"`
 			Endzeit     float64 `json:"endzeit"`
 		}
-		if err := json.Unmarshal(msg.Data, &data); err != nil {
+		if err := jsonv2.Unmarshal(msg.Data, &data); err != nil {
 			slog.Error("unmarshal finish_confirmed", "err", err)
 			return
 		}
@@ -313,7 +314,7 @@ func (c *WSClient) handleMessage(raw string) {
 		var data struct {
 			T int64 `json:"t"`
 		}
-		if err := json.Unmarshal(msg.Data, &data); err != nil {
+		if err := jsonv2.Unmarshal(msg.Data, &data); err != nil {
 			slog.Error("unmarshal pong", "err", err)
 			return
 		}
@@ -328,7 +329,7 @@ func (c *WSClient) handleMessage(raw string) {
 			Seq         string `json:"seq"`
 			StartNummer string `json:"startNummer"`
 		}
-		if err := json.Unmarshal(msg.Data, &data); err != nil {
+		if err := jsonv2.Unmarshal(msg.Data, &data); err != nil {
 			slog.Error("unmarshal finish_unmatched", "err", err)
 			return
 		}
@@ -352,7 +353,7 @@ func (c *WSClient) sendMessage(data map[string]any) {
 		slog.Error("WS not open, message dropped", "type", data["type"], "readyState", ws.Get("readyState").Int())
 		return
 	}
-	raw, err := json.Marshal(data)
+	raw, err := jsonv2.Marshal(data)
 	if err != nil {
 		slog.Error("marshal WS message", "err", err)
 		return

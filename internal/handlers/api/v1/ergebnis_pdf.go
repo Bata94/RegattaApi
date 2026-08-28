@@ -1,7 +1,7 @@
 package api_v1
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -20,7 +20,7 @@ import (
 
 func GetPdfFooter(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode("footer placeholder"); err != nil {
+	if err := jsonv2.MarshalWrite(w, "footer placeholder"); err != nil {
 		slog.Error("failed to encode PDF footer", "error", err)
 	}
 }

@@ -6,8 +6,8 @@ import (
 
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/sqlc"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 	"github.com/bata94/RegattaApi/pkg/webfw"
-	"github.com/google/uuid"
 )
 
 type NewAthletParams struct {
@@ -71,7 +71,7 @@ func CreateAthlet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a, err := crud.CreateAthlet(r.Context(), sqlc.CreateAthletParams{
-		Uuid:            uuid.New(),
+		Uuid:            uuid.NewV7(),
 		VereinUuid:      vereinUuid,
 		Name:            aParams.Name,
 		Vorname:         aParams.Vorname,

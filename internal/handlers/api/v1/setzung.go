@@ -10,8 +10,8 @@ import (
 	DB "github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/service"
 	"github.com/bata94/RegattaApi/internal/sqlc"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 	"github.com/bata94/RegattaApi/pkg/webfw"
-	"github.com/google/uuid"
 )
 
 func shuffle(array []crud.Meldung) []crud.Meldung {

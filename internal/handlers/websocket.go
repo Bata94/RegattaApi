@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"log/slog"
 	"sync"
 
@@ -75,7 +75,7 @@ func RunHub() {
 }
 
 func (h *Hub) BroadcastJSON(v any) {
-	data, err := json.Marshal(v)
+	data, err := jsonv2.Marshal(v)
 	if err != nil {
 		slog.Error("BroadcastJSON marshal error", "err", err)
 		return

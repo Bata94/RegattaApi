@@ -9,8 +9,8 @@ import (
 	"github.com/bata94/RegattaApi/internal/config"
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/handlers"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 	"github.com/bata94/RegattaApi/pkg/webfw"
-	"github.com/google/uuid"
 )
 
 func GetOpenZeitnahmeZiel(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +37,7 @@ func PostZeitnahmeStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	q, err := crud.CreateZeitnahmeStart(r.Context(), p.RennenNummer, p.StartNummern, p.TimeClient, *p.MeasuredLatency, uuid.New().String(), uuid.New().String())
+	q, err := crud.CreateZeitnahmeStart(r.Context(), p.RennenNummer, p.StartNummern, p.TimeClient, *p.MeasuredLatency, uuid.NewV7().String(), uuid.NewV7().String())
 	if err != nil {
 		webfw.APIError(w, webfw.InternalError(err.Error()))
 		return

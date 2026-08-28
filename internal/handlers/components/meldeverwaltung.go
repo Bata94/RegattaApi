@@ -11,8 +11,8 @@ import (
 	api_v1 "github.com/bata94/RegattaApi/internal/handlers/api/v1"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	regattabuero "github.com/bata94/RegattaApi/internal/templates/pages/regattabuero"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 	"github.com/bata94/RegattaApi/pkg/webfw"
-	"github.com/google/uuid"
 )
 
 func AbmeldungDelete(w http.ResponseWriter, r *http.Request) {

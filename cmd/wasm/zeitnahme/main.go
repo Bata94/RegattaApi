@@ -3,7 +3,7 @@
 package main
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"log/slog"
 	"syscall/js"
 	"time"
@@ -75,7 +75,7 @@ func main() {
 		}
 		rennNr := args[0].String()
 		var startNummern []string
-		if err := json.Unmarshal([]byte(args[1].String()), &startNummern); err != nil {
+		if err := jsonv2.Unmarshal([]byte(args[1].String()), &startNummern); err != nil {
 			slog.Error("__wasm_recordStart: unmarshal startNummern", "err", err)
 			return false
 		}
@@ -92,7 +92,7 @@ func main() {
 
 	js.Global().Set("__wasm_getPendingStarts", js.FuncOf(func(this js.Value, args []js.Value) any {
 		pending := store.GetPendingStarts()
-		data, err := json.Marshal(pending)
+		data, err := jsonv2.Marshal(pending)
 		if err != nil {
 			slog.Error("marshal pendingStarts", "err", err)
 			return "[]"
@@ -117,7 +117,7 @@ func main() {
 
 	js.Global().Set("__wasm_getPendingFinishes", js.FuncOf(func(this js.Value, args []js.Value) any {
 		pending := store.GetPendingFinishes()
-		data, err := json.Marshal(pending)
+		data, err := jsonv2.Marshal(pending)
 		if err != nil {
 			slog.Error("marshal pendingFinishes", "err", err)
 			return "[]"
@@ -127,7 +127,7 @@ func main() {
 
 	js.Global().Set("__wasm_getOpenStarts", js.FuncOf(func(this js.Value, args []js.Value) any {
 		starts := store.GetOpenStarts()
-		data, err := json.Marshal(starts)
+		data, err := jsonv2.Marshal(starts)
 		if err != nil {
 			slog.Error("marshal openStarts", "err", err)
 			return "[]"

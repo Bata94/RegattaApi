@@ -6,8 +6,8 @@ import (
 	"github.com/a-h/templ"
 	"github.com/bata94/RegattaApi/internal/crud"
 	profil "github.com/bata94/RegattaApi/internal/templates/pages/profil"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 	"github.com/bata94/RegattaApi/pkg/webfw"
-	"github.com/google/uuid"
 )
 
 func ChangePasswordGet(w http.ResponseWriter, r *http.Request) {

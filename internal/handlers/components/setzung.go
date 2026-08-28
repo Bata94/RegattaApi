@@ -1,14 +1,14 @@
 package components
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"net/http"
 
 	"github.com/bata94/RegattaApi/internal/crud"
 	api_v1 "github.com/bata94/RegattaApi/internal/handlers/api/v1"
 	"github.com/bata94/RegattaApi/internal/sqlc"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 	"github.com/bata94/RegattaApi/pkg/webfw"
-	"github.com/google/uuid"
 )
 
 func SetzungsVerwaltungLosungPost(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +42,7 @@ func SetzungsVerwaltungAenderungRennenPost(w http.ResponseWriter, r *http.Reques
 
 	payloadStr := r.FormValue("params")
 	payload := make(map[string]any)
-	err = json.Unmarshal([]byte(payloadStr), &payload)
+	err = jsonv2.Unmarshal([]byte(payloadStr), &payload)
 	if err != nil {
 		webfw.ErrorToast(w, r, "Invalid JSON")
 		return

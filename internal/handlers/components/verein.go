@@ -8,8 +8,8 @@ import (
 	"github.com/bata94/RegattaApi/internal/crud"
 	"github.com/bata94/RegattaApi/internal/sqlc"
 	regattaleitung "github.com/bata94/RegattaApi/internal/templates/pages/regattaleitung"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 	"github.com/bata94/RegattaApi/pkg/webfw"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -43,12 +43,7 @@ func VereinEditNewPost(w http.ResponseWriter, r *http.Request) {
 
 	var vereinUuid uuid.UUID
 	if isNew {
-		var err error
-		vereinUuid, err = uuid.NewV7()
-		if err != nil {
-			webfw.ErrorToast(w, r, "Bad Request")
-			return
-		}
+		vereinUuid = uuid.NewV7()
 	} else {
 		var err error
 		vereinUuid, err = uuid.Parse(uuidStr)

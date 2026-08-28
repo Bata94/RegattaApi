@@ -7,9 +7,9 @@ import (
 	"github.com/bata94/RegattaApi/internal/config"
 	ui_pages "github.com/bata94/RegattaApi/internal/templates/pages"
 	profil "github.com/bata94/RegattaApi/internal/templates/pages/profil"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 	"github.com/bata94/RegattaApi/pkg/webfw"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 )
 
 func ProfilPage(w http.ResponseWriter, r *http.Request) templ.Component {

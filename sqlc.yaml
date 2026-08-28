@@ -13,15 +13,15 @@ sql:
         overrides:
           - db_type: "uuid"
             go_type:
-              import: "github.com/google/uuid"
+              import: "github.com/bata94/RegattaApi/pkg/uuid"
               type: "UUID"
           - column: "*.uuid"
             go_type:
-              import: "github.com/google/uuid"
+              import: "github.com/bata94/RegattaApi/pkg/uuid"
               type: "UUID"
           - column: "*.*uuid"
             go_type:
-              import: "github.com/google/uuid"
+              import: "github.com/bata94/RegattaApi/pkg/uuid"
               type: "UUID"
           - column: "verin.ges_kosten"
             go_type:

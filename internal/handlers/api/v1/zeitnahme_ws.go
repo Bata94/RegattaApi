@@ -2,7 +2,8 @@ package api_v1
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -10,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 	"github.com/gorilla/websocket"
 
 	"github.com/bata94/RegattaApi/internal/config"
@@ -88,8 +89,8 @@ func getWSToken(r *http.Request) string {
 }
 
 type wsMessage struct {
-	Type string          `json:"type"`
-	Data json.RawMessage `json:"data"`
+	Type string         `json:"type"`
+	Data jsontext.Value `json:"data"`
 }
 
 type submitFinishPayload struct {
@@ -193,7 +194,7 @@ func readPump(client *handlers.Client) {
 		}
 
 		var msg wsMessage
-		if err := json.Unmarshal(raw, &msg); err != nil {
+		if err := jsonv2.Unmarshal(raw, &msg); err != nil {
 			slog.Error("WS unmarshal error", "err", err)
 			continue
 		}
@@ -213,15 +214,15 @@ func readPump(client *handlers.Client) {
 	}
 }
 
-func handlePing(client *handlers.Client, raw json.RawMessage) {
+func handlePing(client *handlers.Client, raw jsontext.Value) {
 	var data struct {
 		T int64 `json:"t"`
 	}
-	if err := json.Unmarshal(raw, &data); err != nil {
+	if err := jsonv2.Unmarshal(raw, &data); err != nil {
 		slog.Error("WS ping unmarshal error", "err", err)
 		return
 	}
-	pong, err := json.Marshal(map[string]any{
+	pong, err := jsonv2.Marshal(map[string]any{
 		"type": "pong",
 		"data": map[string]any{
 			"t": data.T,
@@ -238,9 +239,9 @@ func handlePing(client *handlers.Client, raw json.RawMessage) {
 	}
 }
 
-func handleRecordFinish(client *handlers.Client, raw json.RawMessage) {
+func handleRecordFinish(client *handlers.Client, raw jsontext.Value) {
 	var p submitFinishPayload
-	if err := json.Unmarshal(raw, &p); err != nil {
+	if err := jsonv2.Unmarshal(raw, &p); err != nil {
 		slog.Error("WS record_finish unmarshal error", "err", err)
 		return
 	}
@@ -252,7 +253,7 @@ func handleRecordFinish(client *handlers.Client, raw json.RawMessage) {
 		return
 	}
 
-	msg, err := json.Marshal(map[string]any{
+	msg, err := jsonv2.Marshal(map[string]any{
 		"type": "finish_recorded",
 		"data": map[string]any{
 			"clientId":   p.ClientID,
@@ -273,9 +274,9 @@ func handleRecordFinish(client *handlers.Client, raw json.RawMessage) {
 	}
 }
 
-func handleRecordStart(client *handlers.Client, raw json.RawMessage) {
+func handleRecordStart(client *handlers.Client, raw jsontext.Value) {
 	var p submitStartPayload
-	if err := json.Unmarshal(raw, &p); err != nil {
+	if err := jsonv2.Unmarshal(raw, &p); err != nil {
 		slog.Error("WS record_start unmarshal error", "err", err)
 		return
 	}
@@ -296,7 +297,7 @@ func handleRecordStart(client *handlers.Client, raw json.RawMessage) {
 		return
 	}
 
-	msg, err := json.Marshal(map[string]any{
+	msg, err := jsonv2.Marshal(map[string]any{
 		"type": "start_recorded",
 		"data": map[string]any{
 			"clientId": p.ClientID,
@@ -321,9 +322,9 @@ func handleRecordStart(client *handlers.Client, raw json.RawMessage) {
 	})
 }
 
-func handleAssignFinish(client *handlers.Client, raw json.RawMessage) {
+func handleAssignFinish(client *handlers.Client, raw jsontext.Value) {
 	var p assignFinishPayload
-	if err := json.Unmarshal(raw, &p); err != nil {
+	if err := jsonv2.Unmarshal(raw, &p); err != nil {
 		slog.Error("WS assign_finish unmarshal error", "err", err)
 		return
 	}

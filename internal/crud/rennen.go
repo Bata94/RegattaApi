@@ -3,7 +3,7 @@ package crud
 import (
 	"cmp"
 	"context"
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -13,7 +13,7 @@ import (
 	"github.com/bata94/RegattaApi/internal/db"
 	apierr "github.com/bata94/RegattaApi/internal/errors"
 	"github.com/bata94/RegattaApi/internal/sqlc"
-	"github.com/google/uuid"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -258,7 +258,7 @@ func (r Rennen) MarshalJSON() ([]byte, error) {
 	if r.Meldungen != nil {
 		j.Meldungen = r.Meldungen
 	}
-	return json.Marshal(j)
+	return jsonv2.Marshal(j)
 }
 
 type Zeitplaung struct {

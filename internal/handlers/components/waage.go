@@ -9,8 +9,8 @@ import (
 
 	"github.com/bata94/RegattaApi/internal/crud"
 	regattabuero "github.com/bata94/RegattaApi/internal/templates/pages/regattabuero"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 	"github.com/bata94/RegattaApi/pkg/webfw"
-	"github.com/google/uuid"
 )
 
 func WaagePost(w http.ResponseWriter, r *http.Request) {

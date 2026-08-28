@@ -7,8 +7,8 @@ import (
 	"github.com/a-h/templ"
 	"github.com/bata94/RegattaApi/internal/crud"
 	regattaleitung "github.com/bata94/RegattaApi/internal/templates/pages/regattaleitung"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 	"github.com/bata94/RegattaApi/pkg/webfw"
-	"github.com/google/uuid"
 )
 
 func InternalRegattaleitung(w http.ResponseWriter, r *http.Request) templ.Component {

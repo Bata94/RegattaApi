@@ -4,7 +4,7 @@ import (
 	"context"
 	DB "github.com/bata94/RegattaApi/internal/db"
 	"github.com/bata94/RegattaApi/internal/sqlc"
-	"github.com/google/uuid"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 )
 
 func CreateRechnung(ctx context.Context, nummer string, verein_uuid uuid.UUID, costSum int) error {

@@ -49,10 +49,10 @@ func (z ZeitnahmeConfig) GetCurrentTag() string {
 }
 
 type ServerConfig struct {
-	Port            string
-	Host            string
-	WSPort          string
-	TrustedProxies  []string
+	Port           string
+	Host           string
+	WSPort         string
+	TrustedProxies []string
 }
 
 type DBConfig struct {

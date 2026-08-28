@@ -8,7 +8,7 @@ package sqlc
 import (
 	"context"
 
-	"github.com/google/uuid"
+	"github.com/bata94/RegattaApi/pkg/uuid"
 )
 
 const createUser = `-- name: CreateUser :one
