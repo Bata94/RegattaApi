@@ -226,20 +226,18 @@ func CreateNachmeldung(ctx context.Context, params PostNachmeldungParams) (*crud
 	}
 
 	m, err := crud.CreateMeldung(ctx, crud.CreateMeldungParams{
-		CreateMeldungParams: sqlc.CreateMeldungParams{
-			Uuid:            uuid.New(),
-			VereinUuid:      vereinUuid,
-			RennenUuid:      rennen.Uuid,
-			DrvRevisionUuid: uuid.New(),
-			StartNummer:     lastStrtNr + 1,
-			Abteilung:       abteilung,
-			Bahn:            bahn,
-			Abgemeldet:      false,
-			Kosten:          kosten,
-			Typ:             "Nachmeldung",
-			Bemerkung:       pgtype.Text{},
-		},
-		Athleten: mAth,
+		Uuid:            uuid.New(),
+		VereinUuid:      vereinUuid,
+		RennenUuid:      rennen.Uuid,
+		DrvRevisionUuid: uuid.New(),
+		StartNummer:     lastStrtNr + 1,
+		Abteilung:       abteilung,
+		Bahn:            bahn,
+		Abgemeldet:      false,
+		Kosten:          kosten,
+		Typ:             "Nachmeldung",
+		Bemerkung:       pgtype.Text{},
+		Athleten:        mAth,
 	})
 
 	if err != nil {

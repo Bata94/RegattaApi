@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/bata94/RegattaApi/internal/config"
@@ -19,13 +20,7 @@ func CORS() func(http.Handler) http.Handler {
 		allowedOrigins[i] = strings.TrimSpace(allowedOrigins[i])
 	}
 
-	hasWildcard := false
-	for _, allowed := range allowedOrigins {
-		if allowed == "*" {
-			hasWildcard = true
-			break
-		}
-	}
+	hasWildcard := slices.Contains(allowedOrigins, "*")
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -68,8 +63,8 @@ func matchOrigin(origin string, allowedOrigins []string) string {
 			}
 			continue
 		}
-		if strings.HasSuffix(allowed, ":*") {
-			hostPattern := strings.TrimSuffix(allowed, ":*")
+		if before, ok := strings.CutSuffix(allowed, ":*"); ok {
+			hostPattern := before
 			if strings.HasPrefix(origin, hostPattern+":") {
 				return origin
 			}

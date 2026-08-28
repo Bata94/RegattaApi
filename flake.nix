@@ -17,7 +17,7 @@
 
       encrypt-env = pkgs.writeShellApplication {
         name = "encrypt-env";
-        runtimeInputs = [ pkgs.sops ];
+        runtimeInputs = [pkgs.sops];
         text = ''
           sops encrypt .env > encrypt.env
         '';
@@ -25,33 +25,35 @@
 
       decrypt-env = pkgs.writeShellApplication {
         name = "decrypt-env";
-        runtimeInputs = [ pkgs.sops ];
+        runtimeInputs = [pkgs.sops];
         text = ''
           sops decrypt encrypt.env > .env
         '';
       };
     in {
       devShell = pkgs.mkShell {
-        buildInputs = with pkgs; [
-          just
-          opencode
+        buildInputs = with pkgs;
+          [
+            just
+            opencode
 
-          go
-          air
+            go_1_27
+            air
 
-          golangci-lint
-          gotools
-          gopls
+            golangci-lint
+            gotools
+            gopls
 
-          templ
-          nodejs
+            templ
+            nodejs
 
-          sqlc
-          goose
+            sqlc
+            goose
 
-          sops
-          age
-        ] ++ [ encrypt-env decrypt-env ];
+            sops
+            age
+          ]
+          ++ [encrypt-env decrypt-env];
       };
     });
 }

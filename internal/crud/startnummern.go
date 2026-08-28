@@ -2,6 +2,7 @@ package crud
 
 import (
 	"context"
+	"slices"
 
 	DB "github.com/bata94/RegattaApi/internal/db"
 	apierr "github.com/bata94/RegattaApi/internal/errors"
@@ -52,10 +53,5 @@ func (b StartnummernBereich) InBereich(n int32) bool {
 }
 
 func (b StartnummernBereich) IsFehlend(n int32) bool {
-	for _, f := range b.FehlendeNummern {
-		if f == n {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(b.FehlendeNummern, n)
 }

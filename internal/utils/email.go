@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"log/slog"
+	"slices"
 
 	"github.com/bata94/RegattaApi/internal/config"
 	"github.com/wneessen/go-mail"
@@ -85,13 +86,7 @@ func SendMail(params SendMailParams) error {
 		return err
 	}
 
-	senderInBcc := false
-	for _, bcc := range params.Bcc {
-		if bcc == emailOptions.Sender {
-			senderInBcc = true
-			break
-		}
-	}
+	senderInBcc := slices.Contains(params.Bcc, emailOptions.Sender)
 	if !senderInBcc {
 		params.Bcc = append(params.Bcc, emailOptions.Sender)
 	}

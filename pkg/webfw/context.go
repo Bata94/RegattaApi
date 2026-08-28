@@ -3,6 +3,7 @@ package webfw
 import (
 	"context"
 	"net/http"
+	"slices"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -79,12 +80,7 @@ func GetCapabilities(r *http.Request) []string {
 
 func HasCapability(r *http.Request, cap string) bool {
 	caps := GetCapabilities(r)
-	for _, c := range caps {
-		if c == cap {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(caps, cap)
 }
 
 func HasAllCapabilities(r *http.Request, caps ...string) bool {

@@ -27,7 +27,7 @@ func Auth() func(http.Handler) http.Handler {
 				return
 			}
 
-			token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+			token, err := jwt.Parse(tokenString, func(t *jwt.Token) (any, error) {
 				return []byte(secret), nil
 			})
 
@@ -54,7 +54,7 @@ func OptionalAuth() func(http.Handler) http.Handler {
 			tokenString := getToken(r)
 
 			if tokenString != "" && !strings.HasPrefix(tokenString, "Bearer ") {
-				token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+				token, err := jwt.Parse(tokenString, func(t *jwt.Token) (any, error) {
 					return []byte(secret), nil
 				})
 

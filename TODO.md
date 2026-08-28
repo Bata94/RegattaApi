@@ -7,7 +7,7 @@
 
 ## General
 
-- [ ] Migrate to Go 1.27
+- [X] Migrate to Go 1.27
 - [ ] Explore stdlib UUID pkg
 - [ ] Explore stdlib json v2 pkg
 

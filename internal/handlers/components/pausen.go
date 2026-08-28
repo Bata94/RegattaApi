@@ -21,7 +21,7 @@ func PausenNew(w http.ResponseWriter, r *http.Request) {
 		webfw.ErrorToast(w, r, "Invalid UUID")
 		return
 	}
-	p := crud.Pause{Pause: sqlc.Pause{ID: int32(-2), NachRennenUuid: nachRennenUuid, Laenge: 45}}
+	p := crud.Pause{ID: int32(-2), NachRennenUuid: nachRennenUuid, Laenge: 45}
 
 	templ.Handler(regattaleitung.PausenEntry(p)).ServeHTTP(w, r)
 }

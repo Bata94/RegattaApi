@@ -75,11 +75,9 @@ func UserEditNewPost(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(fieldErrors) > 0 {
 		u = &crud.User{
-			User: sqlc.User{
-				Uuid:     userUuid,
-				Username: username,
-				IsActive: !isNotActive,
-			},
+			Uuid:     userUuid,
+			Username: username,
+			IsActive: !isNotActive,
 			UserGroup: &sqlc.UsersGroup{
 				Uuid: groupUuid,
 			},
@@ -90,11 +88,9 @@ func UserEditNewPost(w http.ResponseWriter, r *http.Request) {
 
 	if uuidStr == "new" {
 		u = &crud.User{
-			User: sqlc.User{
-				Uuid:     userUuid,
-				Username: username,
-				IsActive: !isNotActive,
-			},
+			Uuid:     userUuid,
+			Username: username,
+			IsActive: !isNotActive,
 			UserGroup: &sqlc.UsersGroup{
 				Uuid: groupUuid,
 			},
@@ -117,11 +113,9 @@ func UserEditNewPost(w http.ResponseWriter, r *http.Request) {
 	u, err = crud.GetUser(r.Context(), userUuid)
 	if err != nil {
 		u = &crud.User{
-			User: sqlc.User{
-				Uuid:     userUuid,
-				Username: username,
-				IsActive: !isNotActive,
-			},
+			Uuid:     userUuid,
+			Username: username,
+			IsActive: !isNotActive,
 			UserGroup: &sqlc.UsersGroup{
 				Uuid: groupUuid,
 			},

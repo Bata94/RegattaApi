@@ -53,8 +53,8 @@ func Compression() func(http.Handler) http.Handler {
 			}
 
 			encoding := ""
-			encodings := strings.Split(acceptEncoding, ",")
-			for _, enc := range encodings {
+			encodings := strings.SplitSeq(acceptEncoding, ",")
+			for enc := range encodings {
 				enc = strings.TrimSpace(enc)
 				if enc == "gzip" {
 					encoding = "gzip"

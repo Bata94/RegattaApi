@@ -456,20 +456,18 @@ func importDrvJsonCore(ctx context.Context, drvMeldung DrvMeldungJson) error {
 
 		slog.Debug("Members done... Creating Meldung")
 		newMeldung := crud.CreateMeldungParams{
-			CreateMeldungParams: sqlc.CreateMeldungParams{
-				Uuid:            m.Id,
-				VereinUuid:      m.ClubId,
-				RennenUuid:      m.EventId,
-				DrvRevisionUuid: m.RevisionId,
-				Abgemeldet:      abgemeldet,
-				StartNummer:     int32(0),
-				Abteilung:       int32(0),
-				Bahn:            int32(0),
-				Kosten:          kosten,
-				Typ:             typ,
-				Bemerkung:       pgtype.Text{String: bemerkung},
-			},
-			Athleten: athleten,
+			Uuid:            m.Id,
+			VereinUuid:      m.ClubId,
+			RennenUuid:      m.EventId,
+			DrvRevisionUuid: m.RevisionId,
+			Abgemeldet:      abgemeldet,
+			StartNummer:     int32(0),
+			Abteilung:       int32(0),
+			Bahn:            int32(0),
+			Kosten:          kosten,
+			Typ:             typ,
+			Bemerkung:       pgtype.Text{String: bemerkung},
+			Athleten:        athleten,
 		}
 
 		_, err = crud.CreateMeldung(ctx, newMeldung)

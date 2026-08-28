@@ -35,10 +35,7 @@ var (
 
 func InitRateLimiter() {
 	once.Do(func() {
-		multiplier := config.C.Rate.UserMultiplier
-		if multiplier < 1 {
-			multiplier = 1
-		}
+		multiplier := max(config.C.Rate.UserMultiplier, 1)
 		globalLimiter = &RateLimiter{
 			limiters:       make(map[string]*limiterEntry),
 			rate:           rate.Limit(config.C.Rate.RPS),
@@ -85,10 +82,7 @@ func RateLimit() func(http.Handler) http.Handler {
 			}
 
 			w.Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", entry.burst))
-			remaining := int(entry.limiter.Tokens())
-			if remaining < 0 {
-				remaining = 0
-			}
+			remaining := max(int(entry.limiter.Tokens()), 0)
 			w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(remaining))
 			w.Header().Set("X-RateLimit-Reset", fmt.Sprintf("%d", time.Now().Add(time.Second).Unix()))
 
@@ -123,7 +117,7 @@ func userIDFromRequest(r *http.Request) string {
 	}
 
 	secret := config.C.Auth.JWTSecret
-	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (any, error) {
 		return []byte(secret), nil
 	})
 	if err != nil || !token.Valid {

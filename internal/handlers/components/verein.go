@@ -62,12 +62,11 @@ func VereinEditNewPost(w http.ResponseWriter, r *http.Request) {
 	kurzform := r.FormValue("kurzform")
 	kuerzel := r.FormValue("kuerzel")
 
-	v := crud.Verein{Verein: sqlc.Verein{
+	v := crud.Verein{
 		Uuid:     vereinUuid,
 		Name:     name,
 		Kurzform: kurzform,
-		Kuerzel:  kuerzel,
-	}}
+		Kuerzel:  kuerzel}
 
 	fieldErrors := make(map[string]string)
 	if name == "" {

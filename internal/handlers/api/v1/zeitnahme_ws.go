@@ -63,7 +63,7 @@ func validateWebSocketToken(r *http.Request) error {
 		return fmt.Errorf("missing token")
 	}
 
-	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (any, error) {
 		return []byte(config.C.Auth.JWTSecret), nil
 	})
 	if err != nil || !token.Valid {
