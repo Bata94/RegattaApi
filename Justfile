@@ -120,6 +120,11 @@ test:
 	@echo "Testing..."
 	go test ./... -v
 
+# Smoke test all GET routes against the dev DB (runs inside api-dev)
+smoke-test:
+	@echo "Smoke testing..."
+	docker compose exec api-dev go test ./internal/server/ -run TestSmokeAllGetRoutes -count=1 -v
+
 # Clean the binary
 clean:
 	@echo "Cleaning..."

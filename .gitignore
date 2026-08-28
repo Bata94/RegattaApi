@@ -51,4 +51,4 @@ bin/
 **/*.fiber.gz
 public/
 RegattaApi
-server
+./server
