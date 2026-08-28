@@ -128,7 +128,9 @@ func smokeLogin(base string) string {
 	if err != nil {
 		return ""
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	} ()
 
 	for _, c := range resp.Cookies() {
 		if c.Name == "auth_token" && c.Value != "" {
