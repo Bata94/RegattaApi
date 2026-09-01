@@ -185,15 +185,21 @@ lint:
 
 # Poke the hole
 open-firewall:
-    @read -p "WARNING: This exposes port 8080 to the internet. Continue? [y/N] " confirm && \
-    [[ "$$confirm" == [yY] ]] && sudo iptables -I INPUT 1 -p tcp --dport 8080 -j ACCEPT || \
-    echo "Aborted."
+    @read -p "WARNING: This exposes port 8080 to the internet. Continue? [y/N] " confirm; \
+    if [ "$confirm" = y ] || [ "$confirm" = Y ]; then \
+      sudo iptables -I INPUT 1 -p tcp --dport 8080 -j ACCEPT; \
+    else \
+      echo "Aborted."; \
+    fi
 
 # Close the hole
 close-firewall:
-    @read -p "WARNING: This closes port 8080. Continue? [y/N] " confirm && \
-    [[ "$$confirm" == [yY] ]] && sudo iptables -D INPUT -p tcp --dport 8080 -j ACCEPT || \
-    echo "Aborted."
+    @read -p "WARNING: This closes port 8080. Continue? [y/N] " confirm; \
+    if [ "$confirm" = y ] || [ "$confirm" = Y ]; then \
+      sudo iptables -D INPUT -p tcp --dport 8080 -j ACCEPT; \
+    else \
+      echo "Aborted."; \
+    fi
 
 verify-firewall:
   sudo iptables -L INPUT -n --line-numbers | grep 8080
