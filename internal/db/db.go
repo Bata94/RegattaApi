@@ -17,29 +17,53 @@ import (
 var (
 	Queries *sqlc.Queries
 	pool    *pgxpool.Pool
+
+	stopPoolStats chan struct{}
 )
 
 type DBServerOptions struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	Name     string
-	Sslmode  string
+	Host               string
+	Port               string
+	User               string
+	Password           string
+	Name               string
+	Sslmode            string
+	PoolMaxConns       int32
+	PoolMinConns       int32
+	PoolMaxIdleSeconds int
+	ConnectTimeoutSec  int
 }
 
 func InitConnection(opts DBServerOptions) {
+	if opts.PoolMaxConns <= 0 {
+		opts.PoolMaxConns = 20
+	}
+	if opts.PoolMinConns < 0 {
+		opts.PoolMinConns = 0
+	}
+	if opts.PoolMaxIdleSeconds <= 0 {
+		opts.PoolMaxIdleSeconds = 300
+	}
+	if opts.ConnectTimeoutSec <= 0 {
+		opts.ConnectTimeoutSec = 10
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	dsn := fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=%s",
-		opts.Host, opts.Port, opts.User, opts.Name, opts.Password, opts.Sslmode)
+	dsn := fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=%s connect_timeout=%d",
+		opts.Host, opts.Port, opts.User, opts.Name, opts.Password, opts.Sslmode, opts.ConnectTimeoutSec)
 
 	dbConfig, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
 		slog.Error(fmt.Sprintf("failed to parse db config: %v", err))
 		os.Exit(1)
 	}
+
+	dbConfig.MaxConns = opts.PoolMaxConns
+	dbConfig.MinConns = opts.PoolMinConns
+	dbConfig.MaxConnIdleTime = time.Duration(opts.PoolMaxIdleSeconds) * time.Second
+	dbConfig.HealthCheckPeriod = 30 * time.Second
 
 	pool, err = pgxpool.NewWithConfig(ctx, dbConfig)
 	if err != nil {
@@ -68,6 +92,36 @@ func InitConnection(opts DBServerOptions) {
 	}
 
 	Queries = sqlc.New(pool)
+
+	startPoolStatsLogger()
+}
+
+func startPoolStatsLogger() {
+	stopPoolStats = make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(60 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stopPoolStats:
+				return
+			case <-ticker.C:
+				if pool == nil {
+					continue
+				}
+				stat := pool.Stat()
+				slog.Debug("db pool stats",
+					"max_conns", stat.MaxConns(),
+					"total_conns", stat.TotalConns(),
+					"idle_conns", stat.IdleConns(),
+					"acquired_conns", stat.AcquiredConns(),
+					"constructing_conns", stat.ConstructingConns(),
+					"empty_acquire_count", stat.EmptyAcquireCount(),
+					"canceled_acquire_count", stat.CanceledAcquireCount(),
+				)
+			}
+		}
+	}()
 }
 
 func ShutdownConnection() error {
@@ -75,6 +129,9 @@ func ShutdownConnection() error {
 		return nil
 	}
 	slog.Info("Shutting down database connection...")
+	if stopPoolStats != nil {
+		close(stopPoolStats)
+	}
 	pool.Close()
 	return nil
 }

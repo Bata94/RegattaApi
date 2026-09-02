@@ -14,10 +14,11 @@ import (
 )
 
 const (
-	pollInterval = 10 * time.Second
-	maxAttempts  = int32(5)
-	baseBackoff  = 30 * time.Second
-	maxBackoff   = 15 * time.Minute
+	pollInterval     = 10 * time.Second
+	maxAttempts      = int32(5)
+	baseBackoff      = 30 * time.Second
+	maxBackoff       = 15 * time.Minute
+	claimBaseBackoff = time.Second
 )
 
 type Params struct {
@@ -60,29 +61,52 @@ func RunWorker(ctx context.Context) {
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
 
+	claimFailures := 0
+
 	for {
 		select {
 		case <-ctx.Done():
 			slog.Info("Stopping email worker")
 			return
 		case <-ticker.C:
-			processQueue(ctx)
+			if ctx.Err() != nil {
+				slog.Info("Stopping email worker")
+				return
+			}
+			if err := processQueue(ctx); err != nil {
+				if ctx.Err() != nil {
+					slog.Info("Stopping email worker")
+					return
+				}
+				claimFailures++
+				backoff := claimBackoff(claimFailures)
+				if claimFailures <= 3 {
+					slog.Warn("Failed to claim next email, backing off", "err", err, "consecutive_failures", claimFailures, "backoff", backoff)
+				} else {
+					slog.Error("Failed to claim next email, backing off", "err", err, "consecutive_failures", claimFailures, "backoff", backoff)
+				}
+				if err := waitFor(ctx, backoff); err != nil {
+					slog.Info("Stopping email worker")
+					return
+				}
+				continue
+			}
+			claimFailures = 0
 		}
 	}
 }
 
-func processQueue(ctx context.Context) {
+func processQueue(ctx context.Context) error {
 	for {
 		entry, err := crud.ClaimNextEmail(ctx)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				return
+				return nil
 			}
-			slog.Error("Failed to claim next email", "err", err)
-			return
+			return err
 		}
 
-		sendErr := utils.SendMail(utils.SendMailParams{
+		sendErr := utils.SendMail(ctx, utils.SendMailParams{
 			To:      entry.ToAddresses,
 			CC:      entry.CcAddresses,
 			Bcc:     entry.BccAddresses,
@@ -94,7 +118,9 @@ func processQueue(ctx context.Context) {
 		if sendErr != nil {
 			backoff := nextBackoff(entry.Attempts)
 			if err := crud.MarkEmailFailed(ctx, entry.Uuid, backoff.Seconds(), sendErr.Error()); err != nil {
-				slog.Error("Failed to mark email as failed", "uuid", entry.Uuid, "err", err)
+				if ctx.Err() == nil {
+					slog.Error("Failed to mark email as failed", "uuid", entry.Uuid, "err", err)
+				}
 			} else {
 				slog.Warn("Email send failed, will retry", "uuid", entry.Uuid, "attempts", entry.Attempts+1, "backoff", backoff)
 			}
@@ -102,7 +128,9 @@ func processQueue(ctx context.Context) {
 		}
 
 		if err := crud.MarkEmailSent(ctx, entry.Uuid); err != nil {
-			slog.Error("Failed to mark email as sent", "uuid", entry.Uuid, "err", err)
+			if ctx.Err() == nil {
+				slog.Error("Failed to mark email as sent", "uuid", entry.Uuid, "err", err)
+			}
 		} else {
 			slog.Info("Email sent", "uuid", entry.Uuid, "to", entry.ToAddresses)
 		}
@@ -115,4 +143,23 @@ func nextBackoff(attempts int32) time.Duration {
 		return maxBackoff
 	}
 	return backoff
+}
+
+func claimBackoff(failures int) time.Duration {
+	backoff := claimBaseBackoff * time.Duration(math.Pow(2, float64(failures-1)))
+	if backoff > maxBackoff {
+		return maxBackoff
+	}
+	return backoff
+}
+
+func waitFor(ctx context.Context, d time.Duration) error {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
 }

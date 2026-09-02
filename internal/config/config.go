@@ -56,12 +56,16 @@ type ServerConfig struct {
 }
 
 type DBConfig struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	Name     string
-	SSLMode  string
+	Host               string
+	Port               string
+	User               string
+	Password           string
+	Name               string
+	SSLMode            string
+	PoolMaxConns       int32
+	PoolMinConns       int32
+	PoolMaxIdleSeconds int
+	ConnectTimeoutSec  int
 }
 
 type AuthConfig struct {
@@ -102,12 +106,16 @@ func Load() {
 			TrustedProxies: getEnvList("TRUSTED_PROXIES"),
 		},
 		DB: DBConfig{
-			Host:     os.Getenv("DB_HOST"),
-			Port:     os.Getenv("DB_PORT"),
-			User:     os.Getenv("DB_USER"),
-			Password: os.Getenv("DB_PASSWORD"),
-			Name:     os.Getenv("DB_NAME"),
-			SSLMode:  os.Getenv("DB_SSLMODE"),
+			Host:               os.Getenv("DB_HOST"),
+			Port:               os.Getenv("DB_PORT"),
+			User:               os.Getenv("DB_USER"),
+			Password:           os.Getenv("DB_PASSWORD"),
+			Name:               os.Getenv("DB_NAME"),
+			SSLMode:            os.Getenv("DB_SSLMODE"),
+			PoolMaxConns:       int32(getEnvInt("DB_POOL_MAX_CONNS", 20)),
+			PoolMinConns:       int32(getEnvInt("DB_POOL_MIN_CONNS", 1)),
+			PoolMaxIdleSeconds: getEnvInt("DB_POOL_MAX_IDLE_SECONDS", 300),
+			ConnectTimeoutSec:  getEnvInt("DB_CONNECT_TIMEOUT_SECONDS", 10),
 		},
 		Auth: AuthConfig{
 			JWTSecret: getEnvRequired("JWT_SECRET"),

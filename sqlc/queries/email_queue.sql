@@ -22,9 +22,15 @@ UPDATE email_queue
 SET status = 'sending', updated_at = now()
 WHERE uuid = (
   SELECT uuid FROM email_queue
-  WHERE status IN ('pending', 'failed')
+  WHERE (
+    status IN ('pending', 'failed')
     AND next_attempt_at <= now()
     AND attempts < max_attempts
+  )
+  OR (
+    status = 'sending'
+    AND updated_at < now() - interval '10 minutes'
+  )
   ORDER BY created_at ASC
   FOR UPDATE SKIP LOCKED
   LIMIT 1

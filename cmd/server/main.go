@@ -24,12 +24,16 @@ func main() {
 	setupLogger()
 
 	DB.InitConnection(DB.DBServerOptions{
-		Host:     config.C.DB.Host,
-		Port:     config.C.DB.Port,
-		User:     config.C.DB.User,
-		Password: config.C.DB.Password,
-		Name:     config.C.DB.Name,
-		Sslmode:  config.C.DB.SSLMode,
+		Host:               config.C.DB.Host,
+		Port:               config.C.DB.Port,
+		User:               config.C.DB.User,
+		Password:           config.C.DB.Password,
+		Name:               config.C.DB.Name,
+		Sslmode:            config.C.DB.SSLMode,
+		PoolMaxConns:       config.C.DB.PoolMaxConns,
+		PoolMinConns:       config.C.DB.PoolMinConns,
+		PoolMaxIdleSeconds: config.C.DB.PoolMaxIdleSeconds,
+		ConnectTimeoutSec:  config.C.DB.ConnectTimeoutSec,
 	})
 	defer func() {
 		if err := DB.ShutdownConnection(); err != nil {
@@ -42,13 +46,13 @@ func main() {
 		slog.Error("Error creating public dir", "err", err)
 	}
 
-	go mailer.RunWorker(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go mailer.RunWorker(ctx)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	go func() {
 		sig := <-c

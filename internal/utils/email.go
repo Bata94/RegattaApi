@@ -1,9 +1,12 @@
 package utils
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
+	"time"
 
 	"github.com/bata94/RegattaApi/internal/config"
 	"github.com/wneessen/go-mail"
@@ -63,7 +66,13 @@ type SendMailParams struct {
 	Files   []string
 }
 
-func SendMail(params SendMailParams) error {
+const sendTimeout = 30 * time.Second
+
+func SendMail(ctx context.Context, params SendMailParams) error {
+	if emailOptions == nil || emailClient == nil {
+		return errors.New("mail client not initialized")
+	}
+
 	if config.C.Env == "dev" {
 		slog.Info("Skipping email send in dev mode", "subject", params.Subject, "to", params.To)
 		return nil
@@ -105,7 +114,9 @@ func SendMail(params SendMailParams) error {
 	m.Subject("[SYSTEM] " + params.Subject)
 	m.SetBodyString(mail.TypeTextPlain, params.Body)
 
-	if err := emailClient.DialAndSend(m); err != nil {
+	sendCtx, cancel := context.WithTimeout(ctx, sendTimeout)
+	defer cancel()
+	if err := emailClient.DialAndSendWithContext(sendCtx, m); err != nil {
 		slog.Error("Failed to send email", "err", err)
 		return err
 	}

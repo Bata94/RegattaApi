@@ -130,7 +130,7 @@ func smokeLogin(base string) string {
 	}
 	defer func() {
 		_ = resp.Body.Close()
-	} ()
+	}()
 
 	for _, c := range resp.Cookies() {
 		if c.Name == "auth_token" && c.Value != "" {
